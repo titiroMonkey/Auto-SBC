@@ -28,6 +28,7 @@ class ObjectiveEarlyStopping(cp_model.CpSolverSolutionCallback):
     def on_solution_callback(self):
         '''This is called everytime a solution with better objective is found.'''
         self._reset_timer()
+        print(self)
 
     def _reset_timer(self):
         if self._timer:
@@ -287,8 +288,8 @@ def create_squad_rating_constraint_3(df, model, player, map_idx, players_grouped
         model.Add(final_rating <= squad_rating * num_players - round_expr)
     else:
         model.Add(final_rating >= squad_rating * num_players - round_expr)
-        model.Add(total_rating >= (squad_rating - int(4 * precision)) * num_players - round_expr)
-        model.Add(total_rating <= (squad_rating + int(4 * precision)) * num_players - round_expr)
+        model.Add(total_rating >= (squad_rating - int(10 * precision)) * num_players - round_expr)
+        model.Add(total_rating <= (squad_rating + int(10 * precision)) * num_players - round_expr)
     return model, final_rating, average_rating, sum_excess
  
 @runtime  
