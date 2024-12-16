@@ -273,6 +273,30 @@ min-height: 20px;
 .choices{
 color:black
 }
+.currency-sbc::after {
+    background-position: right top;
+    content: "";
+    background-repeat: no-repeat;
+    background-size: 100%;
+    display: inline-block;
+    height: 1em;
+    vertical-align: middle;
+    width: 1em;
+    background-image: url(../web-app/images/sbc/logo_SBC_home_tile.png);
+    margin-top: -.15em;
+}
+.currency-objective::after {
+    background-position: right top;
+    content: "";
+    background-repeat: no-repeat;
+    background-size: 100%;
+    display: inline-block;
+    height: 1em;
+    vertical-align: middle;
+    width: 1em;
+    background-image: url(../web-app/images/pointsIcon.png);
+    margin-top: -.15em;
+}
 `;
     let styleSheet = document.createElement('style');
     styleSheet.innerText = styles;
@@ -1004,7 +1028,12 @@ color:black
         }
         await sendUnassignedtoTeam()
         let players = await fetchPlayers();
-        let storage = await getStoragePlayers()
+
+
+        for (let item of players) {
+            idToPlayerItem[item.definitionId] = item;
+        }
+        await fetchPlayerPrices(players);
         if (getSettings(sbcId,sbcData.challengeId,'useConcepts')) {
             if (conceptPlayersCollected) {
                 let PriceItems = getPriceItems();
@@ -1016,26 +1045,14 @@ color:black
                 );
             }
         }
-
-
-        players=players.filter(f=>!storage.map(m=>m.definitionId).includes(f?.definitionId))
-        players=players.concat(storage)
-        players=players.filter(item => item!= undefined)
-        await fetchPlayerPrices(players);
-
-
         let maxRating = getSettings(sbcId,sbcData.challengeId,'maxRating')
         let useDupes=getSettings(sbcId,sbcData.challengeId,'useDupes')
-        let duplicateIds = await fetchDuplicateIds();
-        let storageIds = storage.map(m=>m.id)
-
-        console.log(storageIds,storage)
-        players.forEach(item=>item.isStorage=storageIds.includes(item?.id))
         let excludeLeagues=getSettings(sbcId,sbcData.challengeId,'excludeLeagues') || []
         let excludeNations=getSettings(sbcId,sbcData.challengeId,'excludeNations') || []
         let excludeRarity=getSettings(sbcId,sbcData.challengeId,'excludeRarity') || []
         let excludeTeams=getSettings(sbcId,sbcData.challengeId,'excludeTeams') || []
-        let excludePlayers = getSettings(sbcId,sbcData.challengeId,'excludePlayers') || []
+        let duplicateIds = await fetchDuplicateIds();
+      
         let backendPlayersInput = players
         .filter(
             (item) =>
@@ -1085,8 +1102,7 @@ color:black
                 futggPrice:getPrice(item)
             };
         });
-
-
+      
         const input = JSON.stringify({
             clubPlayers: backendPlayersInput,
             sbcData: sbcData,
@@ -1641,18 +1657,12 @@ color:black
             if (duplicateIds.includes(item.id) || storage.map(m=>m.id).includes(item.id)){this.__root.style.opacity = "0.4";}
 
             if ( getSettings(0,0,'showPrices')) {
-                let PriceItems = getPriceItems();
-console.log( PriceItems[item.definitionId])
                 let price = getPrice(item) * (isItemFixed(item) ? 0 : 1);
-                if(!(item.definitionId in PriceItems) || !('isSbc' in PriceItems[item.definitionId])){
-
-                }
-                let symbol = PriceItems[item.definitionId]?.isSbc?'currency-sbc':PriceItems[item.definitionId]?.isObjective?'currency-objective':'currency-coins'
                 this.__root.prepend(
                     createElem(
                         'div',
-                        { className: `${symbol} item-price` },
-                        PriceItems[item.definitionId]?.isExtinct?"EXTINCT": PriceItems[item.definitionId]?.isObjective?"":price.toLocaleString()
+                        { className: 'currency-coins item-price' },
+                        price.toLocaleString()
                     )
                 );
             }
@@ -1814,9 +1824,10 @@ console.log( PriceItems[item.definitionId])
         return number * 1;
     };
 
+
   let priceResponse;
     const fetchLowestPriceByRating = async () => {
-
+        
         let PriceItems = getPriceItems();
         let timeStamp = new Date(Date.now());
 
@@ -1874,7 +1885,7 @@ console.log( PriceItems[item.definitionId])
 
         let totalPrices=idsArray.length
         while (idsArray.length) {
-
+            let PriceItems = getPriceItems();
 
             const playersIdArray = idsArray.splice(0, 50);
 
