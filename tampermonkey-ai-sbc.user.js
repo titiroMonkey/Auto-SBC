@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.6
+// @version      25.1.7
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -272,30 +272,6 @@ min-height: 20px;
 }
 .choices{
 color:black
-}
-.currency-sbc::after {
-    background-position: right top;
-    content: "";
-    background-repeat: no-repeat;
-    background-size: 100%;
-    display: inline-block;
-    height: 1em;
-    vertical-align: middle;
-    width: 1em;
-    background-image: url(../web-app/images/sbc/logo_SBC_home_tile.png);
-    margin-top: -.15em;
-}
-.currency-objective::after {
-    background-position: right top;
-    content: "";
-    background-repeat: no-repeat;
-    background-size: 100%;
-    display: inline-block;
-    height: 1em;
-    vertical-align: middle;
-    width: 1em;
-    background-image: url(../web-app/images/pointsIcon.png);
-    margin-top: -.15em;
 }
 `;
     let styleSheet = document.createElement('style');
@@ -962,7 +938,7 @@ color:black
         }
 
         let sbcPrice=Math.max(getPrice(item),getPrice({definitionId:item.rating+'_CBR'}),100)
-        console.log(getPrice(item),getPrice({definitionId:item.rating+'_CBR'}),100)
+
         if (getPrice(item)==-1){
             return sbcPrice *1.5
         }
@@ -1028,12 +1004,7 @@ color:black
         }
         await sendUnassignedtoTeam()
         let players = await fetchPlayers();
-
-
-        for (let item of players) {
-            idToPlayerItem[item.definitionId] = item;
-        }
-        await fetchPlayerPrices(players);
+        let storage = await getStoragePlayers()
         if (getSettings(sbcId,sbcData.challengeId,'useConcepts')) {
             if (conceptPlayersCollected) {
                 let PriceItems = getPriceItems();
@@ -1045,14 +1016,26 @@ color:black
                 );
             }
         }
+
+
+        players=players.filter(f=>!storage.map(m=>m.definitionId).includes(f?.definitionId))
+        players=players.concat(storage)
+        players=players.filter(item => item!= undefined)
+        await fetchPlayerPrices(players);
+
+
         let maxRating = getSettings(sbcId,sbcData.challengeId,'maxRating')
         let useDupes=getSettings(sbcId,sbcData.challengeId,'useDupes')
+        let duplicateIds = await fetchDuplicateIds();
+        let storageIds = storage.map(m=>m.id)
+
+        console.log(storageIds,storage)
+        players.forEach(item=>item.isStorage=storageIds.includes(item?.id))
         let excludeLeagues=getSettings(sbcId,sbcData.challengeId,'excludeLeagues') || []
         let excludeNations=getSettings(sbcId,sbcData.challengeId,'excludeNations') || []
         let excludeRarity=getSettings(sbcId,sbcData.challengeId,'excludeRarity') || []
         let excludeTeams=getSettings(sbcId,sbcData.challengeId,'excludeTeams') || []
-        let duplicateIds = await fetchDuplicateIds();
-      
+        let excludePlayers = getSettings(sbcId,sbcData.challengeId,'excludePlayers') || []
         let backendPlayersInput = players
         .filter(
             (item) =>
@@ -1102,7 +1085,8 @@ color:black
                 futggPrice:getPrice(item)
             };
         });
-      
+
+
         const input = JSON.stringify({
             clubPlayers: backendPlayersInput,
             sbcData: sbcData,
@@ -1657,12 +1641,18 @@ color:black
             if (duplicateIds.includes(item.id) || storage.map(m=>m.id).includes(item.id)){this.__root.style.opacity = "0.4";}
 
             if ( getSettings(0,0,'showPrices')) {
+                let PriceItems = getPriceItems();
+console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[]),getPrice(item),getPrice({definitionId:item.rating+'_CBR'}))
                 let price = getPrice(item) * (isItemFixed(item) ? 0 : 1);
+                if(!(item.definitionId in PriceItems) || !('isSbc' in PriceItems[item.definitionId])){
+
+                }
+                let symbol = PriceItems[item.definitionId]?.isSbc?'currency-sbc':PriceItems[item.definitionId]?.isObjective?'currency-objective':'currency-coins'
                 this.__root.prepend(
                     createElem(
                         'div',
-                        { className: 'currency-coins item-price' },
-                        price.toLocaleString()
+                        { className: `${symbol} item-price` },
+                        PriceItems[item.definitionId]?.isExtinct?"EXTINCT": PriceItems[item.definitionId]?.isObjective?"":price.toLocaleString()
                     )
                 );
             }
@@ -1824,10 +1814,9 @@ color:black
         return number * 1;
     };
 
-
   let priceResponse;
     const fetchLowestPriceByRating = async () => {
-        
+
         let PriceItems = getPriceItems();
         let timeStamp = new Date(Date.now());
 
@@ -1842,6 +1831,7 @@ color:black
             if (isPriceOld({"definitionId":i + '_CBR'})){
                 await fetchSingleCheapest(i)
             }
+                await fetchSingleCheapest(i)
         }
 
     };
@@ -1851,14 +1841,14 @@ color:black
 		);
         try {
             const doc = new DOMParser().parseFromString(futggSingleCheapestByRatingResponse, 'text/html');
-            console.log(rating,doc)
-            let playerLink = doc.getElementsByClassName("fut-card-container")[0].href?.split('-')[0].split('/').pop()
+        
+            let playerLink = doc.getElementsByClassName("fut-card-container")[0].href?.split('25-')[1].replace("/","")
 
             const futggResponse = await makeGetRequest(
                 `https://www.fut.gg/api/fut/player-prices/25/?ids=${playerLink}`
 
         );
-
+  //  console.log(rating,doc,`https://www.fut.gg/api/fut/player-prices/25/?ids=${playerLink}`, doc.getElementsByClassName("fut-card-container")[0].href)
 
             priceResponse = JSON.parse(futggResponse);
             priceResponse=priceResponse.data
@@ -1885,7 +1875,7 @@ color:black
 
         let totalPrices=idsArray.length
         while (idsArray.length) {
-            let PriceItems = getPriceItems();
+
 
             const playersIdArray = idsArray.splice(0, 50);
 
