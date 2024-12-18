@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.7
+// @version      25.1.8
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -60,13 +60,31 @@
     background-color: #1f2020;
     color: #fcfcf7
 }
-
+.untradable::after {
+    content: "\\E0D6";
+    color: #fd4821;
+    font-family: UltimateTeam-Icons, sans-serif;
+    margin-left: .5rem;
+    font-size: 1rem;
+}
+    .tradable::after {
+    content: "\\E0D1";
+    color: #07f468;
+    font-family: UltimateTeam-Icons, sans-serif;
+    margin-left: .5rem;
+    font-size: 1rem;
+}
 .ut-tab-bar-item.sbcToolBarHover.ut-tab-bar-item--default-to-root span::after {
     background-color: #fcfcf7
 }
 .landscape .ut-tab-bar-item.sbcToolBarHover::after {
     height: 100%;
     width: 4px
+}
+.packList {
+    background-image: none !important;
+    background-color: #000000;
+    padding-top:5px !important;
 }
 .ut-tab-bar-item {
 word-wrap:breakword;
@@ -2147,7 +2165,8 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         $('.sbc-auto').remove();
         if ($('.ut-tab-bar-view').find('.sbc-auto').length === 0 && (favouriteSBCSets.length>0 || packs.packs.filter(f=>f.isMyPack).length>0)  ){
             let NewTab =
-                '<nav class="ut-tab-bar sbc-auto"/><button  class="ut-tab-bar-item" id="openPack"></button><button  class="ut-tab-bar-item"><span>SBC 1-click Favourites</span></button><div id="sbcBtns" style="overflow:auto;top:64px;" ></div>';
+                '<nav class="ut-tab-bar sbc-auto"/><button class="ut-tab-bar-item" id="openPack"></button><button class="ut-tab-bar-item"><span>SBC 1-click Favourites</span></button><div id="sbcBtns" style="overflow:auto;top:64px;"></div>';
+            
             $('.ut-tab-bar-view').prepend(NewTab);
         }
 
@@ -2157,29 +2176,64 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
             let e = packs.packs[0]
             var i = services.Localization;
             var packLabel= document.createElement('span');
-            packLabel.innerHTML = 'Quick Open<br>'+packs.packs.filter(f=>f.id==packs.packs[0].id && f.isMyPack).length + ' ' +i.localize(e.packName);
+        
+            packBtn.addEventListener('mouseenter', async function () {
+                packBtn.classList.add('sbcToolBarHover');
+                if (!document.querySelector('.packList')) {
+
+                let packList = document.createElement('nav');
+                packList.innerHTML = '<span><b>My Packs</b></span>';
+             
+                
+                let packNames = packs.packs.filter(f => f.isMyPack).map(pack =>{return {"packName":pack.packName,"tradable":pack.tradable}});
+                let packCounts = packNames.reduce((acc, pack) => {
+                    let key = `${i.localize(pack.packName)} ${pack.tradable ? '(Tradable)' : '(Untradable)'}`;
+                    acc[key] = (acc[key] || 0) + 1;
+                    return acc;
+                }, {});
+
+                 
+                packList.classList.add('ut-tab-bar', 'sbc-auto', 'packList');
+                packList.style.position = 'absolute';
+                packList.style.left = '-120px';
+                packList.style.top = '0';
+                packList.style.zIndex = '1000';
+
+                Object.keys(packCounts).forEach(packName => {
+                    let packItem = document.createElement('button');
+                    packItem.classList.add('ut-tab-bar-item','packList');
+                    packItem.setAttribute("id","openPackItem");
+                    let packClass = packName.includes('(Tradable)') ? 'tradable' : 'untradable';
+                    packName = packName.replace(' (Tradable)', '').replace(' (Untradable)', '').replace("*","");
+                    packItem.classList.add(packClass);
+                    packItem.innerHTML = packCounts[packName] > 1 ? `<span>${packName} ( x ${packCounts[packName]} )</span>` : `<span>${i.localize(packName)}</span>`;
+                    packItem.addEventListener('mouseenter', async function () {
+                        packItem.classList.add('sbcToolBarHover');
+                    });
+                    packItem.addEventListener('mouseleave', async function () {
+                        packItem.classList.remove('sbcToolBarHover');
+                    });
+                    packItem.addEventListener('click', async function () {
+                        let pack = packs.packs.find(p => p.packName === packName && p.isMyPack);
+                        await openPack(pack);
+                        createSBCTab();
+                        goToUnassignedView();
+                    });
+                    packList.appendChild(packItem);
+                });
+                let packItemFooter = document.createElement('span');
+                packItemFooter.innerHTML = '<i>click to open pack(s)</i>';
+                packList.appendChild(packItemFooter);
+                packBtn.appendChild(packList);
+                packList.addEventListener('mouseleave', function (event) {  
+                            packList.remove();       
+                            packBtn.classList.remove('sbcToolBarHover');             
+                });
+            }
+            });
+            packLabel.innerHTML = 'Packs'+' ( ' + packs.packs.filter(f=> f.isMyPack).length + ' )';
             packBtn.appendChild(packLabel)
-            //  packBtn.appendChild(t.getRootElement())
-
-
-            $('#openPack').click(async function () {
-                packs = await getPacks()
-
-                createSBCTab()
-                if (packs.packs.filter(f=>f.id==packs.packs[0].id).length>0){
-                    await openPack(packs.packs.filter(f=>f.isMyPack)[0],packs.packs.filter(f=>f.id==packs.packs[0].id).length-1)
-                }
-                goToUnassignedView()
-            })
-
-            $('#openPack').hover(
-                function () {
-                    $(this).addClass('sbcToolBarHover');
-                },
-                function () {
-                    $(this).removeClass('sbcToolBarHover');
-                }
-            );
+         
         } else {$('#openPack').remove()}
         let sbcBtns=document.getElementById('sbcBtns')
         favouriteSBCSets.forEach(function (e) {
@@ -2202,14 +2256,16 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
             label.innerHTML = e.name;
             btn.appendChild(label)
             sbcBtns.appendChild(btn)
-            $('#' + e.id).hover(
-                function () {
-                    $(this).addClass('sbcToolBarHover');
-                },
-                function () {
-                    $(this).removeClass('sbcToolBarHover');
-                }
-            );
+            btn.addEventListener('mouseenter', function (event) {  
+                if (document.querySelector('.packList')) {
+                    document.querySelector('.packList').remove();    
+                }   
+                btn.classList.add('sbcToolBarHover');             
+            });
+                btn.addEventListener('mouseleave', function (event) {       
+                    btn.classList.remove('sbcToolBarHover');             
+            });
+         
             $('#' + e.id).click(async function () {
                 createSbc=true
                 createSBCTab();
@@ -2222,7 +2278,6 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
             });
         });
     };
-
     const sideBarNavOverride = () => {
         const navViewInit = UTGameTabBarController.prototype.initWithViewControllers;
         UTGameTabBarController.prototype.initWithViewControllers = function (tabs) {
