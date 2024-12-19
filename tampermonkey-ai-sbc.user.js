@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.9
+// @version      25.1.10
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -2558,8 +2558,13 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         return returnValue
 
     }
-    const defaultSBCSolverSettings = {
+   const defaultSBCSolverSettings = {
         apiUrl: 'http://127.0.0.1:8000/solve',
+        excludeTeams:[],
+        excludeRarity:[],
+        excludeNations:[],
+        excludeLeagues:[],
+        excludePlayers:[],
         useConcepts: false,
         collectConcepts :false,
         animateWalkouts:  86,
