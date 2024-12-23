@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.10
+// @version      25.1.11
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -56,23 +56,32 @@
               border-radius: 10px;
               background-color: #ffffff;
      }
+.ut-companion-carousel-item-container-view .item-container{
+     padding-top:20px;
+     }
      .ut-tab-bar-item.sbcToolBarHover {
     background-color: #1f2020;
     color: #fcfcf7
 }
-.untradable::after {
+.untradable::before {
     content: "\\E0D6";
     color: #fd4821;
     font-family: UltimateTeam-Icons, sans-serif;
     margin-left: .5rem;
-    font-size: 1rem;
+    font-size: 0.8rem;
+    right: 0;
+        bottom: 5px;
+    position: absolute;
 }
-    .tradable::after {
+    .tradable::before {
     content: "\\E0D1";
     color: #07f468;
     font-family: UltimateTeam-Icons, sans-serif;
     margin-left: .5rem;
-    font-size: 1rem;
+    font-size: 0.8rem;
+    right: 0;
+        bottom: 5px;
+    position: absolute;
 }
 .ut-tab-bar-item.sbcToolBarHover.ut-tab-bar-item--default-to-root span::after {
     background-color: #fcfcf7
@@ -85,12 +94,13 @@
     background-image: none !important;
     background-color: #000000;
     padding-top:5px !important;
+
 }
 .ut-tab-bar-item {
 word-wrap:breakword;
 }
      .ut-tab-bar-item.sbcToolBarHover::after {
-
+    content: "";
     background-color: #07f468;
     display: block;
     height: 2px;
@@ -505,7 +515,7 @@ color:black
 
                             //console.log('Storages Retrieved',searchCriteria.offset)
                             getAllStoragePlayers();
-                        } else {                           
+                        } else {
                             resolve(gatheredPlayers);
                         }
                     }
@@ -886,6 +896,8 @@ color:black
     let conceptPlayers=[];
     let sbcLogin=[]
     let players;
+
+    
     const futHomeOverride = async() => {
         const homeHubInit = UTHomeHubView.prototype.init;
         UTHomeHubView.prototype.init = async function () {
@@ -980,7 +992,7 @@ color:black
 
         sbcPrice = sbcPrice * (duplicateIds.includes(item.id) ? duplicateDiscount : 1) // Dupe Discount
 
-        sbcPrice = sbcPrice * (item?.isStorage ? duplicateDiscount : 1) 
+        sbcPrice = sbcPrice * (item?.isStorage ? duplicateDiscount : 1)
         sbcPrice = sbcPrice * (item.untradeable ? untradeableDiscount : 1)
 
 
@@ -1023,9 +1035,10 @@ color:black
         await sendUnassignedtoTeam()
         let players = await fetchPlayers();
         let storage = await getStoragePlayers()
+        let PriceItems = getPriceItems();
         if (getSettings(sbcId,sbcData.challengeId,'useConcepts')) {
             if (conceptPlayersCollected) {
-                let PriceItems = getPriceItems();
+
                 players = players.concat(conceptPlayers?.filter(f=> !PriceItems[f.definitionId].isExtinct));
             } else {
                 showNotification(
@@ -1047,13 +1060,14 @@ color:black
         let duplicateIds = await fetchDuplicateIds();
         let storageIds = storage.map(m=>m.id)
 
-        console.log(storageIds,storage)
         players.forEach(item=>item.isStorage=storageIds.includes(item?.id))
         let excludeLeagues=getSettings(sbcId,sbcData.challengeId,'excludeLeagues') || []
         let excludeNations=getSettings(sbcId,sbcData.challengeId,'excludeNations') || []
         let excludeRarity=getSettings(sbcId,sbcData.challengeId,'excludeRarity') || []
         let excludeTeams=getSettings(sbcId,sbcData.challengeId,'excludeTeams') || []
         let excludePlayers = getSettings(sbcId,sbcData.challengeId,'excludePlayers') || []
+        let excludeSbc = getSettings(sbcId,sbcData.challengeId,'excludeSbc') || false
+        let excludeObjective = getSettings(sbcId,sbcData.challengeId,'excludeObjective') || false
         let backendPlayersInput = players
         .filter(
             (item) =>
@@ -1065,6 +1079,8 @@ color:black
              && !excludeRarity.includes(services.Localization.localize('item.raretype' + item.rareflag))
              && !excludeTeams.includes(item.teamId)
              && !item.isTimeLimited()
+             && !(PriceItems[item.definitionId]?.isSbc  && excludeSbc)
+             && !(PriceItems[item.definitionId]?.isObjective  && excludeObjective)
              && !sbcData.subs.includes(item.definitionId))
             || (useDupes  && !sbcData.subs.includes(item.definitionId) &&  (duplicateIds.includes(item.id) || storageIds.includes(item?.id)))
         )
@@ -1370,9 +1386,9 @@ color:black
             await fetchPlayerPrices(players)
             unassignedItems.call(this,...args);
         }
-        const ppItems = UTPlayerPicksView.prototype.setItems
-        UTPlayerPicksView.prototype.setItems  = async function (...args) {
-
+        const ppItems = UTPlayerPicksView.prototype.setCarouselItems
+        UTPlayerPicksView.prototype.setCarouselItems  = async function (...args) {
+            console.log(args)
             await fetchPlayerPrices(args[0])
             ppItems.call(this,...args);
         }
@@ -1859,7 +1875,7 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
 		);
         try {
             const doc = new DOMParser().parseFromString(futggSingleCheapestByRatingResponse, 'text/html');
-        
+
             let playerLink = doc.getElementsByClassName("fut-card-container")[0].href?.split('25-')[1].replace("/","")
 
             const futggResponse = await makeGetRequest(
@@ -2166,7 +2182,7 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         if ($('.ut-tab-bar-view').find('.sbc-auto').length === 0 && (favouriteSBCSets.length>0 || packs.packs.filter(f=>f.isMyPack).length>0)  ){
             let NewTab =
                 '<nav class="ut-tab-bar sbc-auto"/><button class="ut-tab-bar-item" id="openPack"></button><button class="ut-tab-bar-item"><span>SBC 1-click Favourites</span></button><div id="sbcBtns" style="overflow:auto;top:64px;"></div>';
-            
+
             $('.ut-tab-bar-view').prepend(NewTab);
         }
 
@@ -2176,23 +2192,27 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
             let e = packs.packs[0]
             var i = services.Localization;
             var packLabel= document.createElement('span');
-        
+
             packBtn.addEventListener('mouseenter', async function () {
                 packBtn.classList.add('sbcToolBarHover');
                 if (!document.querySelector('.packList')) {
 
                 let packList = document.createElement('nav');
                 packList.innerHTML = '<span><b>My Packs</b></span>';
-             
-                
-                let packNames = packs.packs.filter(f => f.isMyPack).map(pack =>{return {"packName":pack.packName,"tradable":pack.tradable}});
-                let packCounts = packNames.reduce((acc, pack) => {
+
+
+
+                let packCounts = packs.packs.filter(f => f.isMyPack).reduce((acc, pack) => {
                     let key = `${i.localize(pack.packName)} ${pack.tradable ? '(Tradable)' : '(Untradable)'}`;
-                    acc[key] = (acc[key] || 0) + 1;
+
+                    acc[key] = acc[key] || {};
+                    acc[key].count = (acc[key]?.count || 0) + 1;
+                    acc[key].packName = i.localize(pack.packName);
+                    acc[key].class = pack.tradable ? 'tradable' : 'untradable';
+                    acc[key].pack = pack;
                     return acc;
                 }, {});
 
-                 
                 packList.classList.add('ut-tab-bar', 'sbc-auto', 'packList');
                 packList.style.position = 'absolute';
                 packList.style.left = '-120px';
@@ -2200,13 +2220,14 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
                 packList.style.zIndex = '1000';
 
                 Object.keys(packCounts).forEach(packName => {
+                    let pack=packCounts[packName]
+
                     let packItem = document.createElement('button');
                     packItem.classList.add('ut-tab-bar-item','packList');
                     packItem.setAttribute("id","openPackItem");
-                    let packClass = packName.includes('(Tradable)') ? 'tradable' : 'untradable';
-                    packName = packName.replace(' (Tradable)', '').replace(' (Untradable)', '').replace("*","");
+                    let packClass = pack.class;
                     packItem.classList.add(packClass);
-                    packItem.innerHTML = packCounts[packName] > 1 ? `<span>${packName} ( x ${packCounts[packName]} )</span>` : `<span>${i.localize(packName)}</span>`;
+                    packItem.innerHTML = pack.count > 1 ? `<span>${pack.packName} ( x ${pack.count} )</span>` : `<span>${pack.packName}</span>`;
                     packItem.addEventListener('mouseenter', async function () {
                         packItem.classList.add('sbcToolBarHover');
                     });
@@ -2214,8 +2235,7 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
                         packItem.classList.remove('sbcToolBarHover');
                     });
                     packItem.addEventListener('click', async function () {
-                        let pack = packs.packs.find(p => p.packName === packName && p.isMyPack);
-                        await openPack(pack);
+                        await openPack(pack.pack,pack.count);
                         createSBCTab();
                         goToUnassignedView();
                     });
@@ -2225,18 +2245,19 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
                 packItemFooter.innerHTML = '<i>click to open pack(s)</i>';
                 packList.appendChild(packItemFooter);
                 packBtn.appendChild(packList);
-                packList.addEventListener('mouseleave', function (event) {  
-                            packList.remove();       
-                            packBtn.classList.remove('sbcToolBarHover');             
+                packList.addEventListener('mouseleave', function (event) {
+                            packList.remove();
+                            packBtn.classList.remove('sbcToolBarHover');
                 });
             }
             });
             packLabel.innerHTML = 'Packs'+' ( ' + packs.packs.filter(f=> f.isMyPack).length + ' )';
             packBtn.appendChild(packLabel)
-         
+
         } else {$('#openPack').remove()}
         let sbcBtns=document.getElementById('sbcBtns')
         favouriteSBCSets.forEach(function (e) {
+            console.log(e)
             var t = new UTSBCSetTileView();
             t.init(), (t.title = e.name), t.setData(e), t.render();
 
@@ -2256,16 +2277,20 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
             label.innerHTML = e.name;
             btn.appendChild(label)
             sbcBtns.appendChild(btn)
-            btn.addEventListener('mouseenter', function (event) {  
+            btn.addEventListener('mouseenter', function (event) {
                 if (document.querySelector('.packList')) {
-                    document.querySelector('.packList').remove();    
-                }   
-                btn.classList.add('sbcToolBarHover');             
+
+                    document.querySelector('.packList').remove();
+                }
+                for (let elem of document.getElementsByClassName("sbcToolBarHover")) {
+                        elem.classList.remove("sbcToolBarHover");
+                    }
+                btn.classList.add('sbcToolBarHover');
             });
-                btn.addEventListener('mouseleave', function (event) {       
-                    btn.classList.remove('sbcToolBarHover');             
+                btn.addEventListener('mouseleave', function (event) {
+                    btn.classList.remove('sbcToolBarHover');
             });
-         
+
             $('#' + e.id).click(async function () {
                 createSbc=true
                 createSBCTab();
@@ -2503,6 +2528,12 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
                     saveSettings(dropdown.getValue(),dropdownChallenge.getValue(),'maxSolveTime',numberspinnerMST.getValue())
                 })
                 //  (parentDiv,label,id,options,value,target)
+                createToggle(sbcParamsTile,'Exclude Objective Players','excludeObjective',getSettings(dropdown.getValue(),dropdownChallenge.getValue(),'excludeObjective'),(toggleXO)=>{
+                    saveSettings(dropdown.getValue(),dropdownChallenge.getValue(),'excludeObjective',toggleXO.getToggleState())
+                })
+                createToggle(sbcParamsTile,'Exclude SBC Players','excludeSbc',getSettings(dropdown.getValue(),dropdownChallenge.getValue(),'excludeSbc'),(toggleXSBC)=>{
+                    saveSettings(dropdown.getValue(),dropdownChallenge.getValue(),'excludeSbc',toggleXSBC.getToggleState())
+                })
                 createChoice(sbcParamsTile,'EXCLUDE - Players','excludePlayers',players.map(item=>{ return { label: item._staticData.firstName + ' ' + item._staticData.lastName ,
                                                                                                             value: item.definitionId,
                                                                                                             id: item.definitionId,
@@ -2872,4 +2903,3 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
     };
     init();
 })();
-
