@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.11
+// @version      25.1.12
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -768,7 +768,7 @@ color:black
                     resolve(res.data);
                 }
             });
-        });
+        }).catch((e) => { console.log(e) });
     };
 
     const getChallenges = async function (set) {
@@ -785,7 +785,7 @@ color:black
                     }
                 }
             );
-        });
+        }).catch((e) => { console.log(e) });
     };
 
     const loadChallenge = async function (currentChallenge) {
@@ -809,6 +809,12 @@ color:black
         //Get SBC Data if given a setId
 
         let sbcData = await sbcSets();
+        if (sbcData === undefined) {
+            console.log('SBC DATA is not available')
+            createSBCTab();
+            return null
+        }
+
         let sbcSet = sbcData.sets.filter((e) => e.id == sbcId)
 
         if(sbcSet.length==0){
@@ -2172,6 +2178,10 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         services.SBC.repository.reset()
 
         let sets = await sbcSets();
+        if (sets === undefined) {
+            console.log('createSBCTab: sets are undefined')
+            return null
+        }
         let favourites = sets.categories.filter((f) => f.name == 'Favourites')[0]
         .setIds;
         let favouriteSBCSets = sets.sets.filter((f) => favourites.includes(f.id)).sort((a, b) => b.timesCompleted - a.timesCompleted)
