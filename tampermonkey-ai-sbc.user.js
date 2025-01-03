@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.12
+// @version      25.1.13
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -2175,7 +2175,10 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
     };
 
     const createSBCTab = async () => {
-        if (!getSettings(0,0,'showSbcTab')) return
+        if (!getSettings(0,0,'showSbcTab')){
+            $('.sbc-auto').remove();
+            return
+        }
 
         services.SBC.repository.reset()
 
@@ -2448,8 +2451,9 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         createNumberSpinner(sbcUITile,'Price Cache Minutes','priceCacheMinutes',1,1440,getSettings(0,0,'priceCacheMinutes'),(numberspinnerPCM)=>{
             saveSettings(0,0,'priceCacheMinutes',numberspinnerPCM.getValue())
         })
-        createToggle(sbcUITile,'Show SBCs Tab','showSbcTab',getSettings(0,0,'showSbcTab'),(toggleSP)=>{
-            saveSettings(0,0,'showSbcTab',toggleSP.getToggleState())
+        createToggle(sbcUITile,'Show SBCs Tab','showSbcTab',getSettings(0,0,'showSbcTab'),(toggleSBCT)=>{
+            saveSettings(0,0,'showSbcTab',toggleSBCT.getToggleState())
+            createSBCTab();
         })
 
         let panel = createPanel()
