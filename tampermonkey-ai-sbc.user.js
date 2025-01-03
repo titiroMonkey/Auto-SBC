@@ -2175,6 +2175,8 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
     };
 
     const createSBCTab = async () => {
+        if (!getSettings(0,0,'showSbcTab')) return
+
         services.SBC.repository.reset()
 
         let sets = await sbcSets();
@@ -2446,6 +2448,10 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         createNumberSpinner(sbcUITile,'Price Cache Minutes','priceCacheMinutes',1,1440,getSettings(0,0,'priceCacheMinutes'),(numberspinnerPCM)=>{
             saveSettings(0,0,'priceCacheMinutes',numberspinnerPCM.getValue())
         })
+        createToggle(sbcUITile,'Show SBCs Tab','showSbcTab',getSettings(0,0,'showSbcTab'),(toggleSP)=>{
+            saveSettings(0,0,'showSbcTab',toggleSP.getToggleState())
+        })
+
         let panel = createPanel()
         let clearPricesBtn = createButton('clearPrices','Clear All Prices',()=>{cachedPriceItems=null;localStorage.removeItem(PRICE_ITEMS_KEY)})
         panel.appendChild(clearPricesBtn)
@@ -2616,6 +2622,7 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         maxRating:99,
         repeatCount:0,
         showPrices:true,
+        showSbcTab:true,
         useDupes:true,
         autoOpenPacks:false,
         saveTotw:false
