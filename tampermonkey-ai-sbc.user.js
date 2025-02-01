@@ -1952,6 +1952,9 @@ color:black
     const openPack= async(pack,repeat=0)=> {
         showLoader();
         await sendUnassignedtoTeam();
+     	await swapDuplicates();
+	await sendDuplicatesToStorage();
+	await discardNonPlayerDupes();
         let ulist = await fetchUnassigned();
 
         if (ulist.length>0){
