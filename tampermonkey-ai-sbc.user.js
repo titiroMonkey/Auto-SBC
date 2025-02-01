@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.14
+// @version      25.1.13
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -540,7 +540,7 @@ color:black
                 console.table({...ulist.filter((l) => !l.isPlayer() && l.isDuplicate())})
                 ulist.filter((l) => !l.isPlayer() && l.isDuplicate()).forEach(card=>{
                     services.Item.discard(card)
-
+                
                 });
                 resolve(ulist)
             })}
@@ -555,8 +555,8 @@ color:black
                 ).observe(this, async function (obs, event) {
                     repositories.Item.unassigned.clear();
                     repositories.Item.unassigned.reset();
-
-
+                    
+                    
                 });
             }
 
@@ -910,7 +910,7 @@ color:black
     let sbcLogin=[]
     let players;
 
-
+    
     const futHomeOverride = async() => {
         const homeHubInit = UTHomeHubView.prototype.init;
         UTHomeHubView.prototype.init = async function () {
@@ -2053,7 +2053,7 @@ color:black
 
     }
     const packOverRide = async () => {
-
+    
         const packOpen = UTStoreViewController.prototype.eOpenPack;
         UTStoreViewController.prototype.eOpenPack = async function (...args) {
             showLoader();
@@ -2071,7 +2071,7 @@ color:black
                 else{
                     let e=args[1]
                     let m = e === 'UTStorePackDetailsView.Event.BUY_POINTS' || e === 'UTStoreBundleDetailsView.Event.BUY_POINTS' || e === 'UTStoreRevealModalListView.Event.POINTS_PURCHASE' ? GameCurrency.POINTS : GameCurrency.COINS;
-
+                   
                     packToOpen.purchase(m).observe(new UTStoreViewController,(obs,event)=>{
                     console.log(obs,event)
                         openPack(packToOpen)
@@ -2194,34 +2194,34 @@ color:black
             background:'#1e1f1f',
             marginTop:'0px'
         }
-
+        
         const combinedStyles = { ...defaultStyles, ...style };
         Object.keys(combinedStyles).forEach((key) => {
             button.style[key] = combinedStyles[key];
         });
         button.innerHTML = content;
         button.addEventListener('click', ()=>{let hoverNav = document.getElementById('hoverNav');
-
+              
             if (hoverNav) {
             hoverNav.remove();
             };callback()});
         button.addEventListener('mouseenter',async (e) => {
-
+           
             button.classList.add('sbcToolBarHover');
-
-
+            
+            
                 let parentElement = e.target.parentElement;
                 while (parentElement && parentElement.tagName !== 'NAV') {
                     parentElement = parentElement.parentElement;
                 }
                 if (parentElement.id == 'sbcToolbar') {
                 let hoverNav = document.getElementById('hoverNav');
-
+              
                 if (hoverNav) {
                 hoverNav.remove();
                 }
             }
-
+            
             if (hover){
                 let sbcToolbar = document.getElementById('sbcToolbar');
                 if (sbcToolbar) {
@@ -2232,7 +2232,7 @@ color:black
         });
         button.addEventListener('mouseleave', () => {
             button.classList.remove('sbcToolBarHover');
-
+            
         });
         return button;
     };
@@ -2255,10 +2255,10 @@ color:black
         const combinedStyles = { ...defaultStyles, ...style };
         Object.keys(combinedStyles).forEach((key) => {
             nav.style[key] = combinedStyles[key];
-
+          
         });
-
-
+       
+       
         if (title) {
         let navTitle = document.createElement('span');
         navTitle.innerHTML = `<b>${title}</b>`;
@@ -2289,7 +2289,7 @@ color:black
         nav.appendChild(navFooter);
         }
         nav.addEventListener('mouseleave', () => {
-              nav.remove();
+              nav.remove(); 
         });
 
         return nav;
@@ -2317,23 +2317,23 @@ color:black
             acc[key].class = pack.tradable ? 'tradable' : 'untradable';
             acc[key].description = i.localize(pack.packDesc);
             acc[key].pack = pack;
-
+          
             return acc;
         }, {});
-
+       
             let packHoverButtons =  Object.keys(packCounts).map(packName => {
             let pack=packCounts[packName]
-
+           
             let navLabelSpan = document.createElement('span');
             navLabelSpan.title = pack.description; // Add tooltip with pack description
             navLabelSpan.classList.add(pack.class);
-
+            
             let packLabel = pack.count > 1 ? `${pack.packName}<br>x ${pack.count}` : pack.packName;
             navLabelSpan.innerHTML = packLabel
            let btn=createNavButton("openPackItem",
             navLabelSpan.outerHTML,
             ()=>{},
-            async ()=>{
+            async ()=>{ 
                 let packToOpen=pack.pack
                 if (pack.pack.isMyPack){
                     await openPack(packToOpen,pack.count)
@@ -2342,14 +2342,14 @@ color:black
                         packToOpen.purchase(GameCurrency.COINS).observe(new UTStoreViewController,async (obs,event)=>{
                         await openPack(packToOpen)
                         })
-                    }
-
+                    }    
+            
             createSBCTab();
             goToUnassignedView();},
             {width:'20vw',marginTop:'0px'})
-
+      
             return btn
-
+           
         }
     )
             let packDiv = document.createElement('div');
@@ -2358,10 +2358,10 @@ color:black
             });
             let packNavBtn = createNavButton("navPacks",packContent,async ()=>{
              return createHoverNav("myPacks","My Packs","click to open",[packDiv],{width:'20vw'})},()=>{},{background:'none'})
-
+          
             return packNavBtn
         }
-
+           
         const createCategoryPicker = async () => {
             let sets = await sbcSets();
             if (sets === undefined) {
@@ -2391,9 +2391,9 @@ color:black
                     {width:'20vw',marginTop:'0px'}
                 )
                 categoryButtons.push(navBtn)
-
+                
             });
-
+            
             let categoryNavBtn = createNavButton("navCategory",`SBC 1-click <br>${getSettings(0,0,'sbcType')}`,
             async ()=>{return createHoverNav("categoryPicker","SBC Categories","click to select",categoryButtons, {width:'20vw'})},
             ()=>{},{background:'none'})
@@ -2401,13 +2401,13 @@ color:black
         }
 
         const createSBCButtons= async () => {
-
+          
             let sets = await sbcSets();
             if (sets === undefined) {
                 console.log('createSBCButtons: sets are undefined')
                 return null
             }
-
+            
             let sbcSetIds = sets.categories.filter((f) => f.name == getSettings(0,0,'sbcType'))[0]
                 .setIds;
                 console.log(sets.sets.filter((f) => sbcSetIds.includes(f.id) && !f.isComplete()))
@@ -2428,14 +2428,14 @@ color:black
                 var label= document.createElement('span');
                 label.innerHTML = set.name;
                 sbcDiv.appendChild(label)
-
-
+            
+               
            //     console.log(set)
-
+               
                 sbcTiles.push(createNavButton(`navSBC${set.id}`,sbcDiv.outerHTML,
                     async ()=>{
                         let hoverSet = await createSBCHover(set)
-
+                        
                     let hoverNav = createHoverNav(set.id, "", 'click to start', [hoverSet])
                     return hoverNav},
                     ()=>{
@@ -2445,7 +2445,7 @@ color:black
                         set.name + ' SBC Started',
                         UINotificationType.POSITIVE,
                     ]);
-
+   
                     solveSBC(set.id,0,true);
                 },{background:'none'}))
 
@@ -2453,12 +2453,12 @@ color:black
             return sbcTiles;
         }
     const createChallengeHover= async (challenge)=>{
-
+          
         let layoutHubDiv = document.createElement('div');
             layoutHubDiv.style.padding = '0';
             layoutHubDiv.style.width = '50vw';
             layoutHubDiv.style.maxWidth = '500px';
-            layoutHubDiv.style.direction = 'ltr';
+            layoutHubDiv.style.direction = 'ltr'; 
             layoutHubDiv.id='challengeNav'
             let s = new UTSBCChallengeRequirementsView();
             s.renderChallengeRequirements(challenge,true)
@@ -2470,13 +2470,13 @@ color:black
     return s.getRootElement()
     }
     const  createSBCHover= async (set)=>{
-
+           
             let layoutHubDiv = document.createElement('div');
             layoutHubDiv.style.padding = '0';
             layoutHubDiv.style.width = '50vw';
             layoutHubDiv.style.maxWidth = '500px';
             layoutHubDiv.style.direction = 'ltr';
-
+            
             var s = new UTSBCSetTileView();
             s.init(), (s.title = set.name), s.setData(set), s.render();
             layoutHubDiv.appendChild(s.getRootElement());
@@ -2506,10 +2506,10 @@ color:black
                     let challengeDiv = document.createElement('div');
                     challengeDiv.id = 'challengeNav';
                     challengeDiv.style.position = 'absolute';
-
+                    
                     challengeDiv.style.top = document.getElementById('challengeRow').getBoundingClientRect().top + 'px';
-                    challengeDiv.style.right = '100%';
-                    challengeDiv.style.padding='5px';
+                    challengeDiv.style.right = '355px';
+                    challengeDiv.style.marginRight='5px';
                     challengeDiv.style.width = '25vw';
                     challengeDiv.style.borderRadius = '20px';
                     challengeDiv.style.background = '#1e1f1f';
@@ -2524,7 +2524,7 @@ color:black
                 });
                 rowRoot.addEventListener('click', ()=>{
                 let hoverNav = document.getElementById('hoverNav');
-
+              
                 if (hoverNav) {
                 hoverNav.remove();
                 }
@@ -2539,23 +2539,23 @@ color:black
             })
                     return rowRoot
                     })
-
+                    
             let rowDiv = document.createElement('div');
             rowDiv.id = 'challengeRow';
             rowDiv.style.padding='5px';
             rowDiv.style.borderRadius = '20px';
             rowDiv.style.background = '#1e1f1f';
-            row.forEach((r) => {
+            row.forEach((r) => {              
                 rowDiv.appendChild(r);
             });
             layoutHubDiv.appendChild(rowDiv);
-
+           
     }
     return layoutHubDiv
 }
     const createSBCTab = async () => {
-
-
+       
+        
         if (!getSettings(0,0,'showSbcTab')){
             $('.sbc-auto').remove();
             return
@@ -2564,8 +2564,8 @@ color:black
         const nav = document.createElement('nav');
               nav.id='sbcToolbar'
               nav.classList.add('ut-tab-bar', 'sbc-auto');
-
-
+              
+                
               let packList = await createPackList()
               nav.appendChild(packList);
 
@@ -2579,11 +2579,11 @@ color:black
                     sbcDiv.appendChild(tile);
                 });
                 nav.appendChild(sbcDiv);
-
+            
                 $('.sbc-auto').remove();
                 $('.ut-tab-bar-view').prepend(nav);
-
-
+                  
+        
     };
     const sideBarNavOverride = () => {
         const navViewInit = UTGameTabBarController.prototype.initWithViewControllers;
