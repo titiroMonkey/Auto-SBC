@@ -2508,7 +2508,7 @@ color:black
                     challengeDiv.style.position = 'absolute';
                     
                     challengeDiv.style.top = '355px';
-                    challengeDiv.style.right = calc('100% + 5px');
+                    challengeDiv.style.right = 'calc(100% + 5px)';
                     challengeDiv.style.marginRight='5px';
                     challengeDiv.style.width = '25vw';
                     challengeDiv.style.borderRadius = '20px';
