@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.13
+// @version      25.1.14
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -70,7 +70,7 @@
     margin-left: .5rem;
     font-size: 0.8rem;
     right: 0;
-        bottom: 5px;
+    bottom: 5px;
     position: absolute;
 }
     .tradable::before {
@@ -80,7 +80,7 @@
     margin-left: .5rem;
     font-size: 0.8rem;
     right: 0;
-        bottom: 5px;
+    bottom: 5px;
     position: absolute;
 }
 .ut-tab-bar-item.sbcToolBarHover.ut-tab-bar-item--default-to-root span::after {
@@ -89,12 +89,6 @@
 .landscape .ut-tab-bar-item.sbcToolBarHover::after {
     height: 100%;
     width: 4px
-}
-.packList {
-    background-image: none !important;
-    background-color: #000000;
-    padding-top:5px !important;
-
 }
 .ut-tab-bar-item {
 word-wrap:breakword;
@@ -540,7 +534,17 @@ color:black
                 7
             ).observe(this, function (obs, event) {resolve(ulist)});
         })}
-    const swapDuplicatestoTeam = async () => {
+    const discardNonPlayerDupes = async () => {
+            let ulist = await fetchUnassigned();
+            return new Promise((resolve) => {
+                console.table({...ulist.filter((l) => !l.isPlayer() && l.isDuplicate())})
+                ulist.filter((l) => !l.isPlayer() && l.isDuplicate()).forEach(card=>{
+                    services.Item.discard(card)
+
+                });
+                resolve(ulist)
+            })}
+    const swapDuplicates = async () => {
         let ulist = await fetchUnassigned();
 
         return new Promise((resolve) => {
@@ -548,10 +552,11 @@ color:black
                 services.Item.move(
                     ulist.filter((l) => l.isDuplicate() && l.untradeable ),
                     7
-                ).observe(this, function (obs, event) {
+                ).observe(this, async function (obs, event) {
                     repositories.Item.unassigned.clear();
                     repositories.Item.unassigned.reset();
-                    sendDuplicatesToStorage();
+
+
                 });
             }
 
@@ -847,7 +852,9 @@ color:black
         );
 
         let newSbcSquad = new UTSBCSquadOverviewViewController();
-        newSbcSquad.initWithSBCSet(sbcSet[0], challengeId);
+        newSbcSquad._set = sbcSet[0],
+        newSbcSquad._challenge = challenges.challenges.filter((i) => i.id == challengeId)[0]
+        newSbcSquad.initWithSquad(challenges.challenges.filter((i) => i.id == challengeId)[0].squad)
         let { _challenge } = newSbcSquad;
 
         let totwIdx = -1
@@ -903,7 +910,7 @@ color:black
     let sbcLogin=[]
     let players;
 
-    
+
     const futHomeOverride = async() => {
         const homeHubInit = UTHomeHubView.prototype.init;
         UTHomeHubView.prototype.init = async function () {
@@ -921,6 +928,7 @@ color:black
 
 
             let sbcSettingsLogin = findSBCLogin(getSolverSettings(),'sbcOnLogin')
+            console.log(sbcSettingsLogin)
             sbcs= sbcs.sets
             sbcs.filter(f=>!f.isComplete()).forEach(sbc=>{
                 sbcSettingsLogin.forEach(sl=>{
@@ -1178,7 +1186,7 @@ color:black
 
         window.sbcSet=sbcSet
         window.challengeId=sbcData.challengeId
-
+        console.log(sbcSet,sbcData)
         let newSbcSquad = new UTSBCSquadOverviewViewController();
         newSbcSquad.initWithSBCSet(sbcSet, sbcData.challengeId);
         let { _squad, _challenge } = newSbcSquad;
@@ -1218,20 +1226,11 @@ color:black
         if (((solution.status_code == autoSubmitId) || autoSubmitId==1) && autoSubmit) {
             await	sbcSubmit(_challenge, sbcSet);
             if (getSettings(sbcId,sbcData.challengeId,'autoOpenPacks')){
-
                 repositories.Store.setDirty()
-
                 let item = sbcData.awards[0]
-
                 let packs = await getPacks()
-
-
-                let pack=await openPack(packs.packs.filter(f=>f.id==item)[0])
-
+                await openPack(packs.packs.filter(f=>f.id==item)[0])
                 goToUnassignedView()
-
-
-
             }
             if (!getSettings(sbcId,sbcData.challengeId,'autoOpenPacks')){
 
@@ -1341,8 +1340,9 @@ color:black
                     var n = isPhone() ? new UTUnassignedItemsViewController : new UTUnassignedItemsSplitViewController;
                     t.success && JSUtils.isObject(t.response) ? n.initWithItems(null === (i = t.response) || void 0 === i ? void 0 : i.items) : n.init()
                     services.Item.clearTransferMarketCache()
-                    await swapDuplicatestoTeam();
+                    await swapDuplicates();
                     await sendDuplicatesToStorage();
+                    await discardNonPlayerDupes();
                     o.popToRootViewController()
                     o.pushViewController(n)
 
@@ -1471,6 +1471,9 @@ color:black
             this._rating = new Intl.NumberFormat('en', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format( Math.min(Math.max(n / r, 0), 99)
                                                                                                                      )
         }
+
+
+
         const squadDetailPanelView = UTSBCSquadDetailPanelView.prototype.init;
         UTSBCSquadDetailPanelView.prototype.init = function (...args) {
             const response = squadDetailPanelView.call(this, ...args);
@@ -1682,7 +1685,6 @@ color:black
 
             if ( getSettings(0,0,'showPrices')) {
                 let PriceItems = getPriceItems();
-console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[]),getPrice(item),getPrice({definitionId:item.rating+'_CBR'}))
                 let price = getPrice(item) * (isItemFixed(item) ? 0 : 1);
                 if(!(item.definitionId in PriceItems) || !('isSbc' in PriceItems[item.definitionId])){
 
@@ -1962,6 +1964,7 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
             pack.open().observe(this, async function (obs, res) {
 
                 if (!res.success) {
+                    console.log(res)
                     obs.unobserve(this);
                     reject(res.status);
                     createSBCTab()
@@ -2050,11 +2053,7 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
 
     }
     const packOverRide = async () => {
-        const packReveal = UTStoreViewController.prototype.eRevealPack
-        UTStoreViewController.prototype.eRevealPack  = async function (...args) {
 
-            packReveal.call(this,...args);
-        }
         const packOpen = UTStoreViewController.prototype.eOpenPack;
         UTStoreViewController.prototype.eOpenPack = async function (...args) {
             showLoader();
@@ -2063,10 +2062,22 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
 
             let packs = await getPacks()
             let item =args[2].articleId
-
+            let packToOpen=packs.packs.filter(f=>f.id==item)[0]
+            console.log(args,packToOpen)
             if(packs.packs.filter(f=>f.id==item).length>0){
+                if (packToOpen.isMyPack){
+                await openPack(packToOpen)
+                }
+                else{
+                    let e=args[1]
+                    let m = e === 'UTStorePackDetailsView.Event.BUY_POINTS' || e === 'UTStoreBundleDetailsView.Event.BUY_POINTS' || e === 'UTStoreRevealModalListView.Event.POINTS_PURCHASE' ? GameCurrency.POINTS : GameCurrency.COINS;
 
-                await openPack(packs.packs.filter(f=>f.id==item)[0])
+                    packToOpen.purchase(m).observe(new UTStoreViewController,(obs,event)=>{
+                    console.log(obs,event)
+                        openPack(packToOpen)
+                    }
+                    )
+                }
 
                 goToUnassignedView()
                 await wait(10)
@@ -2174,149 +2185,405 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         };
     };
 
+    const createNavButton = (id, content,hover, callback ,style={}) => {
+        const button = document.createElement('button');
+        button.classList.add('ut-tab-bar-item');
+        button.id = id;
+        const defaultStyles = {
+            width:'100%',
+            background:'#1e1f1f',
+            marginTop:'0px'
+        }
+
+        const combinedStyles = { ...defaultStyles, ...style };
+        Object.keys(combinedStyles).forEach((key) => {
+            button.style[key] = combinedStyles[key];
+        });
+        button.innerHTML = content;
+        button.addEventListener('click', ()=>{let hoverNav = document.getElementById('hoverNav');
+
+            if (hoverNav) {
+            hoverNav.remove();
+            };callback()});
+        button.addEventListener('mouseenter',async (e) => {
+
+            button.classList.add('sbcToolBarHover');
+
+
+                let parentElement = e.target.parentElement;
+                while (parentElement && parentElement.tagName !== 'NAV') {
+                    parentElement = parentElement.parentElement;
+                }
+                if (parentElement.id == 'sbcToolbar') {
+                let hoverNav = document.getElementById('hoverNav');
+
+                if (hoverNav) {
+                hoverNav.remove();
+                }
+            }
+
+            if (hover){
+                let sbcToolbar = document.getElementById('sbcToolbar');
+                if (sbcToolbar) {
+                    let hoverBtn=await hover()
+                    sbcToolbar.appendChild(hoverBtn);
+                }
+            }
+        });
+        button.addEventListener('mouseleave', () => {
+            button.classList.remove('sbcToolBarHover');
+
+        });
+        return button;
+    };
+
+    const createHoverNav = (id, title, footer, buttons, style={}) => {
+        const nav = document.createElement('nav');
+        nav.classList.add('ut-tab-bar', 'sbc-auto');
+        nav.id = 'hoverNav';
+        const defaultStyles = {
+            backgroundImage : 'none',
+            paddingTop : '5px',
+            right:'6.5rem',
+            width : 'auto',
+            position : 'absolute',
+            zIndex : '1000',
+            direction : 'rtl',
+            maxHeight : '70vh',
+            background: 'none'
+        };
+        const combinedStyles = { ...defaultStyles, ...style };
+        Object.keys(combinedStyles).forEach((key) => {
+            nav.style[key] = combinedStyles[key];
+
+        });
+
+
+        if (title) {
+        let navTitle = document.createElement('span');
+        navTitle.innerHTML = `<b>${title}</b>`;
+        navTitle.style.display = 'block';
+        navTitle.style.textAlign = 'center';
+        navTitle.style.background='#1e1f1f'
+        nav.appendChild(navTitle);
+        }
+        let btnDiv = createDiv(`btnDiv${id}`, {});
+        btnDiv.style.overflowY = 'auto';
+        btnDiv.style.height = 'auto';
+        btnDiv.style.width = 'auto !important';
+        btnDiv.style.display = 'block';
+        btnDiv.style.textAlign = 'center';
+        btnDiv.style.borderBottomLeftRadius = '20px'
+        btnDiv.style.borderBottomRightRadius = '20px'
+        console.log(buttons)
+        buttons.forEach((button) => {
+            console.log(button);
+            btnDiv.appendChild(button);
+        });
+        nav.appendChild(btnDiv);
+        if (footer){
+        let navFooter = document.createElement('span');
+        navFooter.innerHTML = `<i>${footer}</i>`;
+        navFooter.style.display = 'block';
+        navFooter.style.textAlign = 'center';
+        nav.appendChild(navFooter);
+        }
+        nav.addEventListener('mouseleave', () => {
+              nav.remove();
+        });
+
+        return nav;
+    };
+
+    const createDiv = (id, style) => {
+        const div = document.createElement('div');
+        div.id = id;
+        Object.keys(style).forEach((key) => {
+            div.style[key] = style[key];
+        });
+        return div;
+    };
+
+    const createPackList = async () => {
+        let packs = await getPacks()
+        let i = services.Localization;
+        let packContent = `<span>Packs<br>${packs.packs.filter(f=>f.isMyPack || f?.prices?._collection?.COINS?.amount<100).length}</span>`;
+        let packCounts = packs.packs.filter(f => f.isMyPack || f?.prices?._collection?.COINS?.amount<100).reduce((acc, pack) => {
+            let key = `${pack.packName} ${pack.tradeable ? '(Tradable)' : '(Untradable)'}`;
+
+            acc[key] = acc[key] || {};
+            acc[key].count = (acc[key]?.count || 0) + 1;
+            acc[key].packName = i.localize(pack.packName) + (pack?.prices?._collection?.COINS?.amount ? ` (${pack.prices._collection.COINS.amount} coins)` : '');
+            acc[key].class = pack.tradable ? 'tradable' : 'untradable';
+            acc[key].description = i.localize(pack.packDesc);
+            acc[key].pack = pack;
+
+            return acc;
+        }, {});
+
+            let packHoverButtons =  Object.keys(packCounts).map(packName => {
+            let pack=packCounts[packName]
+
+            let navLabelSpan = document.createElement('span');
+            navLabelSpan.title = pack.description; // Add tooltip with pack description
+            navLabelSpan.classList.add(pack.class);
+
+            let packLabel = pack.count > 1 ? `${pack.packName}<br>x ${pack.count}` : pack.packName;
+            navLabelSpan.innerHTML = packLabel
+           let btn=createNavButton("openPackItem",
+            navLabelSpan.outerHTML,
+            ()=>{},
+            async ()=>{
+                let packToOpen=pack.pack
+                if (pack.pack.isMyPack){
+                    await openPack(packToOpen,pack.count)
+                    }
+                    else{
+                        packToOpen.purchase(GameCurrency.COINS).observe(new UTStoreViewController,async (obs,event)=>{
+                        await openPack(packToOpen)
+                        })
+                    }
+
+            createSBCTab();
+            goToUnassignedView();},
+            {width:'20vw',marginTop:'0px'})
+
+            return btn
+
+        }
+    )
+            let packDiv = document.createElement('div');
+            packHoverButtons.forEach(button => {
+                packDiv.appendChild(button);
+            });
+            let packNavBtn = createNavButton("navPacks",packContent,async ()=>{
+             return createHoverNav("myPacks","My Packs","click to open",[packDiv],{width:'20vw'})},()=>{},{background:'none'})
+
+            return packNavBtn
+        }
+
+        const createCategoryPicker = async () => {
+            let sets = await sbcSets();
+            if (sets === undefined) {
+                console.log('createCategoryPicker: sets are undefined')
+                return null
+            }
+            let categories = sets.categories.map((f) => f.name);
+            let categoryButtons=[]
+            categories.forEach((category) => {
+                let navLabelSpan = document.createElement('span');
+            navLabelSpan.innerHTML = category
+            navLabelSpan.style.display = 'inline-block';
+            navLabelSpan.style.verticalAlign = 'middle';
+            navLabelSpan.style.width = '50px';
+            let navBtn=createNavButton(
+                    category,
+                    navLabelSpan.outerHTML,
+                    ()=>{},
+                    async () => {
+                        saveSettings(0,0,'sbcType',category);
+                        services.Notification.queue([
+                            'Updating SBC toolbar to ' + category,
+                            UINotificationType.POSITIVE,
+                        ]);
+                        createSBCTab();
+                    },
+                    {width:'20vw',marginTop:'0px'}
+                )
+                categoryButtons.push(navBtn)
+
+            });
+
+            let categoryNavBtn = createNavButton("navCategory",`SBC 1-click <br>${getSettings(0,0,'sbcType')}`,
+            async ()=>{return createHoverNav("categoryPicker","SBC Categories","click to select",categoryButtons, {width:'20vw'})},
+            ()=>{},{background:'none'})
+            return categoryNavBtn
+        }
+
+        const createSBCButtons= async () => {
+
+            let sets = await sbcSets();
+            if (sets === undefined) {
+                console.log('createSBCButtons: sets are undefined')
+                return null
+            }
+
+            let sbcSetIds = sets.categories.filter((f) => f.name == getSettings(0,0,'sbcType'))[0]
+                .setIds;
+                console.log(sets.sets.filter((f) => sbcSetIds.includes(f.id) && !f.isComplete()))
+            let allSbcSets = sets.sets.filter((f) => sbcSetIds.includes(f.id) && !f.isComplete()).reverse().sort((a, b) => b.timesCompleted - a.timesCompleted)
+            let sbcTiles = []
+            allSbcSets.forEach(set=>{
+                var t = new UTSBCSetTileView();
+                t.init(), (t.title = set.name), t.setData(set), t.render();
+                let pb = t._progressBar
+                let sbcDiv = document.createElement('div');
+                var img = document.createElement("img");
+                img.setAttribute("src",t._setImage.src);
+                img.width = img.height = '64'
+                sbcDiv.appendChild(img)
+                if (!t.data.isSingleChallenge){
+                    sbcDiv.appendChild(pb.getRootElement())
+                }
+                var label= document.createElement('span');
+                label.innerHTML = set.name;
+                sbcDiv.appendChild(label)
+
+
+           //     console.log(set)
+
+                sbcTiles.push(createNavButton(`navSBC${set.id}`,sbcDiv.outerHTML,
+                    async ()=>{
+                        let hoverSet = await createSBCHover(set)
+
+                    let hoverNav = createHoverNav(set.id, "", 'click to start', [hoverSet])
+                    return hoverNav},
+                    ()=>{
+                    createSbc=true
+                    createSBCTab();
+                    services.Notification.queue([
+                        set.name + ' SBC Started',
+                        UINotificationType.POSITIVE,
+                    ]);
+
+                    solveSBC(set.id,0,true);
+                },{background:'none'}))
+
+            })
+            return sbcTiles;
+        }
+    const createChallengeHover= async (challenge)=>{
+
+        let layoutHubDiv = document.createElement('div');
+            layoutHubDiv.style.padding = '0';
+            layoutHubDiv.style.width = '50vw';
+            layoutHubDiv.style.maxWidth = '500px';
+            layoutHubDiv.style.direction = 'ltr';
+            layoutHubDiv.id='challengeNav'
+            let s = new UTSBCChallengeRequirementsView();
+            s.renderChallengeRequirements(challenge,true)
+            console.log(s.getRootElement())
+    let challengeDiv = document.createElement('div');
+    challengeDiv.style.float = 'left';
+    challengeDiv.appendChild(s.getRootElement());
+    layoutHubDiv.appendChild(challengeDiv);
+    return s.getRootElement()
+    }
+    const  createSBCHover= async (set)=>{
+
+            let layoutHubDiv = document.createElement('div');
+            layoutHubDiv.style.padding = '0';
+            layoutHubDiv.style.width = '50vw';
+            layoutHubDiv.style.maxWidth = '500px';
+            layoutHubDiv.style.direction = 'ltr';
+
+            var s = new UTSBCSetTileView();
+            s.init(), (s.title = set.name), s.setData(set), s.render();
+            layoutHubDiv.appendChild(s.getRootElement());
+            layoutHubDiv.querySelectorAll('div').forEach(div =>{div.classList.remove('col-1-2-md')});
+            let progressBlock = layoutHubDiv.querySelector('.ut-sbc-set-tile-view--progress-block');
+            if (progressBlock) {
+                progressBlock.insertBefore(s._progressBar.getRootElement(), progressBlock.firstChild);
+            }
+            if (!s.data.isSingleChallenge){
+            let c = await getChallenges(set)
+            let row = c.challenges.sort(function(e, t) {
+                        return e.priority - t.priority
+                    }).map(function(e) {
+                        i = new UTSBCChallengeTableRowView;
+                    i.init(),
+                    i.setTitle(e.name),
+                    i.render(e)
+                    let rowRoot = i.getRootElement()
+                    rowRoot.querySelectorAll('div').forEach(div =>{div.classList.remove('has-tap-callback');
+                    if (div.classList.contains('ut-progress-bar')) {
+                        div.remove();
+                    }
+                })
+                rowRoot.addEventListener('mouseenter', async () => {
+                    let s = new UTSBCChallengeRequirementsView();
+                     s.renderChallengeRequirements(e,true)
+                    let challengeDiv = document.createElement('div');
+                    challengeDiv.id = 'challengeNav';
+                    challengeDiv.style.position = 'absolute';
+
+                    challengeDiv.style.top = document.getElementById('challengeRow').getBoundingClientRect().top + 'px';
+                    challengeDiv.style.right = '100%';
+                    challengeDiv.style.padding='5px';
+                    challengeDiv.style.width = '25vw';
+                    challengeDiv.style.borderRadius = '20px';
+                    challengeDiv.style.background = '#1e1f1f';
+                    challengeDiv.appendChild(s.getRootElement());
+                    layoutHubDiv.appendChild(challengeDiv);
+                })
+                rowRoot.addEventListener('mouseleave', () => {
+                    let challengeDiv = document.getElementById('challengeNav');
+                    if (challengeDiv) {
+                        challengeDiv.remove();
+                    }
+                });
+                rowRoot.addEventListener('click', ()=>{
+                let hoverNav = document.getElementById('hoverNav');
+
+                if (hoverNav) {
+                hoverNav.remove();
+                }
+                createSbc=true
+                createSBCTab();
+                services.Notification.queue([
+                    set.name + ' SBC Started',
+                    UINotificationType.POSITIVE,
+                ]);
+
+                solveSBC(e.setId,e.id,true);
+            })
+                    return rowRoot
+                    })
+
+            let rowDiv = document.createElement('div');
+            rowDiv.id = 'challengeRow';
+            rowDiv.style.padding='5px';
+            rowDiv.style.borderRadius = '20px';
+            rowDiv.style.background = '#1e1f1f';
+            row.forEach((r) => {
+                rowDiv.appendChild(r);
+            });
+            layoutHubDiv.appendChild(rowDiv);
+
+    }
+    return layoutHubDiv
+}
     const createSBCTab = async () => {
+
+
         if (!getSettings(0,0,'showSbcTab')){
             $('.sbc-auto').remove();
             return
         }
-
         services.SBC.repository.reset()
-
-        let sets = await sbcSets();
-        if (sets === undefined) {
-            console.log('createSBCTab: sets are undefined')
-            return null
-        }
-        let favourites = sets.categories.filter((f) => f.name == 'Favourites')[0]
-        .setIds;
-        let favouriteSBCSets = sets.sets.filter((f) => favourites.includes(f.id)).sort((a, b) => b.timesCompleted - a.timesCompleted)
-        let tiles = [];
-        let packs = await getPacks()
-
-        $('.sbc-auto').remove();
-        if ($('.ut-tab-bar-view').find('.sbc-auto').length === 0 && (favouriteSBCSets.length>0 || packs.packs.filter(f=>f.isMyPack).length>0)  ){
-            let NewTab =
-                '<nav class="ut-tab-bar sbc-auto"/><button class="ut-tab-bar-item" id="openPack"></button><button class="ut-tab-bar-item"><span>SBC 1-click Favourites</span></button><div id="sbcBtns" style="overflow:auto;top:64px;"></div>';
-
-            $('.ut-tab-bar-view').prepend(NewTab);
-        }
-
-        if(packs.packs.filter(f=>f.isMyPack).length>0){
-            let packBtn=document.getElementById('openPack')
-
-            let e = packs.packs[0]
-            var i = services.Localization;
-            var packLabel= document.createElement('span');
-
-            packBtn.addEventListener('mouseenter', async function () {
-                packBtn.classList.add('sbcToolBarHover');
-                if (!document.querySelector('.packList')) {
-
-                let packList = document.createElement('nav');
-                packList.innerHTML = '<span><b>My Packs</b></span>';
+        const nav = document.createElement('nav');
+              nav.id='sbcToolbar'
+              nav.classList.add('ut-tab-bar', 'sbc-auto');
 
 
+              let packList = await createPackList()
+              nav.appendChild(packList);
 
-                let packCounts = packs.packs.filter(f => f.isMyPack).reduce((acc, pack) => {
-                    let key = `${i.localize(pack.packName)} ${pack.tradable ? '(Tradable)' : '(Untradable)'}`;
-
-                    acc[key] = acc[key] || {};
-                    acc[key].count = (acc[key]?.count || 0) + 1;
-                    acc[key].packName = i.localize(pack.packName);
-                    acc[key].class = pack.tradable ? 'tradable' : 'untradable';
-                    acc[key].pack = pack;
-                    return acc;
-                }, {});
-
-                packList.classList.add('ut-tab-bar', 'sbc-auto', 'packList');
-                packList.style.position = 'absolute';
-                packList.style.left = '-120px';
-                packList.style.top = '0';
-                packList.style.zIndex = '1000';
-
-                Object.keys(packCounts).forEach(packName => {
-                    let pack=packCounts[packName]
-
-                    let packItem = document.createElement('button');
-                    packItem.classList.add('ut-tab-bar-item','packList');
-                    packItem.setAttribute("id","openPackItem");
-                    let packClass = pack.class;
-                    packItem.classList.add(packClass);
-                    packItem.innerHTML = pack.count > 1 ? `<span>${pack.packName} ( x ${pack.count} )</span>` : `<span>${pack.packName}</span>`;
-                    packItem.addEventListener('mouseenter', async function () {
-                        packItem.classList.add('sbcToolBarHover');
-                    });
-                    packItem.addEventListener('mouseleave', async function () {
-                        packItem.classList.remove('sbcToolBarHover');
-                    });
-                    packItem.addEventListener('click', async function () {
-                        await openPack(pack.pack,pack.count);
-                        createSBCTab();
-                        goToUnassignedView();
-                    });
-                    packList.appendChild(packItem);
+              let categoryPicker = await createCategoryPicker()
+                nav.appendChild(categoryPicker);
+            let sbcDiv = document.createElement('div');
+            sbcDiv.style.overflowY = 'auto';
+            sbcDiv.style.height = 'auto';
+             let sbcTiles = await createSBCButtons()
+                sbcTiles.forEach((tile) => {
+                    sbcDiv.appendChild(tile);
                 });
-                let packItemFooter = document.createElement('span');
-                packItemFooter.innerHTML = '<i>click to open pack(s)</i>';
-                packList.appendChild(packItemFooter);
-                packBtn.appendChild(packList);
-                packList.addEventListener('mouseleave', function (event) {
-                            packList.remove();
-                            packBtn.classList.remove('sbcToolBarHover');
-                });
-            }
-            });
-            packLabel.innerHTML = 'Packs'+' ( ' + packs.packs.filter(f=> f.isMyPack).length + ' )';
-            packBtn.appendChild(packLabel)
+                nav.appendChild(sbcDiv);
 
-        } else {$('#openPack').remove()}
-        let sbcBtns=document.getElementById('sbcBtns')
-        favouriteSBCSets.forEach(function (e) {
-            console.log(e)
-            var t = new UTSBCSetTileView();
-            t.init(), (t.title = e.name), t.setData(e), t.render();
+                $('.sbc-auto').remove();
+                $('.ut-tab-bar-view').prepend(nav);
 
-            let pb = t._progressBar
 
-            var btn = document.createElement("button");
-            btn.classList.add("ut-tab-bar-item")
-            btn.setAttribute("id",e.id);
-            var img = document.createElement("img");
-            img.setAttribute("src",t._setImage.src);
-            img.width = img.height = '64'
-            btn.appendChild(img)
-            if (!t.data.isSingleChallenge){
-                btn.appendChild(pb.getRootElement())
-            }
-            var label= document.createElement('span');
-            label.innerHTML = e.name;
-            btn.appendChild(label)
-            sbcBtns.appendChild(btn)
-            btn.addEventListener('mouseenter', function (event) {
-                if (document.querySelector('.packList')) {
-
-                    document.querySelector('.packList').remove();
-                }
-                for (let elem of document.getElementsByClassName("sbcToolBarHover")) {
-                        elem.classList.remove("sbcToolBarHover");
-                    }
-                btn.classList.add('sbcToolBarHover');
-            });
-                btn.addEventListener('mouseleave', function (event) {
-                    btn.classList.remove('sbcToolBarHover');
-            });
-
-            $('#' + e.id).click(async function () {
-                createSbc=true
-                createSBCTab();
-                services.Notification.queue([
-                    e.name + ' SBC Started',
-                    UINotificationType.POSITIVE,
-                ]);
-
-                solveSBC(e.id,0,true);
-            });
-        });
     };
     const sideBarNavOverride = () => {
         const navViewInit = UTGameTabBarController.prototype.initWithViewControllers;
@@ -2629,7 +2896,8 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         showSbcTab:true,
         useDupes:true,
         autoOpenPacks:false,
-        saveTotw:false
+        saveTotw:false,
+        sbcType:"Favourites"
     };
     const initDefaultSettings=()=>{
         Object.keys(defaultSBCSolverSettings).forEach(id=>
@@ -2822,6 +3090,9 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
         if (!document.contains(document.getElementsByClassName('numCounter')[0])){
             var counterContent = document.createElement("div");
             counterContent.classList.add("numCounter");
+        counterContent.addEventListener('click', () => {
+            hideLoader();
+        });
             shield.appendChild(counterContent);
         }
         this.settings = Object.assign({
@@ -2879,7 +3150,20 @@ console.log( item.rating,item,PriceItems[item.definitionId],getSBCPrice(item,[])
                 }, i * settings.delay, i)
         })
     }
-
+    const pollApiUntilSbcSolved = async (apiUrl, sbcId, challengeId) => {
+        const poll = async () => {
+            if (!createSbc) {
+                return;
+            }
+            const response = await makeGetRequest(apiUrl);
+            if (response.status === 'solved') {
+                solveSBC(sbcId, challengeId, true);
+            } else {
+                setTimeout(poll, 5000);
+            }
+        };
+        poll();
+    };
     function findSBCLogin(obj, keyToFind) {
         let results = [];
 
