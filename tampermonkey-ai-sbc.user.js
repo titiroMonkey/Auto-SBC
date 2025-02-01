@@ -2507,8 +2507,8 @@ color:black
                     challengeDiv.id = 'challengeNav';
                     challengeDiv.style.position = 'absolute';
                     
-                    challengeDiv.style.top = document.getElementById('challengeRow').getBoundingClientRect().top + 'px';
-                    challengeDiv.style.right = '355px';
+                    challengeDiv.style.top = '355px';
+                    challengeDiv.style.right = calc('100% + 5px');
                     challengeDiv.style.marginRight='5px';
                     challengeDiv.style.width = '25vw';
                     challengeDiv.style.borderRadius = '20px';
