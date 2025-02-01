@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.14
+// @version      25.1.13
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -2509,7 +2509,7 @@ color:black
                     
                     challengeDiv.style.top = '355px';
                     challengeDiv.style.right = 'calc(100% + 5px)';
-                    challengeDiv.style.marginRight='5px';
+                    challengeDiv.style.padding='5px';
                     challengeDiv.style.width = '25vw';
                     challengeDiv.style.borderRadius = '20px';
                     challengeDiv.style.background = '#1e1f1f';
