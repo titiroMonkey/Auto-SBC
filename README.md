@@ -23,7 +23,7 @@ Check out the settings menu item for extra details!
 
 Run `pip3 install -r requirements.txt` to install the required dependencies.
 To run the backend, simply run `python -m uvicorn main:app --reload` after installing python and the required dependencies.
-- [Google OR-Tools v9.8](https://github.com/google/or-tools)
+- [Google OR-Tools](https://github.com/google/or-tools)
 - Python 3.9
 - pandas
 - openpyxl
