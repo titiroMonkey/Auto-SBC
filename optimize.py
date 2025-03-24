@@ -1111,26 +1111,26 @@ def SBC(df, sbc, maxSolveTime):
                 [req["eligibilityValues"]],
             )
 
-    """If there is no constraint on total chemistry, simply set CHEMISTRY = 0"""
-    model, pos, chem_expr = create_chemistry_constraint(
-        df,
-        model,
-        chem,
-        z_teamId,
-        z_leagueId,
-        z_nation,
-        player,
-        players_grouped,
-        num_cnts,
-        map_idx,
-        b_c,
-        b_l,
-        b_n,
-        sbc["formation"],
-        CHEMISTRY,
-        CHEM_PER_PLAYER,
-        NUM_PLAYERS,
-    )
+    if CHEMISTRY + CHEM_PER_PLAYER > 0 :
+        model, pos, chem_expr = create_chemistry_constraint(
+            df,
+            model,
+            chem,
+            z_teamId,
+            z_leagueId,
+            z_nation,
+            player,
+            players_grouped,
+            num_cnts,
+            map_idx,
+            b_c,
+            b_l,
+            b_n,
+            sbc["formation"],
+            CHEMISTRY,
+            CHEM_PER_PLAYER,
+            NUM_PLAYERS,
+        )
 
     """Fix specific players and optimize the rest"""
     # model = fix_players(df, model, player, NUM_PLAYERS)
