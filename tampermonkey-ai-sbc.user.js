@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.16
+// @version      25.1.17
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -1144,6 +1144,10 @@ color:black
       getSettings(sbcId, sbcData.challengeId, "excludeSbc") || false;
     let excludeObjective =
       getSettings(sbcId, sbcData.challengeId, "excludeObjective") || false;
+      let excludeSpecial =
+      getSettings(sbcId, sbcData.challengeId, "excludeSpecial") || false;
+      let excludeTradable =
+      getSettings(sbcId, sbcData.challengeId, "excludeTradable") || false;
     let backendPlayersInput = players
       .filter(
         (item) =>
@@ -1159,6 +1163,8 @@ color:black
             !item.isTimeLimited() &&
             !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
             !(PriceItems[item.definitionId]?.isObjective && excludeObjective) &&
+            !(!PriceItems[item.definitionId]?.isSpecial && excludeSpecial) &&
+            !(!PriceItems[item.definitionId]?.untradeable && excludeTradable) &&
             !sbcData.subs.includes(item.definitionId)) ||
           (useDupes &&
             !sbcData.subs.includes(item.definitionId) &&
@@ -3473,6 +3479,42 @@ color:black
             );
             createToggle(
               sbcParamsTile,
+              "Exclude Special Players",
+              "excludeSpecial",
+              getSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeSpecial"
+              ),
+              (toggleSP) => {
+                saveSettings(
+                  dropdown.getValue(),
+                  dropdownChallenge.getValue(),
+                  "excludeSpecial",
+                  toggleSP.getToggleState()
+                );
+              }
+            );
+            createToggle(
+              sbcParamsTile,
+              "Exclude Tradable Players",
+              "excludeTradable",
+              getSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeTradable"
+              ),
+              (toggleSP) => {
+                saveSettings(
+                  dropdown.getValue(),
+                  dropdownChallenge.getValue(),
+                  "excludeTradable",
+                  toggleSP.getToggleState()
+                );
+              }
+            );
+            createToggle(
+              sbcParamsTile,
               "Exclude SBC Players",
               "excludeSbc",
               getSettings(
@@ -3654,6 +3696,10 @@ color:black
     excludeNations: [],
     excludeLeagues: [],
     excludePlayers: [],
+    excludeSbc: false,
+    excludeTradable: false,
+    excludeSpecial: false,
+    excludeObjective: false,
     useConcepts: false,
     collectConcepts: false,
     animateWalkouts: 86,
