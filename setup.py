@@ -1,9 +1,10 @@
-
 import optimize
 import pandas as pd
 from fastapi import Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from globals import add_log
+
 # Preprocess the club dataset obtained from api.
 
 def preprocess_data(df: pd.DataFrame,sbc):
@@ -43,6 +44,7 @@ def preprocess_data(df: pd.DataFrame,sbc):
 
 
 def runAutoSBC(sbc,players,maxSolveTime):
+    add_log("Starting SBC solver process")
     print(sbc)
     df = pd.json_normalize(players)
     # Remove All Players not matching quality first
@@ -72,6 +74,7 @@ def runAutoSBC(sbc,players,maxSolveTime):
         # Concatenate the original DataFrame with the brick DataFrame
         # df = pd.concat([df, brick_df], ignore_index=True)   
     df = preprocess_data(df,sbc)
+    add_log(f"Processing {len(players)} players for SBC")
     final_players,status,status_code = optimize.SBC(df,sbc,maxSolveTime)
     results=[]
     # if status != 2 and status != 4:
@@ -88,8 +91,11 @@ def runAutoSBC(sbc,players,maxSolveTime):
         df_out.to_csv("final_players.csv")
         print(sbc, status, status_code)
         results = df_out.to_json(orient="records")
+        # add_log(f"Results: {results}")
+        add_log(status)
         json_compatible_item_data = jsonable_encoder({'results':results,'status':status,'status_code':status_code})
         return JSONResponse(content=json_compatible_item_data)
+    add_log(status)
     json_compatible_item_data = jsonable_encoder({'status':status,'status_code':status_code})
     return JSONResponse(content=json_compatible_item_data)
 
