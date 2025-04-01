@@ -425,11 +425,11 @@ def create_squad_rating_constraint_3(
         model.Add(final_rating >= squad_rating * num_players - round_expr)
         model.Add(
             total_rating
-            >= (squad_rating - int(1 * precision)) * num_players - round_expr
+            >= (squad_rating - int(10 * precision)) * num_players - round_expr
         )
         model.Add(
             total_rating
-            <= (squad_rating + int(1 * precision)) * num_players - round_expr
+            <= (squad_rating + int(10 * precision)) * num_players - round_expr
         )
     return model, final_rating, average_rating, sum_excess
 
