@@ -6,6 +6,7 @@
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
 // @match        https://www.ea.com/ea-sports-fc/ultimate-team/web-app/*
+// @match        https://www.ea.com/*/ea-sports-fc/ultimate-team/web-app/*
 // @require      https://code.jquery.com/jquery-3.6.0.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js
 // @require      https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js
