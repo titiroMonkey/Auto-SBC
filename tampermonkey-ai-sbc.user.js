@@ -1164,7 +1164,7 @@ color:black
             !item.isTimeLimited() &&
             !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
             !(PriceItems[item.definitionId]?.isObjective && excludeObjective) &&
-            !(!item.isSpecial() && excludeSpecial) &&
+            !(item.isSpecial() && excludeSpecial) &&
             !(!PriceItems[item.definitionId]?.untradeable && excludeTradable) &&
             !sbcData.subs.includes(item.definitionId)) ||
           (useDupes &&
