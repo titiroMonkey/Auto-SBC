@@ -8,17 +8,62 @@ from globals import add_log
 # Preprocess the club dataset obtained from api.
 
 def preprocess_data(df: pd.DataFrame,sbc):
+    groupings=[]
     df['price']= df['price'].fillna(15000000) #set price to 15m if missing so it will only use the player if really necessary
     expPP=False
     expPR=False
     rarityGroups=[]
     for req in sbc['constraints']:
+        if req['count']==11-len(sbc['brickIndices']):
+            # Filter the players to only include those that meet this requirement
+            # since we need all players to satisfy this constraint
+            if req['requirementKey'] == 'PLAYER_RARITY_GROUP':
+                df = df[df['groups'].isin(req['eligibilityValues'])]
+            elif req['requirementKey'] == 'PLAYER_QUALITY':
+                if req['scope'] == 'GREATER' or req['scope'] == 'EXACT':
+                    df = df[df["ratingTier"] >= req['eligibilityValues'][0]]
+                if req['scope'] == 'LOWER' or req['scope'] == 'EXACT':
+                    df = df[df["ratingTier"] <= req['eligibilityValues'][0]]
+            elif req['requirementKey'] == 'CLUB_ID':
+                df = df[df['teamId'].isin(req['eligibilityValues'])]
+            elif req['requirementKey'] == 'LEAGUE_ID':
+                df = df[df['leagueId'].isin(req['eligibilityValues'])]
+            elif req['requirementKey'] == 'NATION_ID':
+                df = df[df['nationId'].isin(req['eligibilityValues'])]
+            elif req['requirementKey'] == 'PLAYER_RARITY':
+                df = df[df['rarityId'].isin(req['eligibilityValues'])]
         if req['requirementKey'] == 'CHEMISTRY_POINTS' or req['requirementKey'] == 'ALL_PLAYERS_CHEMISTRY_POINTS':
+            # Add league, nation, and team to groupings
+            groupings.extend(['leagueId', 'nationId', 'teamId'])
             expPP=True        
         if req['requirementKey'] == 'PLAYER_RARITY_GROUP':
+            groupings.extend(['groups'])
             expPR=True        
             rarityGroups= rarityGroups + req['eligibilityValues']  
-            
+        if req['requirementKey'] == 'SAME_LEAGUE_COUNT':
+            groupings.extend(['leagueId'])
+        if req['requirementKey'] == 'SAME_NATION_COUNT':
+            groupings.extend(['nationId'])
+        if req['requirementKey'] == 'SAME_CLUB_COUNT':
+            groupings.extend(['teamId'])
+        if req['requirementKey'] == 'NATION_COUNT':
+            groupings.extend(['nationId'])
+        if req['requirementKey'] == 'LEAGUE_COUNT':
+            groupings.extend(['leagueId'])
+        if req['requirementKey'] == 'CLUB_COUNT':
+            groupings.extend(['teamId'])
+        if req['requirementKey'] == 'CLUB_ID':
+            groupings.extend(['teamId'])
+        if req['requirementKey'] == 'LEAGUE_ID':
+            groupings.extend(['leagueId'])
+        if req['requirementKey'] == 'NATION_ID':
+            groupings.extend(['nationId'])
+        if req['requirementKey'] == 'PLAYER_RARITY':
+            groupings.extend(['rarityId'])
+        if req['requirementKey'] == 'PLAYER_MIN_OVR' or req['requirementKey'] == 'PLAYER_MAX_OVR' or req['requirementKey'] == 'TEAM_RATING':
+            groupings.extend(['rating'])
+        if req['requirementKey'] == 'PLAYER_LEVEL':
+            groupings.extend(['ratingTier'])
               # Creating separate entries of a particular player for each alternate position.
     if expPP:
         df = df.assign(possiblePositions=[[x for x in l if x in sbc['formation']] for l in df['possiblePositions']])
@@ -28,14 +73,33 @@ def preprocess_data(df: pd.DataFrame,sbc):
     else:
         df = df.assign(possiblePositions=0)
     if expPR:
-      
+        df['original_groups'] = df['groups']
         df = df.assign(groups=[[x for x in l if x in rarityGroups] for l in df['groups']])
-      
+        
         df['groups'] = df['groups'].apply(lambda y: [99] if len(y)==0 else y)
         df = df.explode('groups')
     else:
         df = df.assign(groups=0)
-
+    # Select the cheapest players based on groupings
+    groupings = list(set(groupings))  # Remove duplicates
+    # If groupings are defined, filter to keep the lowest priced players in each group
+    if groupings:
+        # Create a composite grouping key for each unique combination of grouping values
+        if len(groupings) > 0:
+            # Keep only the top 11 cheapest players for each unique grouping combination
+            # First, sort by price
+            df = df.sort_values('price')
+            
+            # Create a grouping key based on the identified groupings
+            if len(groupings) == 1:
+                group_key = df[groupings[0]].astype(str)
+            else:
+                group_key = df[groupings].apply(lambda x: '_'.join(x.astype(str)), axis=1)
+            
+            # Keep only the top 11 cheapest players for each group
+            df = df.groupby(group_key).head(11).reset_index(drop=True)
+            
+            print(f"Filtered to {len(df)} players after keeping top 11 cheapest per group")
     df.to_csv("allPlayers.csv")
     df['Original_Idx'] = df.index
     df = df.reset_index(drop = True)
