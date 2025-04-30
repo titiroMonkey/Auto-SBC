@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.17
+// @version      25.1.20
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -49,7 +49,7 @@
        scrollbar-width: thin;
        scrollbar-color: rgba(0, 0, 0, .5) #ffffff;
      }
-     
+
      *::-webkit-scrollbar {
        width: 12px;
        height: 12px;
@@ -58,7 +58,7 @@
      *::-webkit-scrollbar-thumb {
        background-color: rgba(0, 0, 0, .5);
        border-radius: 10px;
-       border: 2px solid #ffffff; 
+       border: 2px solid #ffffff;
      }
 
      *::-webkit-scrollbar-track {
@@ -69,7 +69,7 @@
      html[dir=ltr] #NotificationLayer {
        right: 6.5rem;
      }
-     
+
      /* Rest of the styles unchanged */
      .ut-companion-carousel-item-container-view .item-container{
      padding-top:20px;
@@ -100,6 +100,9 @@
 }
 .ut-tab-bar-item.sbcToolBarHover.ut-tab-bar-item--default-to-root span::after {
     background-color: #fcfcf7
+}
+.ut-sbc-challenge-table-row-view.complete {
+  cursor: no-drop;
 }
 .landscape .ut-tab-bar-item.sbcToolBarHover::after {
     height: 100%;
@@ -332,7 +335,7 @@ color:black
     try {
     getRootElement(elem).classList.remove(className);
     } catch (error) {
-      
+
     }
     return elem;
   };
@@ -469,19 +472,171 @@ color:black
     return services.Club.search(searchCriteria);
   };
   let conceptPlayersCollected = false;
+  // Progress bar utility functions
+  // Global state to track active progress bars and their positions
+  const activeProgressBars = [];
+
+  const createProgressBar = (id, containerId, labelText = '') => {
+    // Remove existing progress bar if it exists
+    let existingContainer = document.getElementById(containerId);
+    if (existingContainer) {
+      existingContainer.parentNode.removeChild(existingContainer);
+      // Remove from active bars list
+      const index = activeProgressBars.findIndex(item => item.id === containerId);
+      if (index !== -1) {
+        activeProgressBars.splice(index, 1);
+      }
+    }
+
+    const progressBarContainer = document.createElement('div');
+    progressBarContainer.id = containerId;
+    progressBarContainer.style.position = 'fixed';
+    progressBarContainer.style.bottom = '10px';
+    progressBarContainer.style.right = '130px';
+    progressBarContainer.style.width = '300px';
+    progressBarContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+    progressBarContainer.style.borderRadius = '2px';
+    progressBarContainer.style.zIndex = '9999';
+    progressBarContainer.style.transition = 'bottom 0.3s ease-in-out';
+
+    // Create label element if label text is provided
+    if (labelText) {
+      const label = document.createElement('div');
+      label.id = `${id}-label`;
+      label.textContent = labelText;
+      label.style.position = 'absolute';
+      label.style.top = '-20px';
+      label.style.left = '0';
+      label.style.width = '100%';
+      label.style.color = '#ffffff';
+      label.style.textAlign = 'center';
+      label.style.fontSize = '12px';
+      progressBarContainer.appendChild(label);
+    }
+
+    // Add a container for the progress bar itself
+    const progressBarWrapper = document.createElement('div');
+    progressBarWrapper.style.height = '15px';
+    progressBarWrapper.style.width = '100%';
+    progressBarWrapper.style.position = 'relative';
+    progressBarWrapper.style.overflow = 'hidden';
+    progressBarContainer.appendChild(progressBarWrapper);
+
+    const progressBar = document.createElement('div');
+    progressBar.id = id;
+    progressBar.style.height = '100%';
+    progressBar.style.width = '0%';
+    progressBar.style.backgroundColor = '#07f468';
+    progressBar.style.borderRadius = '2px';
+    progressBar.style.transition = 'width 0.3s ease-in-out';
+
+    progressBarWrapper.appendChild(progressBar);
+    document.body.appendChild(progressBarContainer);
+
+    // Calculate position based on existing progress bars
+    const offset = 35; // Height of bar + margin
+    const bottomPosition = 10 + (activeProgressBars.length * offset);
+    progressBarContainer.style.bottom = `${bottomPosition}px`;
+
+    // Add to active progress bars list
+    activeProgressBars.push({
+      id: containerId,
+      element: progressBarContainer,
+      position: activeProgressBars.length
+    });
+
+    return progressBarContainer;
+  };
+
+
+
+  const removeProgressBar = (containerId, delay = 2000) => {
+    setTimeout(() => {
+      const progressBarContainer = document.getElementById(containerId);
+      if (progressBarContainer) {
+        progressBarContainer.style.opacity = '0';
+        progressBarContainer.style.transition = 'opacity 0.5s ease-in-out';
+
+        setTimeout(() => {
+          if (progressBarContainer && progressBarContainer.parentNode) {
+            // Remove from active bars list
+            const index = activeProgressBars.findIndex(item => item.id === containerId);
+            if (index !== -1) {
+              activeProgressBars.splice(index, 1);
+            }
+
+            progressBarContainer.parentNode.removeChild(progressBarContainer);
+
+            // Reposition remaining progress bars
+            activeProgressBars.forEach((item, idx) => {
+              const bottomPosition = 10 + (idx * 25);
+              item.element.style.bottom = `${bottomPosition}px`;
+              item.position = idx;
+            });
+          }
+        }, 500);
+      }
+    }, delay);
+  };
+
+  const updateProgressBar = (progressBarId, progress) => {
+    const progressBar = document.getElementById(progressBarId);
+    if (progressBar) {
+      progressBar.style.width = `${Math.min(100, progress)}%`;
+    }
+  };
+
+
+  // Add a flag to track if concept players are currently being fetched
+  let isConceptPlayerFetchInProgress = false;
+
   let getConceptPlayers = async function (playerCount = 999999) {
+    // If already fetching concepts, return the current conceptPlayers array
+    if (isConceptPlayerFetchInProgress) {
+      console.log("Concept player fetch already in progress, skipping new request");
+
+      return conceptPlayers;
+    }
+
     return new Promise((resolve, reject) => {
+      isConceptPlayerFetchInProgress = true;
       console.log("Getting Concept Players");
       const gatheredPlayers = [];
       const searchCriteria = new UTBucketedItemSearchViewModel().searchCriteria;
       searchCriteria.offset = 0;
-      searchCriteria.sortBy = "rating";
+      searchCriteria.sortBy = "recency";
       searchCriteria.count = DEFAULT_SEARCH_BATCH_SIZE;
+
+      // Create progress bar using the extracted utility function
+      const containerId = 'concept-progress-container';
+      const progressBarId = 'concept-progress-bar';
+      createProgressBar(progressBarId, containerId, "Fetching Concepts");
+
+      // Start with 0% progress
+      updateProgressBar(progressBarId, 0);
+
+      // Estimate total players to be around 20000 for progress calculation
+      // Try to get saved total from localStorage first
+      const savedEstimatedTotal = localStorage.getItem("conceptPlayerTotal");
+      const estimatedTotal = savedEstimatedTotal ? parseInt(savedEstimatedTotal) : 20000;
+
+      // Update the total once we have more data
+      const updateTotal = (newTotal) => {
+        if (newTotal > 1000) { // Only save if it seems like a reasonable count
+          localStorage.setItem("conceptPlayerTotal", newTotal);
+          console.log(`Updated concept player count to ${newTotal}`);
+        }
+      };
+
       const getAllConceptPlayers = () => {
         searchConceptPlayers(searchCriteria).observe(
           this,
           async function (sender, response) {
             gatheredPlayers.push(...response.response.items);
+
+            // Update progress based on current offset
+            const progress = (searchCriteria.offset / estimatedTotal) * 100;
+            updateProgressBar(progressBarId, progress);
 
             if (
               response.status !== 400 &&
@@ -490,20 +645,28 @@ color:black
             ) {
               searchCriteria.offset += searchCriteria.count;
 
-              console.log("Concepts Retrieved", searchCriteria.offset);
+
               getAllConceptPlayers();
             } else {
               if (playerCount > 1) {
                 conceptPlayersCollected = true;
+                // Set progress to 100% when complete
+                updateProgressBar(progressBarId, 100);
+
+                // Remove progress bar after a delay
+                removeProgressBar(containerId);
+
                 showNotification(
                   "Collected All Concept Players",
                   UINotificationType.POSITIVE
                 );
               }
+              // Reset the flag when done
+              isConceptPlayerFetchInProgress = false;
               resolve(gatheredPlayers);
             }
           }
-        );
+        );``
       };
       getAllConceptPlayers();
     });
@@ -541,10 +704,7 @@ color:black
   };
   let sendUnassignedtoTeam = async () => {
     let ulist = await fetchUnassigned();
-    console.log(
-      "sendUnassignedtoTeam",
-      ulist.filter((l) => l.isMovable())
-    );
+
     return new Promise((resolve) => {
       services.Item.move(
         ulist.filter((l) => l.isMovable()),
@@ -556,13 +716,10 @@ color:black
   };
   let discardNonPlayerDupes = async () => {
     let ulist = await fetchUnassigned();
-    console.log(
-      "discardNonPlayerDupes",
-      ulist.filter((l) => !l.isPlayer() && l.isDuplicate())
-    );
+
     return new Promise((resolve) => {
       ulist
-        .filter((l) => !l.isPlayer() && l.isDuplicate())
+        .filter((l) => !l.isPlayer() && l.duplicateId > 0)
         .forEach((card) => {
           services.Item.discard(card);
         });
@@ -571,8 +728,8 @@ color:black
   };
   let swapDuplicates = async () => {
     let ulist = await fetchUnassigned();
-    let playersToMove = ulist.filter((l) => !l.isTradeable && l.isDuplicate());
-    console.log("swapDuplicates", playersToMove);
+    let playersToMove = ulist.filter((l) => !l.isTradeable && l.duplicateId > 0);
+
     return new Promise((resolve) => {
       if (playersToMove.length > 0) {
         services.Item.move(playersToMove, 7).observe(
@@ -588,10 +745,12 @@ color:black
     });
   };
   let sendDuplicatesToStorage = async () => {
-    let ulist = await fetchUnassigned();
 
-    let playersToMove = ulist.filter((l) => l.isStorable());
-    console.log("sendToStorage", playersToMove);
+  let storage = await getStoragePlayers();
+  let ulist = await fetchUnassigned();
+
+  let playersToMove = ulist.filter((l) => l.isStorable()).slice(0, Math.max(0, 100 - storage.length));
+
     return new Promise((resolve) => {
       if (playersToMove.length > 0) {
         services.Item.move(playersToMove, 10).observe(
@@ -616,7 +775,7 @@ color:black
         async (sender, response) => {
           result = [...response.response.items];
           await fetchPlayerPrices(result);
-          console.log("Unassigned", result);
+
           resolve(result);
         }
       );
@@ -740,13 +899,13 @@ color:black
    const addSbcInfo = (sbcName, challengeName) => {
     let shield = getElement(".ut-click-shield");
     let existingInfo = document.getElementById('sbc-info');
-    
+
     if (existingInfo) {
       existingInfo.remove();
     }
-    
+
     if (!sbcName) return;
-    
+
     let infoDiv = document.createElement('div');
     infoDiv.id = 'sbc-info';
     infoDiv.style.position = 'fixed';
@@ -761,11 +920,11 @@ color:black
     infoDiv.style.fontWeight = 'bold';
     infoDiv.style.textAlign = 'center';
     infoDiv.style.zIndex = '9999';
-    
+
     let title = document.createElement('div');
     title.textContent = sbcName || 'SBC';
     infoDiv.appendChild(title);
-    
+
     if (challengeName) {
       let subtitle = document.createElement('div');
       subtitle.textContent = challengeName;
@@ -773,53 +932,79 @@ color:black
       subtitle.style.opacity = '0.8';
       infoDiv.appendChild(subtitle);
     }
-    
+
     shield.appendChild(infoDiv);
   }
 
   const showLoader = (countdown = false) => {
-    try {
-      
-      if (countDown) {
+
+     if (countDown) {
+      createLogOverlayToggle()
         updateLogOverlay()
-        css(getElement(".numCounter"), {
-          display: "block",
-        });
-       
+        createStopOverlayButton();
+        const numCounterElement = document.querySelector(".numCounter");
+        if (numCounterElement) {
+            numCounterElement.style.display = "block";
+        }
+
 
       } else {
+          const toggleContainers = document.querySelectorAll('#sbc-log-toggle');
+          toggleContainers.forEach((toggleContainer) => {
+              toggleContainer.remove();
+          });
         let logOverlay = document.getElementById('sbc-log-overlay');
         if (logOverlay) {
           logOverlay.remove();
         }
-        css(getElement(".numCounter"), {
-          display: "none",
-        });
+        const numCounterElement = document.querySelector(".numCounter");
+        if (numCounterElement) {
+            numCounterElement.style.display = "none";
+        }
+
       }
-    } catch (error) {}
-    addClass(getElement(".ut-click-shield"), "showing");
-    css(getElement(".loaderIcon"), {
-      display: "block",
-    });
+
+  const clickShield = document.querySelector(".ut-click-shield");
+
+  if (clickShield) {
+      clickShield.classList.add("showing");
+  }
+  const loaderIcon = document.querySelector(".loaderIcon");
+  if (loaderIcon) {
+      loaderIcon.style.display = "block";
+  }
   };
   const hideLoader = () => {
-    try {
+      const stopButtons = document.querySelectorAll('#sbc-stop-overlay');
+      stopButtons.forEach((stopButton) => {
+          stopButton.remove();
+      });
+      const toggleContainers = document.querySelectorAll('#sbc-log-toggle');
+      toggleContainers.forEach((toggleContainer) => {
+          toggleContainer.remove();
+      });
+
       let logOverlay = document.getElementById('sbc-log-overlay');
-      console.log(logOverlay)
       if (logOverlay) {
         logOverlay.remove();
       }
-      let numCounterDiv = getElement(".numCounter");
-      if (numCounterDiv) {
-        numCounterDiv.remove();
-      }
-      removeClass(getElement(".ut-click-shield"), "showing");
-      css(getElement(".loaderIcon"), {
-        display: "block",
+      if (counter) {
+          counter = null;
+        }
+      document.querySelectorAll(".numCounter").forEach((element) => {
+        element.remove();
       });
-    } catch (error) {
-      console.log(error);
-    }
+      const clickShield = document.querySelector(".ut-click-shield");
+      if (clickShield) {
+          clickShield.classList.remove("showing");
+      }
+      const loaderIcon = document.querySelector(".loaderIcon");
+      if (loaderIcon) {
+          loaderIcon.style.display = "block";
+      }
+      clearInterval(logPollInterval);
+      clearInterval(countDownInterval);
+
   };
   const showNotification = function (
     message,
@@ -945,8 +1130,8 @@ color:black
       (eligibility, idx) => {
         let keys = Object.keys(eligibility.kvPairs._collection);
         if (
-          SBCEligibilityKey[keys[0]] == "PLAYER_RARITY_GROUP" &&
-          eligibility.kvPairs._collection[keys[0]][0] == 27
+          SBCEligibilityKey[keys[0]] == "PLAYER_RARITY" &&
+          eligibility.kvPairs._collection[keys[0]][0] == 3
         ) {
           totwIdx = idx;
         }
@@ -965,8 +1150,8 @@ color:black
         challengeRequirements.push({
           scope: "EXACT",
           count: 0,
-          requirementKey: "PLAYER_RARITY_GROUP",
-          eligibilityValues: [27],
+          requirementKey: "PLAYER_RARITY",
+          eligibilityValues: [3],
         });
       }
     }
@@ -1016,7 +1201,7 @@ color:black
       );
       homeHubInit.call(this);
       let sbcSettingsLogin = findSBCLogin(getSolverSettings(), "sbcOnLogin");
-      console.log(sbcSettingsLogin);
+
       sbcs = sbcs.sets;
       sbcs
         .filter((f) => !f.isComplete())
@@ -1122,18 +1307,13 @@ color:black
       return;
     }
     console.log("Sbc Started");
-    // Clear any existing counter
-    if (counter) {
-      counter = null;
-    }
-
     counter = new Counter(".numCounter", {
       direction: "rtl",
       delay: 200,
       digits: 3,
     });
 
-    showLoader();
+    showLoader(true);
 
     let sbcData = await fetchSBCData(sbcId, challengeId);
 
@@ -1176,12 +1356,13 @@ color:black
     players = players.filter(
       (f) => !storage.map((m) => m.definitionId).includes(f?.definitionId)
     );
-    players = players.concat(storage);
+    players = players.concat(storage)
     players = players.filter((item) => item != undefined);
     await fetchPlayerPrices(players);
 
     let maxRating = getSettings(sbcId, sbcData.challengeId, "maxRating");
     let useDupes = getSettings(sbcId, sbcData.challengeId, "useDupes");
+
     let duplicateIds = await fetchDuplicateIds();
     let storageIds = storage.map((m) => m.id);
     let chemUtil = new UTSquadChemCalculatorUtils();
@@ -1190,6 +1371,7 @@ color:black
 
     players.forEach((item) => {
       item.isStorage = storageIds.includes(item?.id);
+      item.isDuplicate = duplicateIds.includes(item?.id);
       item.profile = chemUtil.getChemProfileForPlayer(item);
       item.normalizeClubId = chemUtil.normalizeClubId(item.teamId);
     });
@@ -1212,69 +1394,70 @@ color:black
       let excludeTradable =
       getSettings(sbcId, sbcData.challengeId, "excludeTradable") || false;
       let excludeExtinct = getSettings(sbcId, sbcData.challengeId, "excludeExtinct") || false;
-    let backendPlayersInput = players
-      .filter(
-        (item) =>
-          (item.loans < 0 &&
-            item.rating <= maxRating &&
-            !excludePlayers.includes(item.definitionId) &&
-            !excludeLeagues.includes(item.leagueId) &&
-            !excludeNations.includes(item.nationId) &&
-            !excludeRarity.includes(
-              services.Localization.localize("item.raretype" + item.rareflag)
-            ) &&
-            !excludeTeams.includes(item.teamId) &&
-            !item.isTimeLimited() &&
-            !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
-            !(PriceItems[item.definitionId]?.isObjective && excludeObjective) &&
-            !(!PriceItems[item.definitionId]?.isSpecial && excludeSpecial) &&
-            !(!PriceItems[item.definitionId]?.untradeable && excludeTradable) &&
-            !(PriceItems[item.definitionId]?.isExtinct && excludeExtinct) &&
-            !sbcData.subs.includes(item.definitionId)) ||
-          (useDupes &&
-            !sbcData.subs.includes(item.definitionId) && 
-            (duplicateIds.includes(item.id) || storageIds.includes(item?.id)))
-      )
-      .map((item) => {
-        if (!item.groups.length) {
-          item.groups = [0];
-        }
+      let onlyStorage = getSettings(sbcId, sbcData.challengeId, "onlyStorage") || false;
 
-        return {
-          id: item.id,
-          name: item._staticData.name,
-          cardType:
-            (item.isSpecial()
-              ? ""
-              : services.Localization.localize(
-                  "search.cardLevels.cardLevel" + item.getTier()
-                ) + " ") +
-            services.Localization.localize("item.raretype" + item.rareflag),
-          assetId: item._metaData?.id,
-          definitionId: item.definitionId,
-          rating: item.rating,
-          teamId: item.teamId,
-          leagueId: item.leagueId,
-          nationId: item.nationId,
-          rarityId: item.rareflag,
-          ratingTier: item.getTier(),
-          isUntradeable: item.untradeable,
-          isDuplicate: duplicateIds.includes(item.id),
-          isStorage: storageIds.includes(item.id),
-          preferredPosition: item.preferredPosition,
-          possiblePositions: item.possiblePositions,
-          groups: item.groups,
-          isFixed: isItemFixed(item),
-          concept: item.concept,
-          price: getSBCPrice(item, duplicateIds),
-          futggPrice: getPrice(item),
-          maxChem: item.profile.maxChem,
-          teamChem: item.profile.rules[0],
-          leagueChem: item.profile.rules[1],
-          nationChem: item.profile.rules[2],
-          normalizeClubId: item.normalizeClubId,
-        };
-      });
+
+  let backendPlayersInput = players
+    .filter(
+      (item) =>
+      (item.loans < 0 &&
+        (item.rating <= maxRating || (useDupes && (item.isStorage || item.isDuplicate))) &&
+        !excludePlayers.includes(item.definitionId) &&
+        !excludeLeagues.includes(item.leagueId) &&
+        !excludeNations.includes(item.nationId) &&
+        !excludeRarity.includes(services.Localization.localize("item.raretype" + item.rareflag)) &&
+        !excludeTeams.includes(item.teamId) &&
+        !item.isTimeLimited() &&
+        !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
+        !(PriceItems[item.definitionId]?.isObjective && excludeObjective) &&
+        !(item?.isSpecial() && excludeSpecial) &&
+        !(!item?.untradeable && excludeTradable) &&
+        !(PriceItems[item.definitionId]?.isExtinct && excludeExtinct) &&
+        (item?.isStorage || !onlyStorage) &&
+        !sbcData.subs.includes(item.definitionId))
+    )
+    .map((item) => {
+      if (!item.groups.length) {
+      item.groups = [0];
+      }
+
+      return {
+      id: item.id,
+      name: item._staticData.name,
+      cardType:
+        (item.isSpecial()
+          ? ""
+          : services.Localization.localize(
+            "search.cardLevels.cardLevel" + item.getTier()
+          ) + " ") +
+        services.Localization.localize("item.raretype" + item.rareflag),
+      assetId: item._metaData?.id,
+      definitionId: item.definitionId,
+      rating: item.rating,
+      teamId: item.teamId,
+      leagueId: item.leagueId,
+      nationId: item.nationId,
+      rarityId: item.rareflag,
+      ratingTier: item.getTier(),
+      isUntradeable: item.untradeable,
+      isDuplicate: duplicateIds.includes(item.id),
+      isStorage: storageIds.includes(item.id),
+      preferredPosition: item.preferredPosition,
+      possiblePositions: item.possiblePositions,
+      groups: item.groups,
+      isFixed: isItemFixed(item),
+      concept: item.concept,
+      price: getSBCPrice(item, duplicateIds) || -1,
+      futggPrice: getPrice(item),
+      maxChem: item.profile.maxChem,
+      teamChem: item.profile.rules[0],
+      leagueChem: item.profile.rules[1],
+      nationChem: item.profile.rules[2],
+      normalizeClubId: item.normalizeClubId,
+      };
+    });
+
+
 
     const input = JSON.stringify({
       clubPlayers: backendPlayersInput,
@@ -1283,15 +1466,16 @@ color:black
     });
 
     count = getSettings(sbcId, sbcData.challengeId, "maxSolveTime");
-    showLoader(true);
+
+    clearInterval(countDownInterval);
     countDownInterval = setInterval(countDown, 1000);
-    
+
     // Reset log index and start polling
     lastLogIndex = 0;
     logPollInterval = setInterval(pollSolverLogs, 1000);
-    
+
     let solution = await makePostRequest(apiUrl + "/solve", input);
-    
+
     // Stop polling when solve is complete
     clearInterval(logPollInterval);
     clearInterval(countDownInterval);
@@ -1337,7 +1521,7 @@ color:black
 
     window.sbcSet = sbcSet;
     window.challengeId = sbcData.challengeId;
-    console.log(sbcSet, sbcData);
+
     let newSbcSquad = new UTSBCSquadOverviewViewController();
     newSbcSquad.initWithSBCSet(sbcSet, sbcData.challengeId);
     let { _squad, _challenge } = newSbcSquad;
@@ -1348,6 +1532,7 @@ color:black
     sbcData.brickIndices.forEach(function (item, index) {
       _solutionSquad[item] = new UTItemEntity();
     });
+    try {
     JSON.parse(solution.results)
       .sort((a, b) => b.Is_Pos - a.Is_Pos)
       .forEach(function (item, index) {
@@ -1364,12 +1549,17 @@ color:black
           })
         ] = players.filter((f) => item.id == f.id)[0];
       });
+  } catch (error) {
+      hideLoader()
+      return
+  }
     sbcData.subs.forEach(function (item, index) {
       _solutionSquad.push(players.filter((f) => item == f.definitionId)[0]);
     });
     _squad.setPlayers(_solutionSquad, true);
 
     await loadChallenge(_challenge);
+
     let autoSubmitId = getSettings(sbcId, sbcData.challengeId, "autoSubmit");
     if (
       (solution.status_code == autoSubmitId || autoSubmitId == 1) &&
@@ -1501,6 +1691,9 @@ color:black
               t.success && JSUtils.isObject(t.response)
                 ? n.initWithItems(
                     null === (i = t.response) || void 0 === i ? void 0 : i.items
+              .sort(function (t, e) {
+                return getSBCPrice(e, []) - getSBCPrice(t, []);
+              })
                   )
                 : n.init();
               services.Item.clearTransferMarketCache();
@@ -1544,19 +1737,32 @@ color:black
   };
 
   const unassignedItemsOverride = () => {
+
+     UTSectionedItemListView.prototype.addItems = function(e, t, i) {
+         e.sort(function (a, b) {
+                return getSBCPrice(b, []) - getSBCPrice(a, []);
+              })
+        var o = this;
+        return void 0 === i && (i = ListItemPriority.DEFAULT),
+        this.listRows = e.map(function(e) {
+            return o.generateListRow(e, t, i)
+        }),
+        this.listRows
+    }
+
     const unassignedItems = UTSectionedItemListView.prototype.render;
     UTSectionedItemListView.prototype.render = async function (...args) {
       let players = [];
       for (const { data } of this.listRows) {
         players.push(data);
       }
-      console.log('players', players);
+
       await fetchPlayerPrices(players);
       unassignedItems.call(this, ...args);
     };
     const ppItems = UTPlayerPicksView.prototype.setCarouselItems;
     UTPlayerPicksView.prototype.setCarouselItems = async function (...args) {
-      console.log(args);
+console.log("PP",...args)
       await fetchPlayerPrices(args[0]);
       ppItems.call(this, ...args);
     };
@@ -1576,9 +1782,9 @@ color:black
             wompSound.play();
           }
           showNotification("Failed to submit", UINotificationType.NEGATIVE);
-          gClickShield.hideShield(EAClickShieldView.Shield.LOADING);
+          hideLoader();
 
-          reject(res);
+          resolve(res);
         } else {
           showNotification("SBC Submitted", UINotificationType.POSITIVE);
           createSBCTab();
@@ -1673,6 +1879,7 @@ color:black
   const unfixedLabel = "SBC Set Price to Zero";
 
   const playerItemOverride = () => {
+    UTItemEntity.prototype.init=UTItemEntity.prototype.update
     const UTDefaultSetItem = UTSlotActionPanelView.prototype.setItem;
     UTSlotActionPanelView.prototype.setItem = function (e, t) {
       const result = UTDefaultSetItem.call(this, e, t);
@@ -1686,7 +1893,7 @@ color:black
       refreshButton.addTarget(
         this,
         async () => {
-          
+
           // Remove existing price data for this player before refreshing
           let PriceItems = getPriceItems();
           if (e.definitionId in PriceItems) {
@@ -1704,9 +1911,9 @@ color:black
       );
       this.refreshPriceButton = refreshButton;
     }
-      // Concept player
+
       if (
-        e.concept ||
+
         e.loans > -1 ||
         !e.isPlayer() ||
         !e.id ||
@@ -1714,7 +1921,8 @@ color:black
       ) {
         return result;
       }
-      if (!e.isDuplicate() && !isItemFixed(e) && !this.lockUnlockButton) {
+        console.log(e)
+      if (!e?.duplicateId>0 && !isItemFixed(e) && !this.lockUnlockButton) {
         const label = isItemLocked(e) ? lockedLabel : unlockedLabel;
         const button = new UTGroupButtonControl();
         button.init();
@@ -1773,9 +1981,9 @@ color:black
         );
         this.fixUnfixButton = fixbutton;
       }
-      
-  
-      
+
+
+
       return result;
     };
 
@@ -1792,7 +2000,7 @@ color:black
   refreshButton.addTarget(
     this,
     async () => {
-      
+
       await fetchPlayerPrices([e]);
       showNotification(`Price refreshed`, UINotificationType.POSITIVE);
       try {
@@ -1821,7 +2029,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
   refreshButton.addTarget(
     this,
     async () => {
-     
+
       await fetchPlayerPrices([e]);
       showNotification(`Price refreshed`, UINotificationType.POSITIVE);
       try {
@@ -1841,11 +2049,12 @@ if (!this.refreshPriceButton && e.isPlayer()) {
   );
   this.refreshPriceButton = refreshButton;
 }
-      // Concept player
-      if (e.concept || e.loans > -1 || !e.isPlayer() || !e.id) {
+
+      if ( e.loans > -1 || !e.isPlayer() || !e.id || e.isTimeLimited()) {
         return result;
       }
-      if (!e.isDuplicate() && !isItemFixed(e)) {
+
+      if (!e?.duplicateId>0 && !isItemFixed(e)) {
         const label = isItemLocked(e) ? lockedLabel : unlockedLabel;
         if (!this.lockUnlockButton) {
           const button = new UTGroupButtonControl();
@@ -1924,43 +2133,14 @@ if (!this.refreshPriceButton && e.isPlayer()) {
           this.fixUnfixButton = button;
         }
       }
-      
-     
-      
+
+
+
       return result;
     };
 
 
-    const getPriceDiv = async (item) => {
-      if (getSettings(0, 0, "showPrices")) {
-        let PriceItems = getPriceItems();
-        let price = getPrice(item) * (isItemFixed(item) ? 0 : 1);
-        if (
-          !(item.definitionId in PriceItems) ||
-          !("isSbc" in PriceItems[item.definitionId])
-        ) {
-        }
-        let symbol = PriceItems[item.definitionId]?.isSbc
-          ? "currency-sbc"
-          : PriceItems[item.definitionId]?.isObjective
-          ? "currency-objective"
-          : "currency-coins";
-      const priceElement = document.createElement("div");
-      priceElement.className = `${symbol} item-price`;
-      priceElement.textContent = PriceItems[item.definitionId]?.isExtinct
-        ? "EXTINCT"
-        : PriceItems[item.definitionId]?.isObjective
-        ? ""
-        : price.toLocaleString();
-      
-      
-     
-  
-   
-      return priceElement
-    };
-    return null;
-  }
+
 
     const UTPlayerItemView_renderItem = UTPlayerItemView.prototype.renderItem;
     UTPlayerItemView.prototype.renderItem = async function (item, t) {
@@ -1978,7 +2158,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
         if (this.__root && priceElement) {
           this.__root.prepend(priceElement);
         }
-      
+
       if (isItemLocked(item)) {
         addClass(this, "locked");
       } else {
@@ -1992,7 +2172,41 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       return result;
     }
   }
+  const getPriceDiv = async (item) => {
+      if (getSettings(0, 0, "showPrices") && item.definitionId>0) {
+        let PriceItems = getPriceItems();
+        if (!PriceItems[item.definitionId]){
+          return null
+        }
+        let price = getPrice(item) * (isItemFixed(item) ? 0 : 1);
+        if (
+          !(item.definitionId in PriceItems) ||
+          !("isSbc" in PriceItems[item.definitionId])
+        ) {
+        }
 
+        let symbol = PriceItems[item.definitionId]?.isSbc
+          ? "currency-sbc"
+          : PriceItems[item.definitionId]?.isObjective
+          ? "currency-objective"
+          : "currency-coins";
+      const priceElement = document.createElement("div");
+      priceElement.className = `${symbol} item-price`;
+
+      if (isFodder(item)) {
+        priceElement.style.border = "1px solid red"; // Add red border for fodder players
+        priceElement.style.color = "#ff0000"; // Change text color to red as well
+      }
+      priceElement.textContent = PriceItems[item.definitionId]?.isExtinct
+        ? "EXTINCT"
+        : PriceItems[item.definitionId]?.isObjective
+        ? ""
+        : price.toLocaleString();
+
+      return priceElement
+    };
+    return null;
+  }
   let priceCacheMinutes = 60;
   let PRICE_ITEMS_KEY = "futggPrices";
   let cachedPriceItems;
@@ -2057,13 +2271,74 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       return cachedPriceItems;
     }
     cachedPriceItems = {};
-    let PriceItems = localStorage.getItem(PRICE_ITEMS_KEY);
+    function getFromIndexedDB() {
+      return new Promise((resolve) => {
+        const dbName = "futSBCDatabase";
+        const storeName = "priceItems";
+        const request = indexedDB.open(dbName, 1);
+
+        request.onupgradeneeded = function(event) {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(storeName)) {
+            db.createObjectStore(storeName, { keyPath: "id" });
+          }
+        };
+
+        request.onsuccess = function(event) {
+          const db = event.target.result;
+          const transaction = db.transaction([storeName], "readonly");
+          const store = transaction.objectStore(storeName);
+
+          // Get the single entry that contains all price items
+          const getAllRequest = store.get("allPriceItems");
+
+          getAllRequest.onsuccess = function(event) {
+            if (event.target.result && event.target.result.data) {
+              resolve(event.target.result.data);
+            } else {
+              resolve(null);
+            }
+          };
+
+          transaction.onerror = function() {
+            console.error("Error reading from IndexedDB");
+            resolve(null);
+          };
+        };
+
+        request.onerror = function(event) {
+          console.error("Error opening IndexedDB:", event.target.error);
+          resolve(null);
+        };
+      });
+    }
+
+    // First try IndexedDB, then fall back to localStorage
+    let PriceItems = null;
+    getFromIndexedDB().then(idbItems => {
+      if (idbItems) {
+        PriceItems = JSON.stringify(idbItems);
+      } else {
+        PriceItems = localStorage.getItem(PRICE_ITEMS_KEY);
+      }
+    });
     if (PriceItems) {
       cachedPriceItems = JSON.parse(PriceItems);
     }
 
     return cachedPriceItems;
   };
+
+  let isFodder = function (item) {
+    let PriceItems = getPriceItems();
+    if (PriceItems[item.definitionId]?.isExtinct || PriceItems[item.definitionId]?.isObjective){return false}
+    let price=getPrice(item);
+    let fodderPrice = Math.max( getPrice({ definitionId: item.rating + "_CBR" }),item?._itemPriceLimits?.minimum || 0);
+    if (price <= fodderPrice * 1.1){
+      return true;
+    }
+    return false;
+  }
   let PriceItemsCleanup = function (clubPlayerIds) {
     let PriceItems = getPriceItems();
     for (let _i = 0, _a = Array.from(PriceItems); _i < _a.length; _i++) {
@@ -2075,7 +2350,54 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     savePriceItems();
   };
   let savePriceItems = function () {
-    localStorage.setItem(PRICE_ITEMS_KEY, JSON.stringify(cachedPriceItems));
+    function saveToIndexedDB() {
+      const dbName = "futSBCDatabase";
+      const storeName = "priceItems";
+      const request = indexedDB.open(dbName, 1);
+
+      request.onupgradeneeded = function(event) {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(storeName)) {
+          db.createObjectStore(storeName, { keyPath: "id" });
+        }
+      };
+
+      request.onsuccess = function(event) {
+        const db = event.target.result;
+        const transaction = db.transaction([storeName], "readwrite");
+        const store = transaction.objectStore(storeName);
+
+        // First clear existing data
+        store.clear().onsuccess = function() {
+          // Store the entire price items collection in a single entry
+          const allItems = {
+            id: "allPriceItems",
+            data: cachedPriceItems
+          };
+
+          store.put(allItems);
+        };
+
+        transaction.oncomplete = function() {
+          console.log("Price items saved to IndexedDB");
+        };
+
+        transaction.onerror = function(error) {
+          console.error("Error saving to IndexedDB:", error);
+          // Fallback to localStorage if IndexedDB fails
+          localStorage.setItem(PRICE_ITEMS_KEY, JSON.stringify(cachedPriceItems));
+        };
+      };
+
+      request.onerror = function(event) {
+        console.error("IndexedDB error:", event.target.error);
+        // Fallback to localStorage if IndexedDB cannot be opened
+        localStorage.setItem(PRICE_ITEMS_KEY, JSON.stringify(cachedPriceItems));
+      };
+    }
+
+    // Call the function to save the data
+    saveToIndexedDB();
   };
 
   function makeGetRequest(url) {
@@ -2093,11 +2415,13 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     });
   }
 
+
+
   function makePostRequest(url, data) {
     return new Promise((resolve, reject) => {
       fetch(url, {
         method: "POST",
-        body: data,
+        body: data
       })
         .then((response) => {
           // 1. check response.ok
@@ -2161,7 +2485,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
   };
   const fetchSingleCheapest = async (rating) => {
     const futggSingleCheapestByRatingResponse = await makeGetRequest(
-      `https://www.fut.gg/players/?overall__gte=${rating}&overall__lte=${rating}&price__gte=100&sorts=current_price`
+      `https://www.fut.gg/players/?overall__gte=${rating}&overall__lte=${rating}&price__gte=100&sorts=current_price&market_players=1`
     );
     try {
       const doc = new DOMParser().parseFromString(
@@ -2195,36 +2519,54 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     savePriceItems();
   };
   let fetchPlayerPrices = async (players) => {
-    let duplicateIds = await fetchDuplicateIds();
-
+    // Filter out players that need price updates
     let idsArray = players
       .filter((f) => isPriceOld(f) && f?.isPlayer())
       .map((p) => p.definitionId);
 
+    // If no prices to fetch, return early
+    if (idsArray.length === 0) return;
+
+    // Create progress bar
+    const progressBarId = 'prices-progress-bar';
+    const containerId = 'prices-progress-container';
+    createProgressBar(progressBarId, containerId, "Fetching Player Prices");
+
+    let duplicateIds = await fetchDuplicateIds();
     let totalPrices = idsArray.length;
+    let fetched = 0;
+
     while (idsArray.length) {
       const playersIdArray = idsArray.splice(0, 50);
 
-      const futggResponse = await makeGetRequest(
-        `https://www.fut.gg/api/fut/player-prices/25/?ids=${playersIdArray}`
-      );
-      let priceResponse;
       try {
-        priceResponse = JSON.parse(futggResponse);
-        priceResponse = priceResponse.data;
-        //     console.log( `https://www.fut.gg/api/fut/player-prices/25/?ids=${playersIdArray}`,priceResponse)
+        const futggResponse = await makeGetRequest(
+          `https://www.fut.gg/api/fut/player-prices/25/?ids=${playersIdArray}`
+        );
+
+        let priceResponse = JSON.parse(futggResponse).data;
         PriceItem(priceResponse);
+
+        // Update progress
+        fetched += playersIdArray.length;
+        const progress = (fetched / totalPrices) * 100;
+        updateProgressBar(progressBarId, progress);
+
       } catch (error) {
         console.error(error);
         await wait();
         continue;
       }
-      if (totalPrices - idsArray.length >= totalPrices) {
-        showNotification(
-          `Fetched ${totalPrices - idsArray.length} / ${totalPrices} Prices`,
-          UINotificationType.NEUTRAL
-        );
-      }
+    }
+
+    // Remove progress bar after completion
+    removeProgressBar(containerId);
+
+    if (totalPrices > 0) {
+      showNotification(
+        `Fetched ${totalPrices} player prices`,
+        UINotificationType.POSITIVE
+      );
     }
   };
   let sound = new Audio(
@@ -2236,20 +2578,22 @@ if (!this.refreshPriceButton && e.isPlayer()) {
   let nopeSound = new Audio(
     "https://www.myinstants.com/media/sounds/engineer_no01.mp3"
   );
-  let openPack = async (pack, repeat = 0) => {
+  let openPack = async (pack, repeat = 0, allPacks = false) => {
     showLoader();
     await sendUnassignedtoTeam();
     await swapDuplicates();
     await sendDuplicatesToStorage();
     await discardNonPlayerDupes();
     let ulist = await fetchUnassigned();
-    console.log(ulist);
+
     if (ulist.length > 0) {
       goToUnassignedView();
       return;
     }
-    return new Promise((resolve, reject) => {
+
+    return new Promise(async (resolve, reject) => {
       repositories.Store.setDirty();
+
       pack.open().observe(this, async function (obs, res) {
         if (!res.success) {
           console.log(res);
@@ -2294,9 +2638,20 @@ if (!this.refreshPriceButton && e.isPlayer()) {
 
           await goToUnassignedView();
           createSBCTab();
+          repeat = repeat - 1;
           if (repeat > 0) {
-            repeat = repeat - 1;
-            await openPack(pack, repeat);
+
+            await openPack(pack, repeat, false);
+          } else if (allPacks) {
+
+            let packs = await getPacks();
+            let nextPack = packs.packs.find((p) => p.isMyPack);
+
+            if (nextPack) {
+
+                await openPack(nextPack, 0, true);
+
+            }
           }
           resolve(res.response);
         }
@@ -2355,7 +2710,13 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       let packs = await getPacks();
       let item = args[2].articleId;
       let packToOpen = packs.packs.filter((f) => f.id == item)[0];
-      console.log(args, packToOpen);
+
+      let i = services.Localization;
+
+                  services.Notification.queue([
+            "Opening Pack:  " +  i.localize(packToOpen.packName),
+            UINotificationType.POSITIVE,
+          ]);
       if (packs.packs.filter((f) => f.id == item).length > 0) {
         if (packToOpen.isMyPack) {
           await openPack(packToOpen);
@@ -2371,7 +2732,8 @@ if (!this.refreshPriceButton && e.isPlayer()) {
           packToOpen
             .purchase(m)
             .observe(new UTStoreViewController(), (obs, event) => {
-              console.log(obs, event);
+
+              console.log("coin pack",obs, event);
               openPack(packToOpen);
             });
         }
@@ -2420,15 +2782,17 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     const prices = await fetchPlayerPrices(players);
     let total = 0;
     const duplicateIds = await fetchDuplicateIds();
+    let PriceItems = getPriceItems();
     for (const { rootElement, item } of squadSlots) {
       if (duplicateIds.includes(item.id)) {
         rootElement.style.opacity = "0.4";
       }
-      
-     
+
+
         const element = $(rootElement);
         appendPriceToSlot(element, item);
-      
+
+       total += getPrice(item)
     }
     appendSquadTotal(total);
   };
@@ -2450,12 +2814,13 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     }
   };
   const appendPriceToSlot = async (rootElement, item) => {
+
     let priceElement = await getPriceDiv(item)
     if (priceElement) {
     rootElement.prepend(priceElement);
     }
     }
-  
+
 
   const getUserPlatform = () => {
     if (services.User.getUser().getSelectedPersona().isPC) {
@@ -2602,11 +2967,11 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     let i = services.Localization;
     let packContent = `<span>Packs<br>${
       packs.packs.filter(
-        (f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 100
+        (f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101
       ).length
     }</span>`;
     let packCounts = packs.packs
-      .filter((f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 100)
+      .filter((f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101)
       .reduce((acc, pack) => {
         let key = `${pack.packName} ${
           pack.tradeable ? "(Tradable)" : "(Untradable)"
@@ -2626,41 +2991,54 @@ if (!this.refreshPriceButton && e.isPlayer()) {
         return acc;
       }, {});
 
-    let packHoverButtons = Object.keys(packCounts).map((packName) => {
-      let pack = packCounts[packName];
+  if (Object.keys(packCounts).length > 1) {
+      packCounts["Open All Packs"] = {
+          count: 0,
+          packName: "Open All Packs",
+          class: "OpenAll",
+          description: "Open all available packs",
+          pack: Object.values(packCounts)[0]?.pack || null,
+      };
+  }
+  let packHoverButtons = Object.keys(packCounts).map((packName) => {
+    let pack = packCounts[packName];
 
-      let navLabelSpan = document.createElement("span");
-      navLabelSpan.title = pack.description; // Add tooltip with pack description
-      navLabelSpan.classList.add(pack.class);
-      navLabelSpan.style.direction = "ltr";
+    let navLabelSpan = document.createElement("span");
+    navLabelSpan.title = pack.description; // Add tooltip with pack description
+    navLabelSpan.classList.add(pack.class);
+    navLabelSpan.style.direction = "ltr";
+    let packCountLabel =  document.createElement("div");
+      packCountLabel.classList.add("ut-tab-bar-item-notif");
+      packCountLabel.style.left= "5px";
+      packCountLabel.innerHTML = pack.count
+      navLabelSpan.innerHTML = pack.packName;
+      if (pack.count > 1){
+       navLabelSpan.prepend(packCountLabel)
+      }
 
-      let packLabel =
-        pack.count > 1 ? `${pack.packName}<br>x ${pack.count}` : pack.packName;
-      navLabelSpan.innerHTML = packLabel;
-      let btn = createNavButton(
-        "openPackItem",
-        navLabelSpan.outerHTML,
-        () => {},
-        async () => {
-          let packToOpen = pack.pack;
-          if (pack.pack.isMyPack) {
-            await openPack(packToOpen, pack.count);
-          } else {
-            packToOpen
-              .purchase(GameCurrency.COINS)
-              .observe(new UTStoreViewController(), async (obs, event) => {
-                await openPack(packToOpen);
-              });
-          }
 
-          createSBCTab();
-          goToUnassignedView();
-        },
-        { width: "20vw", marginTop: "0px" }
-      );
+    let btn = createNavButton(
+      "openPackItem",
+      navLabelSpan.outerHTML,
+      () => {},
+      async () => {
+      let packToOpen = pack.pack;
+      if (pack.pack.isMyPack) {
+          await openPack(packToOpen, pack.count, packName === "Open All Packs");
+      } else {
+        packToOpen
+          .purchase(GameCurrency.COINS)
+          .observe(new UTStoreViewController(), async (obs, event) => {
+          await openPack(packToOpen);
+          });
+      }
+      },
+      { width: "20vw", marginTop: "0px" }
+    );
 
-      return btn;
-    });
+    return btn;
+  });
+
     let packDiv = document.createElement("div");
     packHoverButtons.forEach((button) => {
       packDiv.appendChild(button);
@@ -2669,13 +3047,16 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       "navPacks",
       packContent,
       async () => {
-        return createHoverNav(
-          "myPacks",
-          "My Packs",
-          "click to open",
-          [packDiv],
-          { width: "20vw" }
-        );
+        if (Object.keys(packCounts).length > 0) {
+          return createHoverNav(
+            "myPacks",
+            "My Packs",
+            "click to open",
+            [packDiv],
+            { width: "20vw" }
+          );
+        }
+        return null;
       },
       () => {},
       { background: "none" }
@@ -2743,9 +3124,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     let sbcSetIds = sets.categories.filter(
       (f) => f.name == getSettings(0, 0, "sbcType")
     )[0].setIds;
-    console.log(
-      sets.sets.filter((f) => sbcSetIds.includes(f.id) && !f.isComplete())
-    );
+
     let allSbcSets = sets.sets
       .filter((f) => sbcSetIds.includes(f.id) && !f.isComplete())
       .reverse();
@@ -3024,7 +3403,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     defaultOption.value = "";
     defaultOption.textContent = localStorage.getItem("lastUsedLayout") || "Save a layout...";
     layoutSelect.appendChild(defaultOption);
-    
+
 
     // Create delete button
     const deleteButton = document.createElement("button");
@@ -3036,7 +3415,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     pivotContainer.appendChild(layoutSelect);
     pivotContainer.appendChild(layoutNameInput);
     pivotContainer.appendChild(saveButton);
-    
+
     pivotContainer.appendChild(deleteButton);
 
     // Add container to layout form
@@ -3061,7 +3440,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       layoutSelect.addEventListener('change', () => {
         const name = layoutSelect.value;
         if (!name) return;
-        
+
         const config = layoutStorage[name];
         localStorage.setItem("lastUsedLayout", name);
         $("#pivot-table").pivotUI(pivotData, config, true);
@@ -3085,7 +3464,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       layoutStorage[name] = config_copy;
       localStorage.setItem("pivotLayouts", JSON.stringify(layoutStorage));
       localStorage.setItem("lastUsedLayout", name); // Save last used layout name
-      
+
       showNotification(`Layout "${name}" saved`, UINotificationType.POSITIVE);
       populateLayoutSelect();
       document.getElementById("layoutName").value = "";
@@ -3182,14 +3561,14 @@ if (!this.refreshPriceButton && e.isPlayer()) {
         $.pivotUtilities.c3_renderers,
         $.pivotUtilities.d3_renderers
       );
-      
+
     // Load last used layout name from storage if exists
     const lastUsed = localStorage.getItem("lastUsedLayout");
-    const layoutStorage = localStorage.getItem("pivotLayouts") ? 
+    const layoutStorage = localStorage.getItem("pivotLayouts") ?
       JSON.parse(localStorage.getItem("pivotLayouts")) : {};
 
     // If last used layout exists, use it as initial config
-    const initialConfig = lastUsed && layoutStorage[lastUsed] ? 
+    const initialConfig = lastUsed && layoutStorage[lastUsed] ?
       layoutStorage[lastUsed] : {
         rows: ["cardType"],
         cols: [],
@@ -3212,13 +3591,13 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       UTGameTabBarController.prototype.initWithViewControllers;
     UTGameTabBarController.prototype.initWithViewControllers = function (tabs) {
       // Check if SBC Solver tab already exists
-      const sbcSolverExists = tabs.some(tab => 
+      const sbcSolverExists = tabs.some(tab =>
         tab.tabBarItem && tab.tabBarItem.getText && tab.tabBarItem.getText() === "SBC Solver");
-      
+
       // Check if Club Analysis tab already exists
-      const clubAnalysisExists = tabs.some(tab => 
+      const clubAnalysisExists = tabs.some(tab =>
         tab.tabBarItem && tab.tabBarItem.getText && tab.tabBarItem.getText() === "Club Analysis");
-      
+
       // Add SBC Solver tab if it doesn't exist
       if (!sbcSolverExists) {
         const navBar = new UTGameFlowNavigationController();
@@ -3226,7 +3605,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
         navBar.tabBarItem = generateSbcSolveTab();
         tabs.push(navBar);
       }
-      
+
       // Add Club Analysis tab if it doesn't exist
       if (!clubAnalysisExists) {
         const navBar2 = new UTGameFlowNavigationController();
@@ -3234,7 +3613,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
         navBar2.tabBarItem = generatePivotTab();
         tabs.push(navBar2);
       }
-      
+
       navViewInit.call(this, tabs);
     };
   };
@@ -3659,6 +4038,24 @@ if (!this.refreshPriceButton && e.isPlayer()) {
             //  (parentDiv,label,id,options,value,target)
             createToggle(
               sbcParamsTile,
+              "Only use Storage Players",
+              "onlyStorage",
+              getSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "onlyStorage"
+              ),
+              (toggleOS) => {
+                saveSettings(
+                  dropdown.getValue(),
+                  dropdownChallenge.getValue(),
+                  "onlyStorage",
+                  toggleOS.getToggleState()
+                );
+              }
+            );
+            createToggle(
+              sbcParamsTile,
               "Exclude Objective Players",
               "excludeObjective",
               getSettings(
@@ -3917,6 +4314,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     excludeSpecial: false,
     excludeObjective: false,
     excludeExtinct: false,
+    onlyStorage:false,
     useConcepts: false,
     collectConcepts: false,
     animateWalkouts: 86,
@@ -3935,16 +4333,108 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     showLogOverlay: false
   };
 
+  const createStopOverlayButton = () => {
+      const stopButtonContainer = document.createElement('div');
+      stopButtonContainer.id = 'sbc-stop-overlay';
+      stopButtonContainer.style.position = 'fixed';
+      stopButtonContainer.style.bottom = '45px';
+      stopButtonContainer.style.right = '130px';
+      stopButtonContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+      stopButtonContainer.style.color = '#fff';
+      stopButtonContainer.style.padding = '10px';
+      stopButtonContainer.style.borderRadius = '5px';
+      stopButtonContainer.style.zIndex = '9999';
+      stopButtonContainer.style.fontSize = '12px';
+      stopButtonContainer.style.fontFamily = 'Arial, sans-serif';
+
+      const stopButton = document.createElement('button');
+      stopButton.textContent = 'STOP';
+      stopButton.style.marginLeft = '5px';
+      stopButton.style.padding = '5px 10px';
+      stopButton.style.border = 'none';
+      stopButton.style.borderRadius = '3px';
+      stopButton.style.cursor = 'pointer';
+      stopButton.style.backgroundColor = '#ff0000';
+      stopButton.style.color = '#000';
+
+      stopButton.addEventListener('click', () => {
+          createSbc = false;
+          hideLoader();
+          fetch(apiUrl + "/stop-solver", {
+              method: "POST"
+          }).then(response => {
+              if (response.ok) {
+                  showNotification("Solver stopped successfully", UINotificationType.POSITIVE);
+              } else {
+                  showNotification("Failed to stop solver", UINotificationType.NEGATIVE);
+              }
+          }).catch(error => {
+              console.error("Error stopping solver:", error);
+              showNotification("Error stopping solver", UINotificationType.NEGATIVE);
+          });
+      });
+
+      stopButtonContainer.appendChild(stopButton);
+      document.body.appendChild(stopButtonContainer);
+  };
+
+
+const createLogOverlayToggle = () => {
+const toggleContainers = document.querySelectorAll('#sbc-log-toggle');
+toggleContainers.forEach((toggleContainer) => {
+  toggleContainer.remove();
+});
+
+const toggleContainer = document.createElement('div');
+toggleContainer.id = 'sbc-log-toggle';
+toggleContainer.style.position = 'fixed';
+toggleContainer.style.bottom = '10px';
+
+toggleContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+toggleContainer.style.color = '#fff';
+toggleContainer.style.padding = '10px';
+toggleContainer.style.borderRadius = '5px';
+toggleContainer.style.zIndex = '9999';
+toggleContainer.style.fontSize = '12px';
+toggleContainer.style.fontFamily = 'Arial, sans-serif';
+
+const toggleLabel = document.createElement('span');
+toggleLabel.textContent = 'Show Solver Logs';
+toggleContainer.appendChild(toggleLabel);
+
+const toggleButton = document.createElement('button');
+toggleButton.textContent = getSettings(0, 0, "showLogOverlay") ? 'ON' : 'OFF';
+toggleButton.style.marginLeft = '5px';
+toggleButton.style.padding = '5px 10px';
+toggleButton.style.border = 'none';
+toggleButton.style.borderRadius = '3px';
+toggleButton.style.cursor = 'pointer';
+toggleButton.style.backgroundColor = getSettings(0, 0, "showLogOverlay") ? '#00ff00' : '#ff0000';
+toggleButton.style.color = '#000';
+
+toggleButton.addEventListener('click', () => {
+  const currentState = getSettings(0, 0, "showLogOverlay");
+  saveSettings(0, 0, "showLogOverlay", !currentState);
+  toggleButton.textContent = !currentState ? 'ON' : 'OFF';
+  toggleButton.style.backgroundColor = !currentState ? '#00ff00' : '#ff0000';
+  updateLogOverlay();
+});
+
+toggleContainer.appendChild(toggleButton);
+document.body.appendChild(toggleContainer);
+};
+
+
   // Create or update the log overlay
   const updateLogOverlay = () => {
     let logOverlay = document.getElementById('sbc-log-overlay');
-    
+
     if (getSettings(0, 0, "showLogOverlay")) {
       if (!logOverlay) {
         logOverlay = document.createElement('div');
         logOverlay.id = 'sbc-log-overlay';
         logOverlay.style.position = 'fixed';
-        logOverlay.style.bottom = '10px';
+        logOverlay.style.bottom = '50px';
         logOverlay.style.left = '10px';
         logOverlay.style.maxHeight = '15vh';
         logOverlay.style.overflowY = 'auto';
@@ -3970,13 +4460,15 @@ if (!this.refreshPriceButton && e.isPlayer()) {
   // Function to poll for solver logs
   const pollSolverLogs = async () => {
       if (!getSettings(0, 0, "showLogOverlay")) {
+
           return; // Don't poll if log overlay is disabled
       }
-      
+
       try {
+          showLoader(true);
           const response = await makeGetRequest(apiUrl + "/solver-logs");
           const data = JSON.parse(response);
-          console.log("Solver logs:",data);
+
           // We have new logs
           const logOverlay = document.getElementById('sbc-log-overlay');
           if (lastLogIndex === 0 && logOverlay) {
@@ -3985,23 +4477,23 @@ if (!this.refreshPriceButton && e.isPlayer()) {
             }
           }
           if (data.logs && data.logs.length > lastLogIndex) {
-              
+
               if (logOverlay) {
                   // Add new logs to the overlay
                   for (let i = lastLogIndex; i < data.logs.length; i++) {
                       const log = data.logs[i];
                       const timestamp = new Date(log.time * 1000).toISOString().split('T')[1].slice(0, -1);
-                      
+
                       const logEntry = document.createElement('div');
                       logEntry.className = 'solver-log';
-                      
+
                       if (log.message) {
                           logEntry.textContent = `${timestamp}: ${log.message}`;
                       }
-                                            
+
                       logOverlay.insertBefore(logEntry, logOverlay.firstChild);
                   }
-                  
+
                   lastLogIndex = data.logs.length;
               }
           }
@@ -4053,7 +4545,7 @@ let initDefaultSettings = () => {
     spinner.addTarget(spinner, target, EventType.CHANGE);
     panel.appendChild(i);
     panel.appendChild(spinner.getRootElement());
-    //console.log(panel)
+
     parentDiv.appendChild(panel);
     return panel;
   };
@@ -4221,6 +4713,7 @@ let initDefaultSettings = () => {
       var counterContent = document.createElement("div");
       counterContent.classList.add("numCounter");
       counterContent.addEventListener("click", () => {
+        createSbc = false;
         hideLoader();
       });
       shield.appendChild(counterContent);
@@ -4289,7 +4782,7 @@ let initDefaultSettings = () => {
         );
     });
   };
-  
+
   function findSBCLogin(obj, keyToFind) {
     let results = [];
 
@@ -4328,7 +4821,7 @@ let initDefaultSettings = () => {
       unassignedItemsOverride();
       initDefaultSettings();
       futHomeOverride();
-     
+
     } else {
       setTimeout(init, 4000);
     }
