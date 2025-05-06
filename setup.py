@@ -18,7 +18,8 @@ def preprocess_data(df: pd.DataFrame,sbc):
             # Filter the players to only include those that meet this requirement
             # since we need all players to satisfy this constraint
             if req['requirementKey'] == 'PLAYER_RARITY_GROUP':
-                df = df[df['groups'].isin(req['eligibilityValues'])]
+                # Filter players where any element in the groups array matches any eligibility value
+                df = df[df['groups'].apply(lambda x: any(g in req['eligibilityValues'] for g in x))]
             elif req['requirementKey'] == 'PLAYER_QUALITY':
                 if req['scope'] == 'GREATER' or req['scope'] == 'EXACT':
                     df = df[df["ratingTier"] >= req['eligibilityValues'][0]]
