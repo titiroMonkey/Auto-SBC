@@ -5,7 +5,7 @@ import setup
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import functools
-import globals  # Import the globals module
+import logger  
 
 app = FastAPI()
 
