@@ -3,7 +3,7 @@ import pandas as pd
 from fastapi import Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from globals import add_log
+from logger import add_log
 
 # Preprocess the club dataset obtained from api.
 
