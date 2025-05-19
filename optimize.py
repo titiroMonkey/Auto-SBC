@@ -3,7 +3,7 @@ from threading import Timer
 import time
 from ortools.sat.python import cp_model
 from decimal import Decimal
-from globals import add_log  # Import the add_log function from globals
+from logger import add_log  # Import the add_log function from globals
 
 
 def runtime(func):
@@ -492,7 +492,15 @@ def create_max_overall_constraint(
         model.Add(cp_model.LinearExpr.Sum(expr) <= NUM_MAX_OVERALL[i])
     return model
 
-
+@runtime 
+def create_player_exact_overall_constraint(
+  df, model, player, map_idx, players_grouped, num_cnts, NUM_MAX_OVERALL, MAX_OVERALL
+):
+    """Exact Max OVR of XX """
+ 
+    for i, rating in enumerate(MAX_OVERALL):
+        model.Add(cp_model.LinearExpr.Sum(players_grouped["rating"].get(map_idx["rating"][rating], [])) == NUM_MAX_OVERALL[i])
+    return model
 def _setup_player_chemistry(
     model, df, i, chem, player, pos, formation_list, 
     teamId_dict, leagueId_dict, nationId_dict, z_teamId, z_leagueId, z_nation, CHEM_PER_PLAYER
@@ -764,7 +772,7 @@ def create_chemistry_constraint(
                 position_expr.append(player_in_pos)
         
         # Enforce the count constraint
-        model.Add(sum(position_expr) == count_needed)
+        model.Add(sum(position_expr) <= count_needed)
     
     add_log("Setting up team chemistry tiers")
     # Apply team chemistry tiers
@@ -1260,6 +1268,17 @@ def SBC(df, sbc, maxSolveTime):
             )
         if req["requirementKey"] == "PLAYER_MAX_OVR":
             model = create_max_overall_constraint(
+                df,
+                model,
+                player,
+                map_idx,
+                players_grouped,
+                num_cnts,
+                [req["count"]],
+                [req["eligibilityValues"][0]],
+            )
+        if req["requirementKey"] == "PLAYER_EXACT_OVR":
+            model = create_player_exact_overall_constraint(
                 df,
                 model,
                 player,
