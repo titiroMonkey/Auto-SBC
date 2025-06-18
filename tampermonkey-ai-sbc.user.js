@@ -1487,6 +1487,12 @@ color:black
   };
 
   const sbcSubmit = async function (challenge, sbcSet, i) {
+    services.Chemistry.resetCustomProfiles();
+    services.Chemistry.requestChemistryProfiles().observe(this, function(e, t) {
+      services.SBC.getCachedSBCSquads().map(function(e) {
+          e.updateChemistry();
+          e.update(e)})}
+      );
     return new Promise((resolve, reject) => {
       services.SBC.submitChallenge(
         challenge,
