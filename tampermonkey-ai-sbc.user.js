@@ -19,8 +19,8 @@
 // @resource      PIVOT_CSS https://pivottable.js.org/dist/pivot.css
 // @resource     CHOICES_BASE_CSS https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/base.min.css
 // @resource     CHOICES_CSS https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css
-// @grant        GM_xmlhttpRequest
-// @grant        GM_getResourceText
+// // @grant        GM_xmlhttpRequest
+// @grant        GM_getResourceText// @grant        GM_getResourceText// @grant        GM_getResourceText
 // @grant        GM_addStyle
 // @connect 	 www.fut.gg
 // @require      https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js
