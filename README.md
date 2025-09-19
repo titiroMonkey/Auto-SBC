@@ -1,5 +1,5 @@
 ## EAFC Automated SBC Solving ⚽
-
+If you want to add any new features to the idedas section of the discussions tab and ill try to implement them.
 #### The goal is to automatically solve the SBC using the currently available players in the club with the minimum cost.
 
 ### Frontend
