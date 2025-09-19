@@ -4116,7 +4116,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
                     customProperties: {
                       icon: `<img width="20" src='${AssetLocationUtils.getLeagueImageUri(
                         m.id,
-                        enums.UIThemeVariation.DARK
+                      
                       )}'/>`,
                     },
                   };
@@ -4138,7 +4138,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
                     customProperties: {
                       icon: `<img width="30" src='${AssetLocationUtils.getFlagImageUri(
                         m.id,
-                        enums.UIThemeVariation.DARK
+                      
                       )}'/>`,
                     },
                   };
@@ -4167,7 +4167,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
                     customProperties: {
                       icon: `<img width="30" src='${AssetLocationUtils.getBadgeImageUri(
                         m.id,
-                        enums.UIThemeVariation.DARK
+                      
                       )}'/>`,
                     },
                   };

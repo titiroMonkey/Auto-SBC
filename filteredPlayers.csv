@@ -1,0 +1,30 @@
+,id,name,cardType,assetId,definitionId,rating,teamId,leagueId,nationId,rarityId,ratingTier,isDuplicate,isStorage,preferredPosition,possiblePositions,groups,isFixed,concept,price,futggPrice,maxChem,normalizeClubId,teamChem.calculationType,teamChem.contribution,teamChem.parameterId,leagueChem.calculationType,leagueChem.contribution,leagueChem.parameterId,nationChem.calculationType,nationChem.contribution,nationChem.parameterId
+0,698115782779,Bruno Carvalho,Bronze Common,79437,79437,59,114545,330,104,0,1,False,False,10,14,0,False,False,200,200,False,114545,1,1,1,1,1,2,1,1,3
+1,698115782779,Bruno Carvalho,Bronze Common,79437,79437,59,114545,330,104,0,1,False,False,10,10,0,False,False,200,200,False,114545,1,1,1,1,1,2,1,1,3
+2,698115782805,Koga,Bronze Common,79410,79410,61,116011,2216,163,0,1,False,False,5,5,0,False,False,200,200,False,18,1,1,1,1,1,2,1,1,3
+3,698115782796,Al Hamsal,Bronze Common,230762,230762,62,112883,350,183,0,1,False,False,3,12,0,False,False,200,200,False,112883,1,1,1,1,1,2,1,1,3
+4,698115782776,Ogundere,Bronze Common,263938,263938,60,112259,60,14,0,1,False,False,5,5,0,False,False,200,200,False,112259,1,1,1,1,1,2,1,1,3
+5,698115782791,Hancock,Bronze Common,264352,264352,61,1803,61,14,0,1,False,False,7,16,0,False,False,200,200,False,1803,1,1,1,1,1,2,1,1,3
+6,698115782791,Hancock,Bronze Common,264352,264352,61,1803,61,14,0,1,False,False,7,5,0,False,False,200,200,False,1803,1,1,1,1,1,2,1,1,3
+7,698115782786,Oufkir,Bronze Common,74460,74460,63,100646,10,34,0,1,False,False,12,12,0,False,False,200,200,False,100646,1,1,1,1,1,2,1,1,3
+8,698115782776,Ogundere,Bronze Common,263938,263938,60,112259,60,14,0,1,False,False,5,12,0,False,False,200,200,False,112259,1,1,1,1,1,2,1,1,3
+9,698115782812,Schroers,Bronze Common,257916,50589564,63,1826,2076,21,0,1,False,False,27,16,0,False,False,200,200,False,1826,1,1,1,1,1,2,1,1,3
+10,698115782801,Bock,Bronze Common,75952,75952,57,27,2076,21,0,1,False,False,23,12,0,False,False,200,200,False,27,1,1,1,1,1,2,1,1,3
+11,698115782785,Sandu,Bronze Common,79066,79066,52,110072,330,39,0,1,False,False,18,12,0,False,False,200,200,False,110072,1,1,1,1,1,2,1,1,3
+12,698115782785,Sandu,Bronze Common,79066,79066,52,110072,330,39,0,1,False,False,18,25,0,False,False,200,200,False,110072,1,1,1,1,1,2,1,1,3
+13,698115782802,Kumbulla,Gold Common,245426,245426,77,453,53,1,0,3,False,False,5,5,0,False,False,350,600,False,453,1,1,1,1,1,2,1,1,3
+14,699225952601,Tetê,Gold Common,247641,247641,77,1884,63,54,0,3,False,False,12,12,0,False,False,350,350,False,1884,1,1,1,1,1,2,1,1,3
+15,699225818180,Javi Rueda,Silver Common,72426,72426,66,450,53,45,0,2,False,False,3,12,0,False,False,400,5100,False,450,1,1,1,1,1,2,1,1,3
+16,699225952603,Gomez,Gold Common,225100,225100,79,9,13,14,0,3,False,False,5,5,0,False,False,400,450,False,9,1,1,1,1,1,2,1,1,3
+17,699225952603,Gomez,Gold Common,225100,225100,79,9,13,14,0,3,False,False,5,12,0,False,False,400,450,False,9,1,1,1,1,1,2,1,1,3
+18,699220035761,Babajide,Gold Rare,264089,264089,79,116282,2236,133,1,3,False,False,27,25,0,False,False,400,650,False,52,1,1,1,1,1,2,1,1,3
+19,699220035761,Babajide,Gold Rare,264089,264089,79,116282,2236,133,1,3,False,False,27,16,0,False,False,400,650,False,52,1,1,1,1,1,2,1,1,3
+20,699225818183,Skrzypczak,Silver Common,248508,248508,72,873,66,37,0,2,False,False,5,5,0,False,False,450,450,False,873,1,1,1,1,1,2,1,1,3
+21,699225952597,Badé,Gold Common,255106,255106,78,32,19,18,0,3,False,False,5,5,0,False,False,450,450,False,32,1,1,1,1,1,2,1,1,3
+22,699225818177,Zeller,Silver Common,264914,264914,72,116003,2215,23,0,2,False,False,16,16,0,False,False,450,550,False,31,1,1,1,1,1,2,1,1,3
+23,699225818177,Zeller,Silver Common,264914,264914,72,116003,2215,23,0,2,False,False,16,14,0,False,False,450,550,False,31,1,1,1,1,1,2,1,1,3
+24,698115782804,Pécsi,Bronze Common,79922,79922,64,9,13,23,0,1,False,False,0,0,0,False,False,600,600,False,9,1,1,1,1,1,2,1,1,3
+25,698115782798,Javi Llabrés,Silver Common,264110,264110,69,453,53,45,0,2,False,False,16,16,0,False,False,650,1500,False,453,1,1,1,1,1,2,1,1,3
+26,698115782789,Raquel García,Silver Common,72286,72286,69,131720,2222,45,0,2,False,False,5,5,0,False,False,650,650,False,242,1,1,1,1,1,2,1,1,3
+27,699220035760,Palacios,Gold Rare,231521,231521,84,32,19,52,1,3,False,False,14,14,0,False,False,1200,1200,False,32,1,1,1,1,1,2,1,1,3
+28,699220035760,Palacios,Gold Rare,231521,231521,84,32,19,52,1,3,False,False,14,10,0,False,False,1200,1200,False,32,1,1,1,1,1,2,1,1,3
