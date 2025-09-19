@@ -3,3 +3,4 @@ openpyxl>=3.1
 ortools>=9.8
 fastapi
 uvicorn
+requests
