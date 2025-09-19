@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FIFA Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      25.1.20
+// @version      26.1.01
 // @description  automatically solve EAFC 25 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -406,6 +406,52 @@ color:black
     return button;
   };
 
+  const API_BASE_URL = "http://127.0.0.1:8000";
+  let LOCAL_CACHE={};  // In-memory cache for performance
+ 
+  const storeGet = async (key) =>{
+    // Return from cache if available for performance
+    console.log(`Fetching ${key} from server...`,LOCAL_CACHE);
+    if (LOCAL_CACHE[key]) {
+      Window.LOCAL_CACHE=LOCAL_CACHE
+      return LOCAL_CACHE[key];
+    }
+    try {
+      // Determine which endpoint to use based on the key
+      const endpoint = "/settings";
+      
+      let response = JSON.parse(await makeGetRequest(`${API_BASE_URL}${endpoint}?key=${key}`));
+      
+      LOCAL_CACHE[key]=JSON.parse(JSON.stringify(response))
+      Window.LOCAL_CACHE=LOCAL_CACHE
+      console.log(LOCAL_CACHE)      
+      return LOCAL_CACHE[key];
+      } catch (error) {
+      console.error(`Failed to fetch ${key} from server:`, error);
+      }
+}
+
+
+const  storeSet = (key, value) =>{
+  console.log(`Saving ${key} to server... with value ${value}`);
+  try {
+    // Update local cache for immediate access
+    LOCAL_CACHE[key] = value ;
+    window.LOCAL_CACHE=LOCAL_CACHE
+    // Determine which endpoint to use
+    const endpoint = "/settings";
+    
+    // Prepare the data payload based on the endpoint
+    let payload = JSON.stringify(value);
+      const response = makePostRequest(`${API_BASE_URL}${endpoint}?key=${key}`, payload);
+      return response.status === "success";
+    } catch (error) {
+      console.error(`Failed to save ${key} to server:`, error);
+      showNotification(`Failed to save data to server`, UINotificationType.NEGATIVE);
+      return false;
+    }
+  }
+
   const DEFAULT_SEARCH_BATCH_SIZE = 91;
   const MILLIS_IN_SECOND = 1000;
   const wait = async (maxWaitTime = 2) => {
@@ -598,7 +644,7 @@ color:black
       return conceptPlayers;
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       isConceptPlayerFetchInProgress = true;
       console.log("Getting Concept Players");
       const gatheredPlayers = [];
@@ -615,15 +661,13 @@ color:black
       // Start with 0% progress
       updateProgressBar(progressBarId, 0);
 
-      // Estimate total players to be around 20000 for progress calculation
-      // Try to get saved total from localStorage first
-      const savedEstimatedTotal = localStorage.getItem("conceptPlayerTotal");
+      const savedEstimatedTotal = await storeGet("conceptPlayerTotal");
       const estimatedTotal = savedEstimatedTotal ? parseInt(savedEstimatedTotal) : 20000;
 
       // Update the total once we have more data
-      const updateTotal = (newTotal) => {
+      const updateTotal = async (newTotal) => {
         if (newTotal > 1000) { // Only save if it seems like a reasonable count
-          localStorage.setItem("conceptPlayerTotal", newTotal);
+          storeSet("conceptPlayerTotal", newTotal);
           console.log(`Updated concept player count to ${newTotal}`);
         }
       };
@@ -633,7 +677,7 @@ color:black
           this,
           async function (sender, response) {
             gatheredPlayers.push(...response.response.items);
-
+       
             // Update progress based on current offset
             const progress = (searchCriteria.offset / estimatedTotal) * 100;
             updateProgressBar(progressBarId, progress);
@@ -865,32 +909,19 @@ color:black
     }
     saveFixedItems();
   };
-  let getFixedItems = function () {
-    if (cachedFixedItems) {
-      return cachedFixedItems;
+  let getFixedItems = async function () {
+    if (LOCAL_CACHE[FIXED_ITEMS_KEY]) {
+      return LOCAL_CACHE[FIXED_ITEMS_KEY];
     }
     cachedFixedItems = [];
-    let fixedItems = localStorage.getItem(FIXED_ITEMS_KEY);
-    if (fixedItems) {
-      cachedFixedItems = JSON.parse(fixedItems);
-    }
-    return cachedFixedItems;
+    let fixedItems = await storeGet(FIXED_ITEMS_KEY);
+    LOCAL_CACHE[FIXED_ITEMS_KEY] = fixedItems ;
+    
+    return LOCAL_CACHE[FIXED_ITEMS_KEY];
   };
-  let fixedItemsCleanup = function (clubPlayerIds) {
-    let fixedItems = getFixedItems();
-    for (let _i = 0, _a = Array.from(fixedItems); _i < _a.length; _i++) {
-      let fixedItem = _a[_i];
-      if (!clubPlayerIds[fixedItem]) {
-        const index = fixedItems.indexOf(fixedItem);
-        if (index > -1) {
-          fixedItems.splice(index, 1);
-        }
-      }
-    }
-    saveFixedItems();
-  };
-  let saveFixedItems = function () {
-    localStorage.setItem(FIXED_ITEMS_KEY, JSON.stringify(cachedFixedItems));
+
+  let saveFixedItems = async function () {
+    storeSet(FIXED_ITEMS_KEY, LOCAL_CACHE[FIXED_ITEMS_KEY]);
   };
 
   const idToPlayerItem = {};
@@ -1559,7 +1590,7 @@ color:black
     _squad.setPlayers(_solutionSquad, true);
 
     await loadChallenge(_challenge);
-
+   
     let autoSubmitId = getSettings(sbcId, sbcData.challengeId, "autoSubmit");
     if (
       (solution.status_code == autoSubmitId || autoSubmitId == 1) &&
@@ -1895,9 +1926,10 @@ console.log("PP",...args)
         async () => {
 
           // Remove existing price data for this player before refreshing
-          let PriceItems = getPriceItems();
+          let PriceItems = await getPriceItems();
           if (e.definitionId in PriceItems) {
             delete PriceItems[e.definitionId];
+            LOCAL_CACHE[PRICE_ITEMS_KEY]= PriceItems;
             savePriceItems();
           }
           await fetchPlayerPrices([e]);
@@ -2255,82 +2287,30 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     return fbPrice;
   };
 
-  let PriceItem = function (items) {
-    //  console.log(item, price, lastUpdated)
-    let PriceItems = getPriceItems();
+  let PriceItem = async function (items) {
+    
+    let PriceItems = await getPriceItems();
+ 
     let timeStamp = new Date(Date.now());
     for (let key in items) {
       items[key]["timeStamp"] = timeStamp;
       PriceItems[items[key]["eaId"]] = items[key];
     }
+    
+    LOCAL_CACHE[PRICE_ITEMS_KEY]= PriceItems;
     savePriceItems();
   };
 
-  let getPriceItems = function () {
-    if (cachedPriceItems) {
-      return cachedPriceItems;
+  let getPriceItems = async function () {
+    if (LOCAL_CACHE[PRICE_ITEMS_KEY]) {
+      return LOCAL_CACHE[PRICE_ITEMS_KEY];
     }
-    cachedPriceItems = {};
-    function getFromIndexedDB() {
-      return new Promise((resolve) => {
-        const dbName = "futSBCDatabase";
-        const storeName = "priceItems";
-        const request = indexedDB.open(dbName, 1);
-
-        request.onupgradeneeded = function(event) {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName, { keyPath: "id" });
-          }
-        };
-
-        request.onsuccess = function(event) {
-          const db = event.target.result;
-          const transaction = db.transaction([storeName], "readonly");
-          const store = transaction.objectStore(storeName);
-
-          // Get the single entry that contains all price items
-          const getAllRequest = store.get("allPriceItems");
-
-          getAllRequest.onsuccess = function(event) {
-            if (event.target.result && event.target.result.data) {
-              resolve(event.target.result.data);
-            } else {
-              resolve(null);
-            }
-          };
-
-          transaction.onerror = function() {
-            console.error("Error reading from IndexedDB");
-            resolve(null);
-          };
-        };
-
-        request.onerror = function(event) {
-          console.error("Error opening IndexedDB:", event.target.error);
-          resolve(null);
-        };
-      });
-    }
-
-    // First try IndexedDB, then fall back to localStorage
-    let PriceItems = null;
-    getFromIndexedDB().then(idbItems => {
-      if (idbItems) {
-        PriceItems = JSON.stringify(idbItems);
-      } else {
-        PriceItems = localStorage.getItem(PRICE_ITEMS_KEY);
-      }
-    });
-    if (PriceItems) {
-      cachedPriceItems = JSON.parse(PriceItems);
-    }
-
-    return cachedPriceItems;
+    LOCAL_CACHE[PRICE_ITEMS_KEY] = await storeGet(PRICE_ITEMS_KEY) || [];
+    return LOCAL_CACHE[PRICE_ITEMS_KEY];
   };
 
-  let isFodder = function (item) {
-    let PriceItems = getPriceItems();
+  let isFodder = async function (item) {
+    let PriceItems = await getPriceItems();
     if (PriceItems[item.definitionId]?.isExtinct || PriceItems[item.definitionId]?.isObjective){return false}
     let price=getPrice(item);
     let fodderPrice = Math.max( getPrice({ definitionId: item.rating + "_CBR" }),item?._itemPriceLimits?.minimum || 0);
@@ -2339,67 +2319,13 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     }
     return false;
   }
-  let PriceItemsCleanup = function (clubPlayerIds) {
-    let PriceItems = getPriceItems();
-    for (let _i = 0, _a = Array.from(PriceItems); _i < _a.length; _i++) {
-      let PriceItem = _a[_i];
-      if (!clubPlayerIds[PriceItem]) {
-        PriceItems.delete(PriceItem);
-      }
-    }
-    savePriceItems();
-  };
-  let savePriceItems = function () {
-    function saveToIndexedDB() {
-      const dbName = "futSBCDatabase";
-      const storeName = "priceItems";
-      const request = indexedDB.open(dbName, 1);
 
-      request.onupgradeneeded = function(event) {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, { keyPath: "id" });
-        }
-      };
-
-      request.onsuccess = function(event) {
-        const db = event.target.result;
-        const transaction = db.transaction([storeName], "readwrite");
-        const store = transaction.objectStore(storeName);
-
-        // First clear existing data
-        store.clear().onsuccess = function() {
-          // Store the entire price items collection in a single entry
-          const allItems = {
-            id: "allPriceItems",
-            data: cachedPriceItems
-          };
-
-          store.put(allItems);
-        };
-
-        transaction.oncomplete = function() {
-          console.log("Price items saved to IndexedDB");
-        };
-
-        transaction.onerror = function(error) {
-          console.error("Error saving to IndexedDB:", error);
-          // Fallback to localStorage if IndexedDB fails
-          localStorage.setItem(PRICE_ITEMS_KEY, JSON.stringify(cachedPriceItems));
-        };
-      };
-
-      request.onerror = function(event) {
-        console.error("IndexedDB error:", event.target.error);
-        // Fallback to localStorage if IndexedDB cannot be opened
-        localStorage.setItem(PRICE_ITEMS_KEY, JSON.stringify(cachedPriceItems));
-      };
-    }
-
-    // Call the function to save the data
-    saveToIndexedDB();
+  let savePriceItems = async function () {
+    
+     storeSet(PRICE_ITEMS_KEY, LOCAL_CACHE[PRICE_ITEMS_KEY]);
   };
 
+   
   function makeGetRequest(url) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
@@ -2414,7 +2340,6 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       });
     });
   }
-
 
 
   function makePostRequest(url, data) {
@@ -2510,12 +2435,14 @@ if (!this.refreshPriceButton && e.isPlayer()) {
 
       return;
     }
-    let PriceItems = getPriceItems();
+    let PriceItems = await getPriceItems();
+    console.log("PriceSingle",priceResponse, rating, PriceItems);
     let timeStamp = new Date(Date.now());
     for (let key in priceResponse) {
       priceResponse[key]["timeStamp"] = timeStamp;
       PriceItems[rating + "_CBR"] = priceResponse[key];
     }
+    LOCAL_CACHE[PRICE_ITEMS_KEY] = PriceItems;
     savePriceItems();
   };
   let fetchPlayerPrices = async (players) => {
@@ -2528,30 +2455,32 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     if (idsArray.length === 0) return;
 
     // Create progress bar
+    let totalPrices = idsArray.length;
+    
     const progressBarId = 'prices-progress-bar';
     const containerId = 'prices-progress-container';
     createProgressBar(progressBarId, containerId, "Fetching Player Prices");
-
+    
     let duplicateIds = await fetchDuplicateIds();
-    let totalPrices = idsArray.length;
+
     let fetched = 0;
 
     while (idsArray.length) {
       const playersIdArray = idsArray.splice(0, 50);
 
       try {
-        const futggResponse = await makeGetRequest(
+        const futggResponse =  await makeGetRequest(
           `https://www.fut.gg/api/fut/player-prices/25/?ids=${playersIdArray}`
         );
 
         let priceResponse = JSON.parse(futggResponse).data;
         PriceItem(priceResponse);
-
+       
         // Update progress
         fetched += playersIdArray.length;
         const progress = (fetched / totalPrices) * 100;
         updateProgressBar(progressBarId, progress);
-
+        
       } catch (error) {
         console.error(error);
         await wait();
@@ -2559,15 +2488,16 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       }
     }
 
-    // Remove progress bar after completion
-    removeProgressBar(containerId);
+   
 
-    if (totalPrices > 0) {
+    
+      // Remove progress bar after completion
+      removeProgressBar(containerId);
       showNotification(
         `Fetched ${totalPrices} player prices`,
         UINotificationType.POSITIVE
       );
-    }
+    
   };
   let sound = new Audio(
     "https://raw.githubusercontent.com/Yousuke777/sound/main/kansei.mp3"
@@ -3401,7 +3331,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     layoutSelect.style.padding = "5px";
     const defaultOption = document.createElement("option");
     defaultOption.value = "";
-    defaultOption.textContent = localStorage.getItem("lastUsedLayout") || "Save a layout...";
+    defaultOption.textContent = await storeGet("lastUsedLayout") || "Save a layout...";
     layoutSelect.appendChild(defaultOption);
 
 
@@ -3423,8 +3353,8 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     container.insertBefore(layoutForm, pivotTable);
 
     // Setup layout saving/loading functionality
-    const layoutStorage = localStorage.getItem("pivotLayouts")
-      ? JSON.parse(localStorage.getItem("pivotLayouts"))
+    const layoutStorage = await storeGet("pivotLayouts")
+      ? JSON.parse(await storeGet("pivotLayouts"))
       : {};
 
     const populateLayoutSelect = () => {
@@ -3437,18 +3367,18 @@ if (!this.refreshPriceButton && e.isPlayer()) {
         select.appendChild(option);
       });
       // Auto load layout when selection changes
-      layoutSelect.addEventListener('change', () => {
+      layoutSelect.addEventListener('change', async () => {
         const name = layoutSelect.value;
         if (!name) return;
 
         const config = layoutStorage[name];
-        localStorage.setItem("lastUsedLayout", name);
+         storeSet("lastUsedLayout", name);
         $("#pivot-table").pivotUI(pivotData, config, true);
         showNotification(`Layout "${name}" loaded`, UINotificationType.POSITIVE);
       });
     };
 
-    saveButton.addEventListener("click", () => {
+    saveButton.addEventListener("click", async () => {
       const name = document.getElementById("layoutName").value;
       if (!name) {
         showNotification(
@@ -3462,22 +3392,25 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       delete config_copy.aggregators;
       delete config_copy.renderers;
       layoutStorage[name] = config_copy;
-      localStorage.setItem("pivotLayouts", JSON.stringify(layoutStorage));
-      localStorage.setItem("lastUsedLayout", name); // Save last used layout name
+      LOCAL_CACHE["pivotLayouts"] = layoutStorage;
+      LOCAL_CACHE["lastUsedLayout"]= name;
+       storeSet("pivotLayouts", LOCAL_CACHE["pivotLayouts"]);
+       storeSet("lastUsedLayout", LOCAL_CACHE["lastUsedLayout"]); // Save last used layout name
 
       showNotification(`Layout "${name}" saved`, UINotificationType.POSITIVE);
       populateLayoutSelect();
       document.getElementById("layoutName").value = "";
     });
 
-  deleteButton.addEventListener("click", () => {
+  deleteButton.addEventListener("click",async () => {
       const name = document.getElementById("savedLayouts").value;
       if (!name) {
         showNotification("Please select a layout", UINotificationType.NEGATIVE);
         return;
       }
       delete layoutStorage[name];
-      localStorage.setItem("pivotLayouts", JSON.stringify(layoutStorage));
+      LOCAL_CACHE["pivotLayouts"] = layoutStorage;
+       storeSet("pivotLayouts", layoutStorage);
       showNotification(`Layout "${name}" deleted`, UINotificationType.POSITIVE);
       populateLayoutSelect();
     });
@@ -3525,7 +3458,7 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     }));
 
     // Initialize pivot table after DOM is ready
-    setTimeout(() => {
+    setTimeout(async () => {
       // Include all D3 renderers
       $.pivotUtilities.c3_renderers = $.extend($.pivotUtilities.c3_renderers, {
         "D3 Tree": function (pivotData, opts) {
@@ -3563,9 +3496,9 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       );
 
     // Load last used layout name from storage if exists
-    const lastUsed = localStorage.getItem("lastUsedLayout");
-    const layoutStorage = localStorage.getItem("pivotLayouts") ?
-      JSON.parse(localStorage.getItem("pivotLayouts")) : {};
+    const lastUsed = await storeGet("lastUsedLayout");
+    const layoutStorage = await storeGet("pivotLayouts") ?
+      JSON.parse(await storeGet("pivotLayouts")) : {};
 
     // If last used layout exists, use it as initial config
     const initialConfig = lastUsed && layoutStorage[lastUsed] ?
@@ -3619,31 +3552,28 @@ if (!this.refreshPriceButton && e.isPlayer()) {
   };
 
   let SOLVER_SETTINGS_KEY = "sbcSolverSettings";
-  let cachedSolverSettings;
+  
 
-  let setSolverSettings = function (key, Settings) {
-    let SolverSettings = getSolverSettings();
+  let setSolverSettings = async function (key, Settings) {
+    let SolverSettings = await getSolverSettings();
     SolverSettings[key] = Settings;
-    cachedSolverSettings = SolverSettings;
-    localStorage.setItem(
+    LOCAL_CACHE[SOLVER_SETTINGS_KEY] = SolverSettings;
+    
+     storeSet(
       SOLVER_SETTINGS_KEY,
-      JSON.stringify(cachedSolverSettings)
+      LOCAL_CACHE[SOLVER_SETTINGS_KEY]
     );
   };
 
-  let getSolverSettings = function () {
-    if (cachedSolverSettings) {
-      return cachedSolverSettings;
+  let getSolverSettings = async function () {
+    if (LOCAL_CACHE[SOLVER_SETTINGS_KEY]) {
+      return LOCAL_CACHE[SOLVER_SETTINGS_KEY];
     }
-    cachedSolverSettings = {};
-    let SolverSettings = localStorage.getItem(SOLVER_SETTINGS_KEY);
-    if (SolverSettings) {
-      cachedSolverSettings = JSON.parse(SolverSettings);
-    } else {
-      cachedSolverSettings = {};
-    }
+    
+    let SolverSettings = await storeGet(SOLVER_SETTINGS_KEY);
+    LOCAL_CACHE[SOLVER_SETTINGS_KEY]=SolverSettings
 
-    return cachedSolverSettings;
+    return LOCAL_CACHE[SOLVER_SETTINGS_KEY];
   };
 
   const generateSbcSolveTab = () => {
@@ -3796,8 +3726,13 @@ if (!this.refreshPriceButton && e.isPlayer()) {
     );
     let panel = createPanel();
     let clearPricesBtn = createButton("clearPrices", "Clear All Prices", () => {
-      cachedPriceItems = null;
-      localStorage.removeItem(PRICE_ITEMS_KEY);
+      
+      LOCAL_CACHE[PRICE_ITEMS_KEY]=[];
+      savePriceItems();
+      services.Notification.queue([
+        "Prices Cleared",
+        UINotificationType.POSITIVE,
+      ]);
     });
     panel.appendChild(clearPricesBtn);
     sbcUITile.appendChild(panel);
@@ -4283,19 +4218,34 @@ if (!this.refreshPriceButton && e.isPlayer()) {
       repositories.Rarity._collection[id]?.guid
     );
   };
-
-  const saveSettings = (sbc, challenge, id, value) => {
-    let settings = getSolverSettings();
+ let saveCount=0;
+  const saveSettings = async (sbc, challenge, id, value) => {
+    
+    let settings = await getSolverSettings();
+    
+    // Initialize settings object if needed
     settings["sbcSettings"] ??= {};
     let sbcSettings = settings["sbcSettings"];
     sbcSettings[sbc] ??= {};
     sbcSettings[sbc][challenge] ??= {};
-    sbcSettings[sbc][challenge][id] = value;
-    setSolverSettings("sbcSettings", sbcSettings);
 
+    // Update value in memory cache
+    sbcSettings[sbc][challenge][id] = value;
+   
+    
+    // Store settings in backend
+    setSolverSettings("sbcSettings",sbcSettings);
   };
-  const getSettings = (sbc, challenge, id) => {
-    let settings = getSolverSettings();
+  const getSettings = async (sbc, challenge, id) => {
+    // Check if settings are already cached
+    let settings
+    if (LOCAL_CACHE?.sbcSolverSettings){
+      settings = LOCAL_CACHE.sbcSolverSettings
+    }
+    else{
+     settings = await getSolverSettings();
+
+    }
     let returnValue =
       settings["sbcSettings"]?.[sbc]?.[challenge]?.[id] ??
       settings["sbcSettings"]?.[sbc]?.[0]?.[id] ??
@@ -4502,14 +4452,19 @@ document.body.appendChild(toggleContainer);
       }
   };
 
-let initDefaultSettings = () => {
-    Object.keys(defaultSBCSolverSettings).forEach((id) =>
+let initDefaultSettings = async () => {
+    
+    
+    Object.keys(defaultSBCSolverSettings).forEach(async (id) =>{
+      let currentSetting = await getSettings(0, 0, id);
+      console.log("Current Setting", currentSetting);
       saveSettings(
         0,
         0,
         id,
-        getSettings(0, 0, id) ?? defaultSBCSolverSettings[id]
+        currentSetting ?? defaultSBCSolverSettings[id]
       )
+    }
     );
   };
   const createPanel = () => {
@@ -4804,25 +4759,106 @@ let initDefaultSettings = () => {
     return results;
   }
 
-  const init = () => {
+  const initLocalCache = async () => {
+    try {
+      console.log("Starting local cache initialization...");
+      
+      // Load solver settings
+      console.log("Loading solver settings...");
+      LOCAL_CACHE[SOLVER_SETTINGS_KEY] = await storeGet(SOLVER_SETTINGS_KEY) || {};
+      console.log("Solver settings loaded:", LOCAL_CACHE[SOLVER_SETTINGS_KEY]);
+      
+      // Load price data
+      console.log("Loading price data...");
+      LOCAL_CACHE[PRICE_ITEMS_KEY] = await storeGet(PRICE_ITEMS_KEY) || {};
+      console.log("Price data loaded, items count:", Object.keys(LOCAL_CACHE[PRICE_ITEMS_KEY]).length);
+      
+      // Load other stored settings
+      console.log("Loading pivot layouts...");
+      LOCAL_CACHE["pivotLayouts"] = await storeGet("pivotLayouts") || {};
+      console.log("Pivot layouts loaded, count:", Object.keys(LOCAL_CACHE["pivotLayouts"]).length);
+      
+      console.log("Loading last used layout...");
+      LOCAL_CACHE["lastUsedLayout"] = await storeGet("lastUsedLayout") || "";
+      console.log("Last used layout:", LOCAL_CACHE["lastUsedLayout"]);
+      
+      console.log("Loading concept player total...");
+      LOCAL_CACHE["conceptPlayerTotal"] = await storeGet("conceptPlayerTotal") || 20000;
+      console.log("Concept player total:", LOCAL_CACHE["conceptPlayerTotal"]);
+
+      // Initialize default settings if missing
+      console.log("Initializing default settings...");
+      await initDefaultSettings();
+      console.log("Default settings initialized");
+
+      console.log("Local cache fully initialized:", LOCAL_CACHE);
+      Window.LOCAL_CACHE = LOCAL_CACHE; // Make available globally for debugging
+      
+      return true;
+    } catch (error) {
+      console.error("Failed to initialize local cache:", error);
+      console.error("Error details:", error.message);
+      showNotification("Failed to load settings from API", UINotificationType.NEGATIVE);
+      return false;
+    }
+  };
+
+  const init = async () => {
     let isAllLoaded = false;
     if (services.Localization) {
       isAllLoaded = true;
     }
     if (isAllLoaded) {
+      console.log("Starting SBC AutoSolver initialization...");
+      await initLocalCache();
+      
+      console.log("SBC AutoSolver local cache initialized.",LOCAL_CACHE);
+      console.log("Initializing sbcViewOverride");
       sbcViewOverride();
+      showNotification("SBC View loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing sbcButtonOverride");
       sbcButtonOverride();
+      showNotification("SBC Buttons loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing playerItemOverride");
       playerItemOverride();
+      showNotification("Player Items loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing playerSlotOverride");
       playerSlotOverride();
+      showNotification("Player Slots loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing packOverRide");
       packOverRide();
+      showNotification("Pack functionality loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing sideBarNavOverride");
       sideBarNavOverride();
+      showNotification("Navigation loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing favTagOverride");
       favTagOverride();
+      showNotification("Favorites system loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing sbcSubmitChallengeOverride");
       sbcSubmitChallengeOverride();
+      showNotification("SBC submission loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing unassignedItemsOverride");
       unassignedItemsOverride();
-      initDefaultSettings();
+      showNotification("Unassigned items loaded", UINotificationType.NEUTRAL);
+      
+;
+      showNotification("Settings loaded", UINotificationType.NEUTRAL);
+      
+      console.log("Initializing futHomeOverride");
       futHomeOverride();
-
+      showNotification("FUT Home loaded", UINotificationType.NEUTRAL);
+      
+      showNotification("Auto-SBC fully loaded!", UINotificationType.POSITIVE);
     } else {
+      console.log("SBC AutoSolver not ready, retrying in 4 seconds");
       setTimeout(init, 4000);
     }
   };

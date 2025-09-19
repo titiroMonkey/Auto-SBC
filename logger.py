@@ -26,7 +26,7 @@ def add_log(message,result = []):
         os.makedirs(log_dir)
         
     log_file = os.path.join(log_dir, f"solver_log.csv")
-    with open(log_file, 'w', newline='') as f:
+    with open(log_file, 'w', newline='', encoding='utf-8') as f:
         csv_writer = csv.writer(f)
         # Write header
         csv_writer.writerow(["time", "message", "result"])
