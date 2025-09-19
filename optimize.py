@@ -463,33 +463,54 @@ def create_squad_rating_constraint(
 
 @runtime
 def create_min_overall_constraint(
-    df, model, player, map_idx, players_grouped, num_cnts, NUM_MIN_OVERALL, MIN_OVERALL
+    df, model, player, map_idx, players_grouped, num_cnts, NUM_MIN_OVERALL, MIN_OVERALL, SCOPE
 ):
-    """Minimum OVR of XX : Min X (>=)"""
-    MAX_rating = int(df["rating"].max())
-    for i, rating in enumerate(MIN_OVERALL):
+    """
+    Minimum OVR constraint.
+    MIN_OVERALL[i] with SCOPE applies to the count of players whose rating >= MIN_OVERALL[i].
+
+    SCOPE semantics:
+      GREATER / GREATER_OR_EQUAL : Sum >= NUM_MIN_OVERALL[i]
+      LOWER / LESS               : Sum <= NUM_MIN_OVERALL[i]
+      EXACT                      : Sum == NUM_MIN_OVERALL[i]
+    """
+    max_rating = int(df["rating"].max())
+    for i, threshold in enumerate(MIN_OVERALL):
         expr = []
-        for rat in range(rating, MAX_rating + 1):
+        for rat in range(threshold, max_rating + 1):
             if rat not in map_idx["rating"]:
                 continue
-            expr += players_grouped["rating"].get(map_idx["rating"][rat], [])
-        model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_MIN_OVERALL[i])
+            expr.extend(players_grouped["rating"].get(map_idx["rating"][rat], []))
+        if SCOPE == "GREATER":
+            model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_MIN_OVERALL[i])
+        elif SCOPE == "LOWER":
+            model.Add(cp_model.LinearExpr.Sum(expr) <= NUM_MIN_OVERALL[i])
+        elif SCOPE == "EXACT":
+            model.Add(cp_model.LinearExpr.Sum(expr) == NUM_MIN_OVERALL[i])
+        else:
+            raise ValueError(f"Unsupported SCOPE '{SCOPE}' for create_min_overall_constraint")
     return model
 
 
 @runtime
 def create_max_overall_constraint(
-    df, model, player, map_idx, players_grouped, num_cnts, NUM_MAX_OVERALL, MAX_OVERALL
+    df, model, player, map_idx, players_grouped, num_cnts, NUM_MAX_OVERALL, MAX_OVERALL, SCOPE
 ):
-    """Max OVR of XX : Max X (>=)"""
-    MAX_rating = df["rating"].max()
-    for i, rating in enumerate(MAX_OVERALL):
+   
+    for i, threshold in enumerate(MAX_OVERALL):
         expr = []
-        for rat in range(rating, MAX_rating + 1):
-            if rat not in map_idx["rating"]:
-                continue
-            expr += players_grouped["rating"].get(map_idx["rating"][rat], [])
-        model.Add(cp_model.LinearExpr.Sum(expr) <= NUM_MAX_OVERALL[i])
+        # Collect players with rating <= threshold
+        for rat in map_idx["rating"].keys():
+            if rat <= threshold:
+                expr.extend(players_grouped["rating"].get(map_idx["rating"][rat], []))
+        if SCOPE == "GREATER":
+            model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_MAX_OVERALL[i])
+        elif SCOPE == "LOWER":
+            model.Add(cp_model.LinearExpr.Sum(expr) <= NUM_MAX_OVERALL[i])
+        elif SCOPE == "EXACT":
+            model.Add(cp_model.LinearExpr.Sum(expr) == NUM_MAX_OVERALL[i])
+        else:
+            raise ValueError(f"Unsupported SCOPE '{SCOPE}' for create_max_overall_constraint")
     return model
 
 @runtime 
@@ -1265,6 +1286,7 @@ def SBC(df, sbc, maxSolveTime):
                 num_cnts,
                 [req["count"]],
                 [req["eligibilityValues"][0]],
+                req["scope"],
             )
         if req["requirementKey"] == "PLAYER_MAX_OVR":
             model = create_max_overall_constraint(
@@ -1276,6 +1298,7 @@ def SBC(df, sbc, maxSolveTime):
                 num_cnts,
                 [req["count"]],
                 [req["eligibilityValues"][0]],
+                req["scope"],
             )
         if req["requirementKey"] == "PLAYER_EXACT_OVR":
             model = create_player_exact_overall_constraint(
