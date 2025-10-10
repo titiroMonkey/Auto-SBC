@@ -22,7 +22,11 @@ Check out the settings menu item for extra details!
 ### Backend
 
 Run `pip3 install -r requirements.txt` to install the required dependencies.
-To run the backend, simply run `python -m uvicorn main:app --reload` after installing python and the required dependencies.
+To run the backend (now packaged under `backend/`), run:
+
+```
+python -m uvicorn backend.main:app --reload
+```
 - [Google OR-Tools](https://github.com/google/or-tools)
 - Python 3.9
 - pandas
@@ -31,6 +35,26 @@ To run the backend, simply run `python -m uvicorn main:app --reload` after insta
 - uvicorn
 
 The constraints used in the program are created in the `optimize.py` file based of the SBC requirements and the optimization problem is solved using [Google CP-SAT solver](https://developers.google.com/optimization/cp/cp_solver).
+
+### Windows Installer (Optional Packaging)
+
+You can create a single-file executable with PyInstaller and then wrap it in a user-friendly Windows installer (Inno Setup) that asks the user where to install the backend service.
+
+1. Build the one-file executable:
+```
+pyinstaller --onefile --noconfirm --name AutoSBCBackend backend/main.py
+```
+2. (Optional) Build an installer (requires Inno Setup `iscc` on PATH):
+```
+python installer/build_installer.py --version 1.0.0
+```
+This produces an installer in `dist/installer/AutoSBCBackendSetup-<version>.exe` that:
+ - Prompts for install directory
+ - Installs `AutoSBCBackend.exe` and README
+ - Optionally adds a desktop shortcut & startup (Run at login) entry
+ - Uninstaller cleans up state/log files generated at runtime.
+
+You can adjust install icon (`pictures/solveBtn.ico`) or add more files by editing `installer/AutoSBCBackendInstaller.iss`.
 
 ### Shoutouts
 Thanks to [Regista6](https://github.com/Regista6) for showing the way with the google OR tools

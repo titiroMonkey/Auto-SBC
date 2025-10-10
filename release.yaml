@@ -1,33 +1,43 @@
-name: Release Backend EXE
+name: Backend EXE Release (Minimal)
 
 on:
   push:
     tags:
-      - "v*" # e.g. v1.2.3
+      - "v*"  # e.g. v1.0.0
 
 permissions:
-  contents: write # needed to create / upload release
-  actions: read
+  contents: write
 
 jobs:
-  build-and-release:
-    name: Build EXE and Publish Release
+  build-release:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Detect prerelease
+        id: pre
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # If tag contains a hyphen (v1.2.3-rc1, v1.2.3-beta, etc.) treat as prerelease
+          if [[ "$TAG" == *-* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+          cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if exist requirements.txt (pip install -r requirements.txt) else (echo "No requirements.txt found" && exit /b 1)
+          pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Show versions
@@ -35,51 +45,47 @@ jobs:
           python --version
           pip list
 
-      - name: Build EXE (PyInstaller spec)
+      - name: Build EXE
         shell: cmd
         run: |
           if exist dist rd /s /q dist
           if exist build rd /s /q build
-          python scripts\build_backend.py --spec
+          pyinstaller --noconfirm --onefile --name AutoSBCBackend ^
+            --additional-hooks-dir hooks ^
+            --collect-all ortools ^
+            backend\main.py
           if not exist dist\AutoSBCBackend.exe (
             echo Build failed: EXE missing
             dir dist
             exit /b 1
           )
 
-      - name: Stamp version into checksum
+      - name: Compute checksum
         id: sums
         shell: bash
         run: |
-          SHA256=$(sha256sum dist/AutoSBCBackend.exe | cut -d' ' -f1)
-          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "sha256=$(sha256sum dist/AutoSBCBackend.exe | cut -d' ' -f1)" >> $GITHUB_OUTPUT
 
-      - name: Upload artifact (CI)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AutoSBCBackend-${{ github.ref_name }}
-          path: |
-            dist/AutoSBCBackend.exe
-            warn-*.txt
-          if-no-files-found: ignore
+          path: dist/AutoSBCBackend.exe
           retention-days: 7
 
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: AutoSBC Backend ${{ github.ref_name }}
-          draft: false
-          prerelease: false
           body: |
             AutoSBC Backend release ${{ github.ref_name }}
-
             SHA256: `${{ steps.sums.outputs.sha256 }}`
-
             Notes:
-            - Built via PyInstaller spec.
+            - Built via PyInstaller.
             - Run: AutoSBCBackend.exe (binds to port 8000).
-            - Set AUTOSBC_ENABLE_FILE_LOGS=1 to re-enable file logging in packaged mode.
+            - Set AUTOSBC_ENABLE_FILE_LOGS=1 to enable file logging in packaged mode.
+          prerelease: ${{ steps.pre.outputs.is_prerelease }}
           files: |
             dist/AutoSBCBackend.exe
         env:

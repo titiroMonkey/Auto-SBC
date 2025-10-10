@@ -4,3 +4,5 @@ model.txt
 .DS_Store
 *.log
 *.csv
+dist/**
+build/**
