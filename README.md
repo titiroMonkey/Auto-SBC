@@ -1,8 +1,11 @@
 ## EAFC Automated SBC Solving ⚽
+
 If you want to add any new features to the idedas section of the discussions tab and ill try to implement them.
+
 #### The goal is to automatically solve the SBC using the currently available players in the club with the minimum cost.
 
 ### Frontend
+
 The project utilizes [tamper monkey script](https://www.tampermonkey.net/) to output the users Club Player Data.
 Install the tampermonkey extension and then install [the frontend script](https://github.com/titiroMonkey/Auto-SBC/blob/main/tampermonkey-ai-sbc.user.js)
 
@@ -27,6 +30,7 @@ To run the backend (now packaged under `backend/`), run:
 ```
 python -m uvicorn backend.main:app --reload
 ```
+
 - [Google OR-Tools](https://github.com/google/or-tools)
 - Python 3.9
 - pandas
@@ -41,20 +45,26 @@ The constraints used in the program are created in the `optimize.py` file based 
 You can create a single-file executable with PyInstaller and then wrap it in a user-friendly Windows installer (Inno Setup) that asks the user where to install the backend service.
 
 1. Build the one-file executable:
+
 ```
 pyinstaller --onefile --noconfirm --name AutoSBCBackend backend/main.py
 ```
+
 2. (Optional) Build an installer (requires Inno Setup `iscc` on PATH):
+
 ```
 python installer/build_installer.py --version 1.0.0
 ```
+
 This produces an installer in `dist/installer/AutoSBCBackendSetup-<version>.exe` that:
- - Prompts for install directory
- - Installs `AutoSBCBackend.exe` and README
- - Optionally adds a desktop shortcut & startup (Run at login) entry
- - Uninstaller cleans up state/log files generated at runtime.
+
+- Prompts for install directory
+- Installs `AutoSBCBackend.exe` and README
+- Optionally adds a desktop shortcut & startup (Run at login) entry
+- Uninstaller cleans up state/log files generated at runtime.
 
 You can adjust install icon (`pictures/solveBtn.ico`) or add more files by editing `installer/AutoSBCBackendInstaller.iss`.
 
 ### Shoutouts
+
 Thanks to [Regista6](https://github.com/Regista6) for showing the way with the google OR tools
