@@ -6,3 +6,13 @@ model.txt
 *.csv
 dist/**
 build/**
+*.spec
+installer/output/**
+logs/**
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+*.tmp
+*.bak
+~$*
+*.swp
