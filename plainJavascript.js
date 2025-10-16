@@ -4449,24 +4449,24 @@ let dealWithUnassigned = async () => {
   // swap duplicates for tradable
   const switchTradeable = ulist.filter((l) =>
     players
-      .filter((p) => !p.untradeable)
+      .filter((p) => p.isTradeable())
       .map((m) => m.definitionId)
       .includes(l.definitionId)
   );
   const tradablePlayers = players.filter(
     (f) => f.definitionId in switchTradeable.map((m) => m.definitionId)
   );
-  if (switchTradeable.length > 0) {
+  if (tradablePlayers.length > 0) {
     console.log(
-      `Moving duplicates to club (tradable swaps): count=${switchTradeable.length}`,
-      switchTradeable.map((p) => ({
+      `Moving duplicates to club (tradable swaps): count=${tradablePlayers.length}`,
+      tradablePlayers.map((p) => ({
         id: p.id,
         definitionId: p.definitionId,
         name: p._staticData?.name,
       }))
     );
 
-    services.Item.move(switchTradeable, 7);
+    services.Item.move(tradablePlayers, 7);
     goToUnassignedView();
 
     storage = await getStoragePlayers();
@@ -4475,7 +4475,7 @@ let dealWithUnassigned = async () => {
   }
   // ulist = ulist.filter(item =>
   //       !switchTradeable.some(sw => sw.id === item.id)
-  //     ).concat(players.filter(p => !p.untradeable).map(m => m.definitionId).includes(ulist.map(p=>p.definitionId)));
+  //     ).concat(players.filter(p => p.isTradeable()).map(m => m.definitionId).includes(ulist.map(p=>p.definitionId)));
 
   const toTeam = ulist.filter((item) => item.isMovable());
   if (toTeam.length > 0) {
@@ -4512,7 +4512,7 @@ let dealWithUnassigned = async () => {
 
   // sendDuplicatesToStorage
   const toStorage = ulist
-    .filter((item) => item.isStorable() && !item.isMovable() && item.untradeable)
+    .filter((item) => item.isStorable() && !item.isMovable() && !item.isTradeable())
     .sort((a, b) => getPrice(b) - getPrice(a))
     .slice(0, Math.max(0, 100 - storage.length));
   if (toStorage.length > 0) {
@@ -5291,7 +5291,7 @@ let getSBCPrice = (item, sbcId = 0, challengeId = 0) => {
     (item?.isStorage ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1);
   sbcPrice =
     sbcPrice *
-    (item.untradeable ? getSettings(sbcId, challengeId, 'untradeableDiscount') / 100 : 1);
+    (!item.isTradeable() ? getSettings(sbcId, challengeId, 'untradeableDiscount') / 100 : 1);
 
   return sbcPrice;
 };
@@ -5406,7 +5406,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
           !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
           !(PriceItems[item.definitionId]?.isObjective && excludeObjective) &&
           !(item?.isSpecial() && excludeSpecial) &&
-          !(!item?.untradeable && excludeTradable) &&
+          !(item?.isTradeable() && excludeTradable) &&
           !(PriceItems[item.definitionId]?.isExtinct && excludeExtinct) &&
           (item?.isStorage || !onlyStorage) &&
           !sbcData.subs.includes(item.definitionId))
@@ -5432,7 +5432,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
         nationId: item.nationId,
         rarityId: item.rareflag,
         ratingTier: item.getTier(),
-        isUntradeable: item.untradeable,
+        isUntradeable: item.isTradeable(),
         isDuplicate: duplicateIds.includes(item.id),
         isStorage: storageIds.includes(item.id),
         preferredPosition: item.preferredPosition,
@@ -7184,8 +7184,14 @@ const createCategoryPicker = async () => {
     console.log('createCategoryPicker: sets are undefined');
     return null;
   }
-  // Get all category names from the server response
-  let categories = sets.categories.map((f) => f.name);
+  // Only keep categories that contain at least one incomplete set
+  const incompleteSetIds = (sets.sets || []).filter((s) => !s.isComplete()).map((s) => s.id);
+  const filteredCategories = (sets.categories || []).filter(
+    (cat) => Array.isArray(cat.setIds) && cat.setIds.some((id) => incompleteSetIds.includes(id))
+  );
+  // Fallback to original categories if filtering results in none (avoids empty UI)
+  let categories = filteredCategories.length ? filteredCategories.map((c) => c.name) : (sets.categories || []).map((c) => c.name);
+
 
   // Add a "Daily" category if it doesn't already exist
   if (!categories.includes('Daily')) {
