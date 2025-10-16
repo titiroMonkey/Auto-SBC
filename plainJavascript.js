@@ -5286,12 +5286,8 @@ let getSBCPrice = (item, sbcId = 0, challengeId = 0) => {
     sbcPrice *
     (item.duplicateId > 0 ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1); // Dupe Discount
 
-  sbcPrice =
-    getPrice({ definitionId: item.rating + '_CBR' }) *
-    (item?.isStorage ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1);
-  sbcPrice =
-    sbcPrice *
-    (!item.isTradeable() ? getSettings(sbcId, challengeId, 'untradeableDiscount') / 100 : 1);
+  sbcPrice = sbcPrice * (item?.isStorage ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1);
+  sbcPrice = sbcPrice * (!item.isTradeable() ? getSettings(sbcId, challengeId, 'untradeableDiscount') / 100 : 1);
 
   return sbcPrice;
 };

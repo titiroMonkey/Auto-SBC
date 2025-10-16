@@ -28,7 +28,8 @@ Run `pip3 install -r requirements.txt` to install the required dependencies.
 To run the backend (now packaged under `backend/`), run:
 
 ```
-python -m uvicorn backend.main:app --reload
+cd backend
+python -m uvicorn main:app --reload
 ```
 
 - [Google OR-Tools](https://github.com/google/or-tools)
