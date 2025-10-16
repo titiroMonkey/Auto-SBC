@@ -5282,9 +5282,7 @@ let getSBCPrice = (item, sbcId = 0, challengeId = 0) => {
   }
   sbcPrice = sbcPrice - (100 - item.rating); //Rating Discount
 
-  sbcPrice =
-    sbcPrice *
-    (item.duplicateId > 0 ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1); // Dupe Discount
+  sbcPrice = sbcPrice * (item.duplicateId > 0 ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1); // Dupe Discount
 
   sbcPrice = sbcPrice * (item?.isStorage ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1);
   sbcPrice = sbcPrice * (!item.isTradeable() ? getSettings(sbcId, challengeId, 'untradeableDiscount') / 100 : 1);
