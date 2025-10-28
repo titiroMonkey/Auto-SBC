@@ -24,6 +24,7 @@ Check out the settings menu item for extra details!
 
 ### Backend
 
+#### Locally
 Run `pip3 install -r requirements.txt` to install the required dependencies.
 To run the backend (now packaged under `backend/`), run:
 
@@ -40,6 +41,13 @@ python -m uvicorn main:app --reload
 - uvicorn
 
 The constraints used in the program are created in the `optimize.py` file based of the SBC requirements and the optimization problem is solved using [Google CP-SAT solver](https://developers.google.com/optimization/cp/cp_solver).
+
+#### Docker
+build:
+`docker build -t auto-sbc:latest .`
+then run:
+
+`docker run --rm -p 8000:8000 auto-sbc`
 
 ### Windows Installer (Optional Packaging)
 
