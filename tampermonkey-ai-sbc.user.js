@@ -5863,21 +5863,21 @@ const unassignedItemsOverride = () => {
   UTPlayerPicksViewController.prototype.render = async function (...args) {
     ppController = this;
     await fetchPlayerPrices(this.picks);
-    this.selectedPicks = this.picks
-      .sort(function (t, e) {
-        const priceDiff = getPrice(e) - getPrice(t);
-        if (priceDiff === 0) {
-          return e.rating - t.rating;
-        }
-        return priceDiff;
-      })
-      .slice(0, this.availablePicks);
+    // this.selectedPicks = this.picks
+    //   .sort(function (t, e) {
+    //     const priceDiff = getPrice(e) - getPrice(t);
+    //     if (priceDiff === 0) {
+    //       return e.rating - t.rating;
+    //     }
+    //     return priceDiff;
+    //   })
+    //   .slice(0, this.availablePicks);
     r = this.getView();
 
     await ppRender.call(this, ...args);
-    console.log('here');
-    ppController.view._triggerActions(UTPlayerPicksView.Event.CONTINUE);
-    ppController.view._triggerActions(UTPlayerPicksView.Event.CONFIRM_PICK);
+    // console.log('here');
+    // ppController.view._triggerActions(UTPlayerPicksView.Event.CONTINUE);
+    // ppController.view._triggerActions(UTPlayerPicksView.Event.CONFIRM_PICK);
   };
 };
 let sbcSubmit = async function (challenge, sbcSet, i) {

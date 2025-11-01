@@ -5300,7 +5300,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
     return;
   }
    let sbcData = await fetchSBCData(sbcId, challengeId);
-  console.log('Sbc Started',sbcData.sbcName, sbcData.challengeName,sbcData);
+  console.log('Sbc Started',sbcData?.sbcName, sbcData?.challengeName,sbcData);
   await ratingCountUI();
   counter = new Counter('.numCounter', {
     direction: 'rtl',
@@ -5311,7 +5311,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
   showLoader(true);
 
  
-
+ console.log(sbcData,sbcLogin)
   if (sbcData == null) {
     hideLoader();
     if (sbcLogin.length > 0) {
@@ -5845,8 +5845,8 @@ const unassignedItemsOverride = () => {
 
     await ppRender.call(this, ...args);
     console.log('here');
-    ppController.view._triggerActions(UTPlayerPicksView.Event.CONTINUE);
-    ppController.view._triggerActions(UTPlayerPicksView.Event.CONFIRM_PICK);
+    // ppController.view._triggerActions(UTPlayerPicksView.Event.CONTINUE);
+    // ppController.view._triggerActions(UTPlayerPicksView.Event.CONFIRM_PICK);
   };
 };
 let sbcSubmit = async function (challenge, sbcSet, i) {
