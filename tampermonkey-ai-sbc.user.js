@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EAFC 26 Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      26.1.03
+// @version      26.1.04
 // @description  automatically solve EAFC 26 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
