@@ -5293,7 +5293,7 @@ let countDownInterval;
 let logPollInterval;
 let createSbc = true;
 let concepts = false;
-let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, autoOpen = false, tryNext = true) => {
+let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, autoOpen = false , trynext = false) => {
   if (createSbc != true) {
     showNotification('SBC Stopped');
     createSbc = true;
@@ -5309,9 +5309,6 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
   });
 
   showLoader(true);
-
- 
- console.log(sbcData,sbcLogin)
   if (sbcData == null) {
     hideLoader();
     if (sbcLogin.length > 0) {
@@ -5349,6 +5346,14 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
     }
   }
   showLoader(true);
+  let allSbcData = await sbcSets();
+  let sbcSet = allSbcData.sets.filter((e) => e.id == sbcData.setId)[0];
+  let challenges = await getChallenges(sbcSet);
+  let sbcChallenge = challenges.challenges.filter((i) => i.id == sbcData.challengeId)[0];
+  for (let challenge of challenges.challenges) {
+    await loadChallenge(challenge);
+  }
+
   // storage = storage.concat(unassigned)
   players = players.filter((f) => !storage.map((m) => m.definitionId).includes(f?.definitionId));
   players = players.concat(storage);
@@ -5363,9 +5368,11 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
   let chemUtil = new UTSquadChemCalculatorUtils();
   chemUtil.chemService = services.Chemistry;
   chemUtil.teamConfigRepo = repositories.TeamConfig;
-
+  let sbcPlayerIds = services.SBC.repository.getSets().filter(s => s.id === sbcId).reduce(function(e,t){t=t.getChallenges().filter(f=>f.id!=sbcData.challengeId);return 0<t.length&&t.forEach(function(t){t.squad&&e.push(t.squad._players.filter(f=>f._item.id>0).map(m=>m._item.id))}),e},[]).flat()
+  console.log('sbcPlayerIds', sbcPlayerIds);
   players.forEach((item) => {
     item.isStorage = storageIds.includes(item?.id);
+    item.isSbcPlayer = sbcPlayerIds.includes(item?.id);
     item.isDuplicate = duplicateIds.includes(item?.id) || unassigned.includes(item?.id);
     item.profile = chemUtil.getChemProfileForPlayer(item);
     item.normalizeClubId = chemUtil.normalizeClubId(item.teamId);
@@ -5381,7 +5388,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
   let excludeTradable = getSettings(sbcId, sbcData.challengeId, 'excludeTradable') || false;
   let excludeExtinct = getSettings(sbcId, sbcData.challengeId, 'excludeExtinct') || false;
   let onlyStorage = getSettings(sbcId, sbcData.challengeId, 'onlyStorage') || false;
-
+  let excludeSbcSquads = getSettings(sbcId, sbcData.challengeId, 'excludeSbcSquads') || false;
   let backendPlayersInput = players
     .filter(
       (item) =>
@@ -5395,6 +5402,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
           !excludeRarity.includes(
             services.Localization.localize('item.raretype' + item.rareflag)
           ) &&
+          (!item?.isSbcPlayer || !excludeSbcSquads) &&
           !excludeTeams.includes(item.teamId) &&
           !item.isTimeLimited() &&
           !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
@@ -5477,45 +5485,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
       wompSound.play();
     }
     showNotification(solution.status, UINotificationType.NEGATIVE);
-    if (tryNext) {
-      try {
-      // Track which challenges in this set have already been tried during this solve cycle
-      window.__sbcTried = window.__sbcTried || {};
-      const key = String(sbcId);
-      const tried = window.__sbcTried[key] || new Set();
-      tried.add(sbcData.challengeId);
-      window.__sbcTried[key] = tried;
-
-      const all = await sbcSets();
-      const setObj = all?.sets?.find(s => s.id == sbcId);
-      if (setObj) {
-        const chData = await getChallenges(setObj);
-        const uncompleted = (chData?.challenges || []).filter(c => c.status !== 'COMPLETED');
-        // Only consider challenges we haven't tried yet in this chain
-        const remaining = uncompleted.filter(c => !tried.has(c.id));
-        if (remaining.length > 0) {
-        // Try from the "hardest"/last first to preserve prior behavior
-        const nextChallenge = remaining[remaining.length - 1];
-        services.Notification.queue(
-          [`Trying another challenge: ${nextChallenge.name}`],
-          UINotificationType.NEUTRAL
-        );
-        await solveSBC(sbcId, nextChallenge.id, autoSubmit, repeat, autoOpen, tryNext);
-        return;
-        } else {
-          if (window.__sbcTried[key].length>1){
-        services.Notification.queue(
-          [`All uncompleted challenges in "${setObj.name}" have been tried`],
-          UINotificationType.NEUTRAL
-        );
-      }
-        window.__sbcTried = {};
-        }
-      }
-      } catch (err) {
-      console.warn('Could not try next challenge in set:', err);
-      }
-    }
+    
     if (sbcLogin.length > 0) {
       let sbcToTry = sbcLogin.shift();
       sbcLogin = sbcLogin.slice();
@@ -5525,17 +5495,13 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
       return;
     }
   }
-  window.__sbcTried = {};
+
   showNotification(
     solution.status,
     solution.status_code != 4 ? UINotificationType.NEUTRAL : UINotificationType.POSITIVE
   );
 
-  let allSbcData = await sbcSets();
-  let sbcSet = allSbcData.sets.filter((e) => e.id == sbcData.setId)[0];
-  let challenges = await getChallenges(sbcSet);
-  let sbcChallenge = challenges.challenges.filter((i) => i.id == sbcData.challengeId)[0];
-  await loadChallenge(sbcChallenge);
+
 
   window.sbcSet = sbcSet;
   window.challengeId = sbcData.challengeId;
@@ -5649,6 +5615,45 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
       }
     });
     hideLoader();
+    if (getSettings(sbcId, sbcData.challengeId, 'sbcAllGroup') && trynext) {
+      try {
+      // Track which challenges in this set have already been tried during this solve cycle
+      window.__sbcTried = window.__sbcTried || {};
+      const key = String(sbcId);
+      const tried = window.__sbcTried[key] || new Set();
+      tried.add(sbcData.challengeId);
+      window.__sbcTried[key] = tried;
+
+      const all = await sbcSets();
+      const setObj = all?.sets?.find(s => s.id == sbcId);
+      if (setObj) {
+        const chData = await getChallenges(setObj);
+        const uncompleted = (chData?.challenges || []).filter(c => c.status !== 'COMPLETED');
+        // Only consider challenges we haven't tried yet in this chain
+        const remaining = uncompleted.filter(c => !tried.has(c.id));
+        if (remaining.length > 0) {
+        // Try from the "hardest"/last first to preserve prior behavior
+        const nextChallenge = remaining[remaining.length - 1];
+        services.Notification.queue(
+          [`Trying another challenge: ${nextChallenge.name}`],
+          UINotificationType.NEUTRAL
+        );
+        await solveSBC(sbcId, nextChallenge.id, autoSubmit, repeat, autoOpen, trynext);
+        return;
+        } else {
+          if (window.__sbcTried[key].length>1){
+        services.Notification.queue(
+          [`All uncompleted challenges in "${setObj.name}" have been tried`],
+          UINotificationType.NEUTRAL
+        );
+      }
+        window.__sbcTried = {};
+        }
+      }
+      } catch (err) {
+      console.warn('Could not try next challenge in set:', err);
+      }
+    }
   }
 
   if (sbcLogin.length > 0) {
@@ -7303,7 +7308,7 @@ const createSBCButtons = async () => {
           createSBCTab();
           services.Notification.queue([set.name + ' SBC Started', UINotificationType.POSITIVE]);
 
-          solveSBC(set.id, 0, true);
+          solveSBC(set.id, 0, true ,null, true, true);
         },
         { background: 'none' }
       )
@@ -7856,6 +7861,21 @@ const createSBCCustomRulesPanel = async (parent) => {
           },
           'Number of times to repeat this SBC: -1 repeats indefinitely, 0 performs once, positive numbers repeat that many times'
         );
+         createToggle(
+          sbcParamsTile,
+          'Automatically try All Sbcs in Group',
+          'sbcAllGroup',
+          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'sbcAllGroup'),
+          (toggleSBC) => {
+            saveSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              'sbcAllGroup',
+              toggleSBC.getToggleState()
+            );
+          },
+          'When enabled, this SBC will automatically try all sbcs in the group'
+        );
         createToggle(
           sbcParamsTile,
           'Automatically try SBC on Login',
@@ -8018,6 +8038,22 @@ const createSBCCustomRulesPanel = async (parent) => {
           },
           'When enabled, only players from your storage will be used in SBC solutions'
         );
+          createToggle(
+          sbcParamsTile,
+          'Do not include Players from other SBC solutions',
+          'excludeSbcSquads',
+          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'excludeSbcSquads'),
+          (toggleOS) => {
+            saveSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              'excludeSbcSquads',
+              toggleOS.getToggleState()
+            );
+          },
+          'When enabled, players pending from other SBC solutions will not be used in SBC solutions'
+        );
+        
         createToggle(
           sbcParamsTile,
           'Exclude Objective Players',
