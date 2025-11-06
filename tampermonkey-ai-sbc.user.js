@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EAFC 26 Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      26.1.05
+// @version      26.1.06
 // @description  automatically solve EAFC 26 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -5381,7 +5381,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
   let sbcSet = allSbcData.sets.filter((e) => e.id == sbcData.setId)[0];
   let challenges = await getChallenges(sbcSet);
   let sbcChallenge = challenges.challenges.filter((i) => i.id == sbcData.challengeId)[0];
-  for (let challenge of challenges.challenges) {
+  for (let challenge of challenges.challenges.filter(f=>f.status!="COMPLETED")) {
     await loadChallenge(challenge);
   }
 

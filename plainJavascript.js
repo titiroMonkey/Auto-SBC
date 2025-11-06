@@ -4425,6 +4425,7 @@ const searchStoragePlayers = (searchCriteria) => {
 };
 
 let dealWithUnassigned = async () => {
+  try{
   let storage = await getStoragePlayers();
   let ulist = await fetchUnassigned();
   let players = await fetchPlayers();
@@ -4447,11 +4448,17 @@ let dealWithUnassigned = async () => {
   }
 
   // swap duplicates for tradable
-  const switchTradeable = ulist.filter((l) =>
-    players
-      .filter((p) => p.isTradeable())
-      .map((m) => m.definitionId)
-      .includes(l.definitionId)
+  const tradeableDefIds = new Set(
+    players.filter((p) => p.isTradeable()).map((m) => m.definitionId)
+  );
+
+  // filter unassigned by those tradeable definitionIds and ensure uniqueness by definitionId
+  const switchTradeable = Array.from(
+    new Map(
+      ulist
+        .filter((l) => tradeableDefIds.has(l.definitionId))
+        .map((item) => [item.definitionId, item])
+    ).values()
   );
   const tradablePlayers = players.filter(
     (f) => f.definitionId in switchTradeable.map((m) => m.definitionId)
@@ -4557,6 +4564,10 @@ let dealWithUnassigned = async () => {
   }
   await ratingCountUI();
   return Promise.resolve(ulist);
+}catch(error){
+  console.error('Error in dealWithUnassigned:', error);
+  return Promise.reject(error);
+}
 };
 let fetchUnassigned = () => {
   repositories.Item.unassigned.clear();
@@ -4889,7 +4900,7 @@ let fetchSBCData = async (sbcId, challengeId = 0) => {
 
     challengeId = uncompletedChallenges[uncompletedChallenges.length - 1].id;
   }
-
+  console.log('SBCData')
   await loadChallenge(challenges.challenges.filter((i) => i.id == challengeId)[0]);
 
   let newSbcSquad = new UTSBCSquadOverviewViewController();
@@ -5294,6 +5305,7 @@ let logPollInterval;
 let createSbc = true;
 let concepts = false;
 let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, autoOpen = false , trynext = false) => {
+  try{
   if (createSbc != true) {
     showNotification('SBC Stopped');
     createSbc = true;
@@ -5350,7 +5362,9 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
   let sbcSet = allSbcData.sets.filter((e) => e.id == sbcData.setId)[0];
   let challenges = await getChallenges(sbcSet);
   let sbcChallenge = challenges.challenges.filter((i) => i.id == sbcData.challengeId)[0];
-  for (let challenge of challenges.challenges) {
+  for (let challenge of challenges.challenges.filter(f=>f.status!="COMPLETED")) {
+
+    console.log('Loading Challenge:', challenge);
     await loadChallenge(challenge);
   }
 
@@ -5542,7 +5556,7 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
     _solutionSquad.push(players.filter((f) => item == f.definitionId)[0]);
   });
   _squad.setPlayers(_solutionSquad, true);
-
+  
   await loadChallenge(_challenge);
 
   let autoSubmitId = getSettings(sbcId, sbcData.challengeId, 'autoSubmit');
@@ -5663,6 +5677,11 @@ let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, aut
     solveSBC(sbcToTry[0], sbcToTry[1], true);
   }
   hideLoader();
+} catch (err) {
+  hideLoader();
+  console.error('Error in solveSBC:', err);
+}
+
   //getAppMain().getRootViewController().getPresentedViewController().getCurrentViewController().rootController.getRootNavigationController().pushViewController(currentView);
 };
 
