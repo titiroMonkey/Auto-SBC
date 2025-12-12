@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EAFC 26 Auto SBC
 // @namespace    http://tampermonkey.net/
-// @version      26.1.06
+// @version      26.1.12
 // @description  automatically solve EAFC 26 SBCs using the currently available players in the club with the minimum cost
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
@@ -79,13 +79,14 @@
 // })();
 /*! choices.js v11.1.0 | © 2025 Josh Johnson | https://github.com/jshjohnson/Choices#readme */
 !(function (e, t) {
-  'object' == typeof exports && 'undefined' != typeof module
+  "object" == typeof exports && "undefined" != typeof module
     ? (module.exports = t())
-    : 'function' == typeof define && define.amd
+    : "function" == typeof define && define.amd
     ? define(t)
-    : ((e = 'undefined' != typeof globalThis ? globalThis : e || self).Choices = t());
+    : ((e = "undefined" != typeof globalThis ? globalThis : e || self).Choices =
+        t());
 })(this, function () {
-  'use strict';
+  "use strict";
   var e = function (t, i) {
     return (
       (e =
@@ -95,18 +96,23 @@
             e.__proto__ = t;
           }) ||
         function (e, t) {
-          for (var i in t) Object.prototype.hasOwnProperty.call(t, i) && (e[i] = t[i]);
+          for (var i in t)
+            Object.prototype.hasOwnProperty.call(t, i) && (e[i] = t[i]);
         }),
       e(t, i)
     );
   };
   function t(t, i) {
-    if ('function' != typeof i && null !== i)
-      throw new TypeError('Class extends value ' + String(i) + ' is not a constructor or null');
+    if ("function" != typeof i && null !== i)
+      throw new TypeError(
+        "Class extends value " + String(i) + " is not a constructor or null"
+      );
     function n() {
       this.constructor = t;
     }
-    e(t, i), (t.prototype = null === i ? Object.create(i) : ((n.prototype = i.prototype), new n()));
+    e(t, i),
+      (t.prototype =
+        null === i ? Object.create(i) : ((n.prototype = i.prototype), new n()));
   }
   var i = function () {
     return (
@@ -124,26 +130,27 @@
   function n(e, t, i) {
     if (i || 2 === arguments.length)
       for (var n, s = 0, o = t.length; s < o; s++)
-        (!n && s in t) || (n || (n = Array.prototype.slice.call(t, 0, s)), (n[s] = t[s]));
+        (!n && s in t) ||
+          (n || (n = Array.prototype.slice.call(t, 0, s)), (n[s] = t[s]));
     return e.concat(n || Array.prototype.slice.call(t));
   }
-  'function' == typeof SuppressedError && SuppressedError;
+  "function" == typeof SuppressedError && SuppressedError;
   var s,
-    o = 'ADD_CHOICE',
-    r = 'REMOVE_CHOICE',
-    c = 'FILTER_CHOICES',
-    a = 'ACTIVATE_CHOICES',
-    h = 'CLEAR_CHOICES',
-    l = 'ADD_GROUP',
-    u = 'ADD_ITEM',
-    d = 'REMOVE_ITEM',
-    p = 'HIGHLIGHT_ITEM',
-    f = 'search',
-    m = 'removeItem',
-    g = 'highlightItem',
-    v = ['fuseOptions', 'classNames'],
-    _ = 'select-one',
-    y = 'select-multiple',
+    o = "ADD_CHOICE",
+    r = "REMOVE_CHOICE",
+    c = "FILTER_CHOICES",
+    a = "ACTIVATE_CHOICES",
+    h = "CLEAR_CHOICES",
+    l = "ADD_GROUP",
+    u = "ADD_ITEM",
+    d = "REMOVE_ITEM",
+    p = "HIGHLIGHT_ITEM",
+    f = "search",
+    m = "removeItem",
+    g = "highlightItem",
+    v = ["fuseOptions", "classNames"],
+    _ = "select-one",
+    y = "select-multiple",
     b = function (e) {
       return { type: o, choice: e };
     },
@@ -159,52 +166,52 @@
     w = function (e) {
       return Array.from({ length: e }, function () {
         return Math.floor(36 * Math.random() + 0).toString(36);
-      }).join('');
+      }).join("");
     },
     I = function (e) {
-      if ('string' != typeof e) {
-        if (null == e) return '';
-        if ('object' == typeof e) {
-          if ('raw' in e) return I(e.raw);
-          if ('trusted' in e) return e.trusted;
+      if ("string" != typeof e) {
+        if (null == e) return "";
+        if ("object" == typeof e) {
+          if ("raw" in e) return I(e.raw);
+          if ("trusted" in e) return e.trusted;
         }
         return e;
       }
       return e
-        .replace(/&/g, '&amp;')
-        .replace(/>/g, '&gt;')
-        .replace(/</g, '&lt;')
-        .replace(/'/g, '&#039;')
-        .replace(/"/g, '&quot;');
+        .replace(/&/g, "&amp;")
+        .replace(/>/g, "&gt;")
+        .replace(/</g, "&lt;")
+        .replace(/'/g, "&#039;")
+        .replace(/"/g, "&quot;");
     },
     A =
-      ((s = document.createElement('div')),
+      ((s = document.createElement("div")),
       function (e) {
         s.innerHTML = e.trim();
         for (var t = s.children[0]; s.firstChild; ) s.removeChild(s.firstChild);
         return t;
       }),
     x = function (e, t) {
-      return 'function' == typeof e ? e(I(t), t) : e;
+      return "function" == typeof e ? e(I(t), t) : e;
     },
     O = function (e) {
-      return 'function' == typeof e ? e() : e;
+      return "function" == typeof e ? e() : e;
     },
     L = function (e) {
-      if ('string' == typeof e) return e;
-      if ('object' == typeof e) {
-        if ('trusted' in e) return e.trusted;
-        if ('raw' in e) return e.raw;
+      if ("string" == typeof e) return e;
+      if ("object" == typeof e) {
+        if ("trusted" in e) return e.trusted;
+        if ("raw" in e) return e.raw;
       }
-      return '';
+      return "";
     },
     M = function (e) {
-      if ('string' == typeof e) return e;
-      if ('object' == typeof e) {
-        if ('escaped' in e) return e.escaped;
-        if ('trusted' in e) return e.trusted;
+      if ("string" == typeof e) return e;
+      if ("object" == typeof e) {
+        if ("escaped" in e) return e.escaped;
+        if ("trusted" in e) return e.trusted;
       }
-      return '';
+      return "";
     },
     T = function (e, t) {
       return e ? M(t) : I(t);
@@ -222,10 +229,10 @@
       return e && Array.isArray(e)
         ? e
             .map(function (e) {
-              return '.'.concat(e);
+              return ".".concat(e);
             })
-            .join('')
-        : '.'.concat(e);
+            .join("")
+        : ".".concat(e);
     },
     P = function (e, t) {
       var i;
@@ -248,13 +255,16 @@
       function e(e) {
         var t = e.type,
           i = e.classNames;
-        (this.element = e.element), (this.classNames = i), (this.type = t), (this.isActive = !1);
+        (this.element = e.element),
+          (this.classNames = i),
+          (this.type = t),
+          (this.isActive = !1);
       }
       return (
         (e.prototype.show = function () {
           return (
             P(this.element, this.classNames.activeState),
-            this.element.setAttribute('aria-expanded', 'true'),
+            this.element.setAttribute("aria-expanded", "true"),
             (this.isActive = !0),
             this
           );
@@ -262,7 +272,7 @@
         (e.prototype.hide = function () {
           return (
             j(this.element, this.classNames.activeState),
-            this.element.setAttribute('aria-expanded', 'false'),
+            this.element.setAttribute("aria-expanded", "false"),
             (this.isActive = !1),
             this
           );
@@ -288,34 +298,37 @@
         (e.prototype.shouldFlip = function (e, t) {
           var i = !1;
           return (
-            'auto' === this.position
+            "auto" === this.position
               ? (i =
                   this.element.getBoundingClientRect().top - t >= 0 &&
-                  !window.matchMedia('(min-height: '.concat(e + 1, 'px)')).matches)
-              : 'top' === this.position && (i = !0),
+                  !window.matchMedia("(min-height: ".concat(e + 1, "px)"))
+                    .matches)
+              : "top" === this.position && (i = !0),
             i
           );
         }),
         (e.prototype.setActiveDescendant = function (e) {
-          this.element.setAttribute('aria-activedescendant', e);
+          this.element.setAttribute("aria-activedescendant", e);
         }),
         (e.prototype.removeActiveDescendant = function () {
-          this.element.removeAttribute('aria-activedescendant');
+          this.element.removeAttribute("aria-activedescendant");
         }),
         (e.prototype.open = function (e, t) {
           P(this.element, this.classNames.openState),
-            this.element.setAttribute('aria-expanded', 'true'),
+            this.element.setAttribute("aria-expanded", "true"),
             (this.isOpen = !0),
             this.shouldFlip(e, t) &&
-              (P(this.element, this.classNames.flippedState), (this.isFlipped = !0));
+              (P(this.element, this.classNames.flippedState),
+              (this.isFlipped = !0));
         }),
         (e.prototype.close = function () {
           j(this.element, this.classNames.openState),
-            this.element.setAttribute('aria-expanded', 'false'),
+            this.element.setAttribute("aria-expanded", "false"),
             this.removeActiveDescendant(),
             (this.isOpen = !1),
             this.isFlipped &&
-              (j(this.element, this.classNames.flippedState), (this.isFlipped = !1));
+              (j(this.element, this.classNames.flippedState),
+              (this.isFlipped = !1));
         }),
         (e.prototype.addFocusState = function () {
           P(this.element, this.classNames.focusState);
@@ -325,20 +338,23 @@
         }),
         (e.prototype.enable = function () {
           j(this.element, this.classNames.disabledState),
-            this.element.removeAttribute('aria-disabled'),
-            this.type === _ && this.element.setAttribute('tabindex', '0'),
+            this.element.removeAttribute("aria-disabled"),
+            this.type === _ && this.element.setAttribute("tabindex", "0"),
             (this.isDisabled = !1);
         }),
         (e.prototype.disable = function () {
           P(this.element, this.classNames.disabledState),
-            this.element.setAttribute('aria-disabled', 'true'),
-            this.type === _ && this.element.setAttribute('tabindex', '-1'),
+            this.element.setAttribute("aria-disabled", "true"),
+            this.type === _ && this.element.setAttribute("tabindex", "-1"),
             (this.isDisabled = !0);
         }),
         (e.prototype.wrap = function (e) {
           var t = this.element,
             i = e.parentNode;
-          i && (e.nextSibling ? i.insertBefore(t, e.nextSibling) : i.appendChild(t)),
+          i &&
+            (e.nextSibling
+              ? i.insertBefore(t, e.nextSibling)
+              : i.appendChild(t)),
             t.appendChild(e);
         }),
         (e.prototype.unwrap = function (e) {
@@ -348,12 +364,12 @@
         }),
         (e.prototype.addLoadingState = function () {
           P(this.element, this.classNames.loadingState),
-            this.element.setAttribute('aria-busy', 'true'),
+            this.element.setAttribute("aria-busy", "true"),
             (this.isLoading = !0);
         }),
         (e.prototype.removeLoadingState = function () {
           j(this.element, this.classNames.loadingState),
-            this.element.removeAttribute('aria-busy'),
+            this.element.removeAttribute("aria-busy"),
             (this.isLoading = !1);
         }),
         e
@@ -377,14 +393,14 @@
           (this._onBlur = this._onBlur.bind(this));
       }
       return (
-        Object.defineProperty(e.prototype, 'placeholder', {
+        Object.defineProperty(e.prototype, "placeholder", {
           set: function (e) {
             this.element.placeholder = e;
           },
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'value', {
+        Object.defineProperty(e.prototype, "value", {
           get: function () {
             return this.element.value;
           },
@@ -396,23 +412,23 @@
         }),
         (e.prototype.addEventListeners = function () {
           var e = this.element;
-          e.addEventListener('paste', this._onPaste),
-            e.addEventListener('input', this._onInput, { passive: !0 }),
-            e.addEventListener('focus', this._onFocus, { passive: !0 }),
-            e.addEventListener('blur', this._onBlur, { passive: !0 });
+          e.addEventListener("paste", this._onPaste),
+            e.addEventListener("input", this._onInput, { passive: !0 }),
+            e.addEventListener("focus", this._onFocus, { passive: !0 }),
+            e.addEventListener("blur", this._onBlur, { passive: !0 });
         }),
         (e.prototype.removeEventListeners = function () {
           var e = this.element;
-          e.removeEventListener('input', this._onInput),
-            e.removeEventListener('paste', this._onPaste),
-            e.removeEventListener('focus', this._onFocus),
-            e.removeEventListener('blur', this._onBlur);
+          e.removeEventListener("input", this._onInput),
+            e.removeEventListener("paste", this._onPaste),
+            e.removeEventListener("focus", this._onFocus),
+            e.removeEventListener("blur", this._onBlur);
         }),
         (e.prototype.enable = function () {
-          this.element.removeAttribute('disabled'), (this.isDisabled = !1);
+          this.element.removeAttribute("disabled"), (this.isDisabled = !1);
         }),
         (e.prototype.disable = function () {
-          this.element.setAttribute('disabled', ''), (this.isDisabled = !0);
+          this.element.setAttribute("disabled", ""), (this.isDisabled = !0);
         }),
         (e.prototype.focus = function () {
           this.isFocussed || this.element.focus();
@@ -421,18 +437,23 @@
           this.isFocussed && this.element.blur();
         }),
         (e.prototype.clear = function (e) {
-          return void 0 === e && (e = !0), (this.element.value = ''), e && this.setWidth(), this;
+          return (
+            void 0 === e && (e = !0),
+            (this.element.value = ""),
+            e && this.setWidth(),
+            this
+          );
         }),
         (e.prototype.setWidth = function () {
           var e = this.element;
-          (e.style.minWidth = ''.concat(e.placeholder.length + 1, 'ch')),
-            (e.style.width = ''.concat(e.value.length + 1, 'ch'));
+          (e.style.minWidth = "".concat(e.placeholder.length + 1, "ch")),
+            (e.style.width = "".concat(e.value.length + 1, "ch"));
         }),
         (e.prototype.setActiveDescendant = function (e) {
-          this.element.setAttribute('aria-activedescendant', e);
+          this.element.setAttribute("aria-activedescendant", e);
         }),
         (e.prototype.removeActiveDescendant = function () {
-          this.element.removeAttribute('aria-activedescendant');
+          this.element.removeAttribute("aria-activedescendant");
         }),
         (e.prototype._onInput = function () {
           this.type !== _ && this.setWidth();
@@ -503,29 +524,31 @@
     $ = (function () {
       function e(e) {
         var t = e.classNames;
-        (this.element = e.element), (this.classNames = t), (this.isDisabled = !1);
+        (this.element = e.element),
+          (this.classNames = t),
+          (this.isDisabled = !1);
       }
       return (
-        Object.defineProperty(e.prototype, 'isActive', {
+        Object.defineProperty(e.prototype, "isActive", {
           get: function () {
-            return 'active' === this.element.dataset.choice;
+            return "active" === this.element.dataset.choice;
           },
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'dir', {
+        Object.defineProperty(e.prototype, "dir", {
           get: function () {
             return this.element.dir;
           },
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'value', {
+        Object.defineProperty(e.prototype, "value", {
           get: function () {
             return this.element.value;
           },
           set: function (e) {
-            this.element.setAttribute('value', e), (this.element.value = e);
+            this.element.setAttribute("value", e), (this.element.value = e);
           },
           enumerable: !1,
           configurable: !0,
@@ -533,25 +556,29 @@
         (e.prototype.conceal = function () {
           var e = this.element;
           P(e, this.classNames.input), (e.hidden = !0), (e.tabIndex = -1);
-          var t = e.getAttribute('style');
-          t && e.setAttribute('data-choice-orig-style', t), e.setAttribute('data-choice', 'active');
+          var t = e.getAttribute("style");
+          t && e.setAttribute("data-choice-orig-style", t),
+            e.setAttribute("data-choice", "active");
         }),
         (e.prototype.reveal = function () {
           var e = this.element;
-          j(e, this.classNames.input), (e.hidden = !1), e.removeAttribute('tabindex');
-          var t = e.getAttribute('data-choice-orig-style');
+          j(e, this.classNames.input),
+            (e.hidden = !1),
+            e.removeAttribute("tabindex");
+          var t = e.getAttribute("data-choice-orig-style");
           t
-            ? (e.removeAttribute('data-choice-orig-style'), e.setAttribute('style', t))
-            : e.removeAttribute('style'),
-            e.removeAttribute('data-choice');
+            ? (e.removeAttribute("data-choice-orig-style"),
+              e.setAttribute("style", t))
+            : e.removeAttribute("style"),
+            e.removeAttribute("data-choice");
         }),
         (e.prototype.enable = function () {
-          this.element.removeAttribute('disabled'),
+          this.element.removeAttribute("disabled"),
             (this.element.disabled = !1),
             (this.isDisabled = !1);
         }),
         (e.prototype.disable = function () {
-          this.element.setAttribute('disabled', ''),
+          this.element.setAttribute("disabled", ""),
             (this.element.disabled = !0),
             (this.isDisabled = !0);
         }),
@@ -576,8 +603,8 @@
     },
     U = function (e) {
       if (
-        ('string' == typeof e &&
-          (e = e.split(' ').filter(function (e) {
+        ("string" == typeof e &&
+          (e = e.split(" ").filter(function (e) {
             return e.length;
           })),
         Array.isArray(e) && e.length)
@@ -585,13 +612,20 @@
         return e;
     },
     G = function (e, t, i) {
-      if ((void 0 === i && (i = !0), 'string' == typeof e)) {
+      if ((void 0 === i && (i = !0), "string" == typeof e)) {
         var n = I(e);
-        return G({ value: e, label: i || n === e ? e : { escaped: n, raw: e }, selected: !0 }, !1);
+        return G(
+          {
+            value: e,
+            label: i || n === e ? e : { escaped: n, raw: e },
+            selected: !0,
+          },
+          !1
+        );
       }
       var s = e;
-      if ('choices' in s) {
-        if (!t) throw new TypeError('optGroup is not allowed');
+      if ("choices" in s) {
+        if (!t) throw new TypeError("optGroup is not allowed");
         var o = s,
           r = o.choices.map(function (e) {
             return G(e, !1);
@@ -623,22 +657,24 @@
       };
     },
     z = function (e) {
-      return 'SELECT' === e.tagName;
+      return "SELECT" === e.tagName;
     },
     J = (function (e) {
       function i(t) {
         var i = t.template,
           n = t.extractPlaceholder,
-          s = e.call(this, { element: t.element, classNames: t.classNames }) || this;
+          s =
+            e.call(this, { element: t.element, classNames: t.classNames }) ||
+            this;
         return (s.template = i), (s.extractPlaceholder = n), s;
       }
       return (
         t(i, e),
-        Object.defineProperty(i.prototype, 'placeholderOption', {
+        Object.defineProperty(i.prototype, "placeholderOption", {
           get: function () {
             return (
               this.element.querySelector('option[value=""]') ||
-              this.element.querySelector('option[placeholder]')
+              this.element.querySelector("option[placeholder]")
             );
           },
           enumerable: !1,
@@ -661,13 +697,13 @@
             t = [];
           return (
             this.element
-              .querySelectorAll(':scope > option, :scope > optgroup')
+              .querySelectorAll(":scope > option, :scope > optgroup")
               .forEach(function (i) {
                 !(function (e) {
-                  return 'OPTION' === e.tagName;
+                  return "OPTION" === e.tagName;
                 })(i)
                   ? (function (e) {
-                      return 'OPTGROUP' === e.tagName;
+                      return "OPTGROUP" === e.tagName;
                     })(i) && t.push(e._optgroupToChoice(i))
                   : t.push(e._optionToChoice(i));
               }),
@@ -676,9 +712,9 @@
         }),
         (i.prototype._optionToChoice = function (e) {
           return (
-            !e.hasAttribute('value') &&
-              e.hasAttribute('placeholder') &&
-              (e.setAttribute('value', ''), (e.value = '')),
+            !e.hasAttribute("value") &&
+              e.hasAttribute("placeholder") &&
+              (e.setAttribute("value", ""), (e.value = "")),
             {
               id: 0,
               group: null,
@@ -688,26 +724,35 @@
               label: e.label,
               element: e,
               active: !0,
-              selected: this.extractPlaceholder ? e.selected : e.hasAttribute('selected'),
+              selected: this.extractPlaceholder
+                ? e.selected
+                : e.hasAttribute("selected"),
               disabled: e.disabled,
               highlighted: !1,
-              placeholder: this.extractPlaceholder && (!e.value || e.hasAttribute('placeholder')),
-              labelClass: void 0 !== e.dataset.labelClass ? U(e.dataset.labelClass) : void 0,
+              placeholder:
+                this.extractPlaceholder &&
+                (!e.value || e.hasAttribute("placeholder")),
+              labelClass:
+                void 0 !== e.dataset.labelClass
+                  ? U(e.dataset.labelClass)
+                  : void 0,
               labelDescription:
-                void 0 !== e.dataset.labelDescription ? e.dataset.labelDescription : void 0,
+                void 0 !== e.dataset.labelDescription
+                  ? e.dataset.labelDescription
+                  : void 0,
               customProperties: R(e.dataset.customProperties),
             }
           );
         }),
         (i.prototype._optgroupToChoice = function (e) {
           var t = this,
-            i = e.querySelectorAll('option'),
+            i = e.querySelectorAll("option"),
             n = Array.from(i).map(function (e) {
               return t._optionToChoice(e);
             });
           return {
             id: 0,
-            label: e.label || '',
+            label: e.label || "",
             element: e,
             active: !!n.length,
             disabled: e.disabled,
@@ -723,12 +768,12 @@
       silent: !1,
       renderChoiceLimit: -1,
       maxItemCount: -1,
-      closeDropdownOnSelect: 'auto',
+      closeDropdownOnSelect: "auto",
       singleModeForMultiSelect: !1,
       addChoices: !1,
       addItems: !0,
       addItemFilter: function (e) {
-        return !!e && '' !== e;
+        return !!e && "" !== e;
       },
       removeItems: !0,
       removeItemButton: !1,
@@ -737,14 +782,14 @@
       allowHTML: !1,
       allowHtmlUserInput: !1,
       duplicateItemsAllowed: !0,
-      delimiter: ',',
+      delimiter: ",",
       paste: !0,
       searchEnabled: !0,
       searchChoices: !0,
       searchFloor: 1,
       searchResultLimit: 4,
-      searchFields: ['label', 'value'],
-      position: 'auto',
+      searchFields: ["label", "value"],
+      position: "auto",
       resetScrollPosition: !0,
       shouldSort: !0,
       shouldSortItems: !1,
@@ -753,7 +798,7 @@
           n = t.label,
           s = void 0 === n ? t.value : n;
         return L(void 0 === i ? e.value : i).localeCompare(L(s), [], {
-          sensitivity: 'base',
+          sensitivity: "base",
           ignorePunctuation: !0,
           numeric: !0,
         });
@@ -764,62 +809,63 @@
       searchPlaceholderValue: null,
       prependValue: null,
       appendValue: null,
-      renderSelectedChoices: 'auto',
-      loadingText: 'Loading...',
-      noResultsText: 'No results found',
-      noChoicesText: 'No choices to choose from',
-      itemSelectText: 'Press to select',
-      uniqueItemText: 'Only unique values can be added',
-      customAddItemText: 'Only values matching specific conditions can be added',
+      renderSelectedChoices: "auto",
+      loadingText: "Loading...",
+      noResultsText: "No results found",
+      noChoicesText: "No choices to choose from",
+      itemSelectText: "Press to select",
+      uniqueItemText: "Only unique values can be added",
+      customAddItemText:
+        "Only values matching specific conditions can be added",
       addItemText: function (e) {
         return 'Press Enter to add <b>"'.concat(e, '"</b>');
       },
       removeItemIconText: function () {
-        return 'Remove item';
+        return "Remove item";
       },
       removeItemLabelText: function (e) {
-        return 'Remove item: '.concat(e);
+        return "Remove item: ".concat(e);
       },
       maxItemText: function (e) {
-        return 'Only '.concat(e, ' values can be added');
+        return "Only ".concat(e, " values can be added");
       },
       valueComparer: function (e, t) {
         return e === t;
       },
       fuseOptions: { includeScore: !0 },
-      labelId: '',
+      labelId: "",
       callbackOnInit: null,
       callbackOnCreateTemplates: null,
       classNames: {
-        containerOuter: ['choices'],
-        containerInner: ['choices__inner'],
-        input: ['choices__input'],
-        inputCloned: ['choices__input--cloned'],
-        list: ['choices__list'],
-        listItems: ['choices__list--multiple'],
-        listSingle: ['choices__list--single'],
-        listDropdown: ['choices__list--dropdown'],
-        item: ['choices__item'],
-        itemSelectable: ['choices__item--selectable'],
-        itemDisabled: ['choices__item--disabled'],
-        itemChoice: ['choices__item--choice'],
-        description: ['choices__description'],
-        placeholder: ['choices__placeholder'],
-        group: ['choices__group'],
-        groupHeading: ['choices__heading'],
-        button: ['choices__button'],
-        activeState: ['is-active'],
-        focusState: ['is-focused'],
-        openState: ['is-open'],
-        disabledState: ['is-disabled'],
-        highlightedState: ['is-highlighted'],
-        selectedState: ['is-selected'],
-        flippedState: ['is-flipped'],
-        loadingState: ['is-loading'],
-        notice: ['choices__notice'],
-        addChoice: ['choices__item--selectable', 'add-choice'],
-        noResults: ['has-no-results'],
-        noChoices: ['has-no-choices'],
+        containerOuter: ["choices"],
+        containerInner: ["choices__inner"],
+        input: ["choices__input"],
+        inputCloned: ["choices__input--cloned"],
+        list: ["choices__list"],
+        listItems: ["choices__list--multiple"],
+        listSingle: ["choices__list--single"],
+        listDropdown: ["choices__list--dropdown"],
+        item: ["choices__item"],
+        itemSelectable: ["choices__item--selectable"],
+        itemDisabled: ["choices__item--disabled"],
+        itemChoice: ["choices__item--choice"],
+        description: ["choices__description"],
+        placeholder: ["choices__placeholder"],
+        group: ["choices__group"],
+        groupHeading: ["choices__heading"],
+        button: ["choices__button"],
+        activeState: ["is-active"],
+        focusState: ["is-focused"],
+        openState: ["is-open"],
+        disabledState: ["is-disabled"],
+        highlightedState: ["is-highlighted"],
+        selectedState: ["is-selected"],
+        flippedState: ["is-flipped"],
+        loadingState: ["is-loading"],
+        notice: ["choices__notice"],
+        addChoice: ["choices__item--selectable", "add-choice"],
+        noResults: ["has-no-results"],
+        noChoices: ["has-no-choices"],
       },
       appendGroupInSearch: !1,
     },
@@ -849,15 +895,16 @@
         switch (t.type) {
           case u:
             (t.item.selected = !0),
-              (o = t.item.element) && ((o.selected = !0), o.setAttribute('selected', '')),
+              (o = t.item.element) &&
+                ((o.selected = !0), o.setAttribute("selected", "")),
               n.push(t.item);
             break;
           case d:
             var o;
             if (((t.item.selected = !1), (o = t.item.element))) {
-              (o.selected = !1), o.removeAttribute('selected');
+              (o.selected = !1), o.removeAttribute("selected");
               var c = o.parentElement;
-              c && z(c) && c.type === _ && (c.value = '');
+              c && z(c) && c.type === _ && (c.value = "");
             }
             Q(t.item),
               (n = n.filter(function (e) {
@@ -884,7 +931,9 @@
                   n && (j(n, i), P(n, t));
                 })(
                   h,
-                  a ? i.classNames.highlightedState : i.classNames.selectedState,
+                  a
+                    ? i.classNames.highlightedState
+                    : i.classNames.selectedState,
                   a ? i.classNames.selectedState : i.classNames.highlightedState
                 ));
             break;
@@ -903,9 +952,11 @@
           case r:
             (t.choice.choiceEl = void 0),
               t.choice.group &&
-                (t.choice.group.choices = t.choice.group.choices.filter(function (e) {
-                  return e.id !== t.choice.id;
-                })),
+                (t.choice.group.choices = t.choice.group.choices.filter(
+                  function (e) {
+                    return e.id !== t.choice.id;
+                  }
+                )),
               (n = n.filter(function (e) {
                 return e.id !== t.choice.id;
               }));
@@ -929,7 +980,8 @@
             break;
           case a:
             n.forEach(function (e) {
-              (e.active = t.active), i && i.appendGroupInSearch && (e.choiceEl = void 0);
+              (e.active = t.active),
+                i && i.appendGroupInSearch && (e.choiceEl = void 0);
             });
             break;
           case h:
@@ -949,7 +1001,7 @@
           (this._context = e);
       }
       return (
-        Object.defineProperty(e.prototype, 'defaultState', {
+        Object.defineProperty(e.prototype, "defaultState", {
           get: function () {
             return { groups: [], items: [], choices: [] };
           },
@@ -1002,21 +1054,21 @@
             }
           }
         }),
-        Object.defineProperty(e.prototype, 'state', {
+        Object.defineProperty(e.prototype, "state", {
           get: function () {
             return this._state;
           },
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'items', {
+        Object.defineProperty(e.prototype, "items", {
           get: function () {
             return this.state.items;
           },
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'highlightedActiveItems', {
+        Object.defineProperty(e.prototype, "highlightedActiveItems", {
           get: function () {
             return this.items.filter(function (e) {
               return e.active && e.highlighted;
@@ -1025,14 +1077,14 @@
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'choices', {
+        Object.defineProperty(e.prototype, "choices", {
           get: function () {
             return this.state.choices;
           },
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'activeChoices', {
+        Object.defineProperty(e.prototype, "activeChoices", {
           get: function () {
             return this.choices.filter(function (e) {
               return e.active;
@@ -1041,7 +1093,7 @@
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'searchableChoices', {
+        Object.defineProperty(e.prototype, "searchableChoices", {
           get: function () {
             return this.choices.filter(function (e) {
               return !e.disabled && !e.placeholder;
@@ -1050,14 +1102,14 @@
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'groups', {
+        Object.defineProperty(e.prototype, "groups", {
           get: function () {
             return this.state.groups;
           },
           enumerable: !1,
           configurable: !0,
         }),
-        Object.defineProperty(e.prototype, 'activeGroups', {
+        Object.defineProperty(e.prototype, "activeGroups", {
           get: function () {
             var e = this;
             return this.state.groups.filter(function (t) {
@@ -1087,25 +1139,30 @@
         e
       );
     })(),
-    ee = 'no-choices',
-    te = 'no-results',
-    ie = 'add-choice';
+    ee = "no-choices",
+    te = "no-results",
+    ie = "add-choice";
   function ne(e, t, i) {
     return (
       (t = (function (e) {
         var t = (function (e) {
-          if ('object' != typeof e || !e) return e;
+          if ("object" != typeof e || !e) return e;
           var t = e[Symbol.toPrimitive];
           if (void 0 !== t) {
-            var i = t.call(e, 'string');
-            if ('object' != typeof i) return i;
-            throw new TypeError('@@toPrimitive must return a primitive value.');
+            var i = t.call(e, "string");
+            if ("object" != typeof i) return i;
+            throw new TypeError("@@toPrimitive must return a primitive value.");
           }
           return String(e);
         })(e);
-        return 'symbol' == typeof t ? t : t + '';
+        return "symbol" == typeof t ? t : t + "";
       })(t)) in e
-        ? Object.defineProperty(e, t, { value: i, enumerable: !0, configurable: !0, writable: !0 })
+        ? Object.defineProperty(e, t, {
+            value: i,
+            enumerable: !0,
+            configurable: !0,
+            writable: !0,
+          })
         : (e[t] = i),
       e
     );
@@ -1138,16 +1195,16 @@
     return e;
   }
   function re(e) {
-    return Array.isArray ? Array.isArray(e) : '[object Array]' === de(e);
+    return Array.isArray ? Array.isArray(e) : "[object Array]" === de(e);
   }
   function ce(e) {
-    return 'string' == typeof e;
+    return "string" == typeof e;
   }
   function ae(e) {
-    return 'number' == typeof e;
+    return "number" == typeof e;
   }
   function he(e) {
-    return 'object' == typeof e;
+    return "object" == typeof e;
   }
   function le(e) {
     return null != e;
@@ -1158,8 +1215,8 @@
   function de(e) {
     return null == e
       ? void 0 === e
-        ? '[object Undefined]'
-        : '[object Null]'
+        ? "[object Undefined]"
+        : "[object Null]"
       : Object.prototype.toString.call(e);
   }
   const pe = (e) => `Missing ${e} property in key`,
@@ -1195,18 +1252,19 @@
       o = null;
     if (ce(e) || re(e)) (n = e), (t = _e(e)), (i = ye(e));
     else {
-      if (!me.call(e, 'name')) throw new Error(pe('name'));
+      if (!me.call(e, "name")) throw new Error(pe("name"));
       const r = e.name;
-      if (((n = r), me.call(e, 'weight') && ((s = e.weight), s <= 0))) throw new Error(fe(r));
+      if (((n = r), me.call(e, "weight") && ((s = e.weight), s <= 0)))
+        throw new Error(fe(r));
       (t = _e(r)), (i = ye(r)), (o = e.getFn);
     }
     return { path: t, id: i, weight: s, src: n, getFn: o };
   }
   function _e(e) {
-    return re(e) ? e : e.split('.');
+    return re(e) ? e : e.split(".");
   }
   function ye(e) {
-    return re(e) ? e.join('.') : e;
+    return re(e) ? e.join(".") : e;
   }
   const be = {
     useExtendedSearch: !1,
@@ -1229,18 +1287,18 @@
                     ((function (e) {
                       return he(e) && null !== e;
                     })(e) &&
-                      '[object Boolean]' == de(e))
+                      "[object Boolean]" == de(e))
                   );
                 })(r))
             )
               i.push(
                 (function (e) {
                   return null == e
-                    ? ''
+                    ? ""
                     : (function (e) {
-                        if ('string' == typeof e) return e;
-                        let t = e + '';
-                        return '0' == t && 1 / e == -1 / 0 ? '-0' : t;
+                        if ("string" == typeof e) return e;
+                        let t = e + "";
+                        return "0" == t && 1 / e == -1 / 0 ? "-0" : t;
                       })(e);
                 })(r)
               );
@@ -1250,7 +1308,7 @@
             } else t.length && s(r, t, o + 1);
           } else i.push(e);
       };
-      return s(e, ce(t) ? t.split('.') : t, 0), n ? i : i[0];
+      return s(e, ce(t) ? t.split(".") : t, 0), n ? i : i[0];
     },
     ignoreLocation: !1,
     ignoreFieldNorm: !1,
@@ -1267,7 +1325,13 @@
             keys: [],
             shouldSort: !0,
             sortFn: (e, t) =>
-              e.score === t.score ? (e.idx < t.idx ? -1 : 1) : e.score < t.score ? -1 : 1,
+              e.score === t.score
+                ? e.idx < t.idx
+                  ? -1
+                  : 1
+                : e.score < t.score
+                ? -1
+                : 1,
           }
         ),
         { includeMatches: !1, findAllMatches: !1, minMatchCharLength: 1 }
@@ -1278,7 +1342,10 @@
   );
   const Ce = /[^ ]+/g;
   class Se {
-    constructor({ getFn: e = Ee.getFn, fieldNormWeight: t = Ee.fieldNormWeight } = {}) {
+    constructor({
+      getFn: e = Ee.getFn,
+      fieldNormWeight: t = Ee.fieldNormWeight,
+    } = {}) {
       (this.norm = (function (e = 1, t = 3) {
         const i = new Map(),
           n = Math.pow(10, t);
@@ -1376,7 +1443,11 @@
       return { keys: this.keys, records: this.records };
     }
   }
-  function we(e, t, { getFn: i = Ee.getFn, fieldNormWeight: n = Ee.fieldNormWeight } = {}) {
+  function we(
+    e,
+    t,
+    { getFn: i = Ee.getFn, fieldNormWeight: n = Ee.fieldNormWeight } = {}
+  ) {
     const s = new Se({ getFn: i, fieldNormWeight: n });
     return s.setKeys(e.map(ve)), s.setSources(t), s.create(), s;
   }
@@ -1485,7 +1556,8 @@
             ignoreLocation: h = Ee.ignoreLocation,
           } = {}
         ) {
-          if (t.length > Ae) throw new Error('Pattern length exceeds max of 32.');
+          if (t.length > Ae)
+            throw new Error("Pattern length exceeds max of 32.");
           const l = t.length,
             u = e.length,
             d = Math.max(0, Math.min(n, u));
@@ -1574,7 +1646,9 @@
                 let r = e[o];
                 r && -1 === n
                   ? (n = o)
-                  : r || -1 === n || ((s = o - 1), s - n + 1 >= t && i.push([n, s]), (n = -1));
+                  : r ||
+                    -1 === n ||
+                    ((s = o - 1), s - n + 1 >= t && i.push([n, s]), (n = -1));
               }
               return e[o - 1] && o - n >= t && i.push([n, o - 1]), i;
             })(g, c);
@@ -1639,7 +1713,7 @@
         }));
     }
     static get type() {
-      return 'fuzzy';
+      return "fuzzy";
     }
     static get multiRegex() {
       return /^"(.*)"$/;
@@ -1656,7 +1730,7 @@
       super(e);
     }
     static get type() {
-      return 'include';
+      return "include";
     }
     static get multiRegex() {
       return /^'"(.*)"$/;
@@ -1669,7 +1743,8 @@
         i = 0;
       const n = [],
         s = this.pattern.length;
-      for (; (t = e.indexOf(this.pattern, i)) > -1; ) (i = t + s), n.push([t, i - 1]);
+      for (; (t = e.indexOf(this.pattern, i)) > -1; )
+        (i = t + s), n.push([t, i - 1]);
       const o = !!n.length;
       return { isMatch: o, score: o ? 0 : 1, indices: n };
     }
@@ -1680,7 +1755,7 @@
           super(e);
         }
         static get type() {
-          return 'exact';
+          return "exact";
         }
         static get multiRegex() {
           return /^="(.*)"$/;
@@ -1690,7 +1765,11 @@
         }
         search(e) {
           const t = e === this.pattern;
-          return { isMatch: t, score: t ? 0 : 1, indices: [0, this.pattern.length - 1] };
+          return {
+            isMatch: t,
+            score: t ? 0 : 1,
+            indices: [0, this.pattern.length - 1],
+          };
         }
       },
       Ne,
@@ -1699,7 +1778,7 @@
           super(e);
         }
         static get type() {
-          return 'prefix-exact';
+          return "prefix-exact";
         }
         static get multiRegex() {
           return /^\^"(.*)"$/;
@@ -1709,7 +1788,11 @@
         }
         search(e) {
           const t = e.startsWith(this.pattern);
-          return { isMatch: t, score: t ? 0 : 1, indices: [0, this.pattern.length - 1] };
+          return {
+            isMatch: t,
+            score: t ? 0 : 1,
+            indices: [0, this.pattern.length - 1],
+          };
         }
       },
       class extends Le {
@@ -1717,7 +1800,7 @@
           super(e);
         }
         static get type() {
-          return 'inverse-prefix-exact';
+          return "inverse-prefix-exact";
         }
         static get multiRegex() {
           return /^!\^"(.*)"$/;
@@ -1735,7 +1818,7 @@
           super(e);
         }
         static get type() {
-          return 'inverse-suffix-exact';
+          return "inverse-suffix-exact";
         }
         static get multiRegex() {
           return /^!"(.*)"\$$/;
@@ -1753,7 +1836,7 @@
           super(e);
         }
         static get type() {
-          return 'suffix-exact';
+          return "suffix-exact";
         }
         static get multiRegex() {
           return /^"(.*)"\$$/;
@@ -1775,7 +1858,7 @@
           super(e);
         }
         static get type() {
-          return 'inverse-exact';
+          return "inverse-exact";
         }
         static get multiRegex() {
           return /^!"(.*)"$/;
@@ -1801,8 +1884,8 @@
     }
     return new Oe(e, t);
   }
-  const Ke = '$and',
-    Ve = '$path',
+  const Ke = "$and",
+    Ve = "$path",
     Be = (e) => !(!e[Ke] && !e.$or),
     He = (e) => ({ [Ke]: Object.keys(e).map((t) => ({ [t]: e[t] })) });
   function $e(e, t, { auto: i = !0 } = {}) {
@@ -1839,7 +1922,9 @@
           if (!le(e.indices) || !e.indices.length) return;
           const { indices: i, value: n } = e;
           let s = { indices: i, value: n };
-          e.key && (s.key = e.key.src), e.idx > -1 && (s.refIndex = e.idx), t.matches.push(s);
+          e.key && (s.key = e.key.src),
+            e.idx > -1 && (s.refIndex = e.idx),
+            t.matches.push(s);
         });
   }
   function We(e, t) {
@@ -1852,7 +1937,8 @@
         this.setCollection(e, i);
     }
     setCollection(e, t) {
-      if (((this._docs = e), t && !(t instanceof Se))) throw new Error("Incorrect 'index' type");
+      if (((this._docs = e), t && !(t instanceof Se)))
+        throw new Error("Incorrect 'index' type");
       this._myIndex =
         t ||
         we(this.options.keys, this._docs, {
@@ -1896,7 +1982,10 @@
             let i = 1;
             e.matches.forEach(({ key: e, norm: n, score: s }) => {
               const o = e ? e.weight : null;
-              i *= Math.pow(0 === s && o ? Number.EPSILON : s, (o || 1) * (t ? 1 : n));
+              i *= Math.pow(
+                0 === s && o ? Number.EPSILON : s,
+                (o || 1) * (t ? 1 : n)
+              );
             }),
               (e.score = i);
           });
@@ -1906,7 +1995,10 @@
         (function (
           e,
           t,
-          { includeMatches: i = Ee.includeMatches, includeScore: n = Ee.includeScore } = {}
+          {
+            includeMatches: i = Ee.includeMatches,
+            includeScore: n = Ee.includeScore,
+          } = {}
         ) {
           const s = [];
           return (
@@ -1935,7 +2027,12 @@
         i.forEach(({ v: e, i: i, n: s }) => {
           if (!le(e)) return;
           const { isMatch: o, score: r, indices: c } = t.searchIn(e);
-          o && n.push({ item: e, idx: i, matches: [{ score: r, value: e, norm: s, indices: c }] });
+          o &&
+            n.push({
+              item: e,
+              idx: i,
+              matches: [{ score: r, value: e, norm: s, indices: c }],
+            });
         }),
         n
       );
@@ -1967,7 +2064,8 @@
           if (le(e)) {
             let r = i(t, e, o);
             r.length &&
-              (n[o] || ((n[o] = { idx: o, item: e, matches: [] }), s.push(n[o])),
+              (n[o] ||
+                ((n[o] = { idx: o, item: e, matches: [] }), s.push(n[o])),
               r.forEach(({ matches: e }) => {
                 n[o].matches.push(...e);
               }));
@@ -1999,7 +2097,8 @@
         t.forEach(({ v: t, i: s, n: o }) => {
           if (!le(t)) return;
           const { isMatch: r, score: c, indices: a } = i.searchIn(t);
-          r && n.push({ score: c, key: e, value: t, idx: s, norm: o, indices: a });
+          r &&
+            n.push({ score: c, key: e, value: t, idx: s, norm: o, indices: a });
         });
       else {
         const { v: s, n: o } = t,
@@ -2009,7 +2108,7 @@
       return n;
     }
   }
-  (Ue.version = '7.0.0'),
+  (Ue.version = "7.0.0"),
     (Ue.createIndex = we),
     (Ue.parseIndex = function (
       e,
@@ -2051,7 +2150,7 @@
             }),
             (this.pattern = t ? e : e.toLowerCase()),
             (this.query = (function (e, t = {}) {
-              return e.split('|').map((e) => {
+              return e.split("|").map((e) => {
                 let i = e
                     .trim()
                     .split(De)
@@ -2103,7 +2202,8 @@
               }
               (s += 1),
                 (r += l),
-                i && (Pe.has(n.constructor.type) ? (o = [...o, ...h]) : o.push(h));
+                i &&
+                  (Pe.has(n.constructor.type) ? (o = [...o, ...h]) : o.push(h));
             }
             if (s) {
               let e = { isMatch: !0, score: r / s };
@@ -2134,7 +2234,8 @@
         }),
         (e.prototype.search = function (e) {
           return (
-            this._fuse || (this._fuse = new Ue(this._haystack, this._fuseOptions)),
+            this._fuse ||
+              (this._fuse = new Ue(this._haystack, this._fuseOptions)),
             this._fuse.search(e).map(function (e, t) {
               return { item: e.item, score: e.score || 0, rank: t + 1 };
             })
@@ -2148,15 +2249,16 @@
         s = t.customProperties,
         o = t.labelClass,
         r = t.labelDescription;
-      o && (n.labelClass = F(o).join(' ')),
+      o && (n.labelClass = F(o).join(" ")),
         r && (n.labelDescription = r),
         i &&
           s &&
-          ('string' == typeof s
+          ("string" == typeof s
             ? (n.customProperties = s)
-            : 'object' != typeof s ||
+            : "object" != typeof s ||
               (function (e) {
-                for (var t in e) if (Object.prototype.hasOwnProperty.call(e, t)) return !1;
+                for (var t in e)
+                  if (Object.prototype.hasOwnProperty.call(e, t)) return !1;
                 return !0;
               })(s) ||
               (n.customProperties = JSON.stringify(s)));
@@ -2164,31 +2266,31 @@
     Je = function (e, t, i) {
       var n = t && e.querySelector("label[for='".concat(t, "']")),
         s = n && n.innerText;
-      s && i.setAttribute('aria-label', s);
+      s && i.setAttribute("aria-label", s);
     },
     Xe = {
       containerOuter: function (e, t, i, n, s, o, r) {
         var c = e.classNames.containerOuter,
-          a = document.createElement('div');
+          a = document.createElement("div");
         return (
           P(a, c),
           (a.dataset.type = o),
           t && (a.dir = t),
           n && (a.tabIndex = 0),
           i &&
-            (a.setAttribute('role', s ? 'combobox' : 'listbox'),
+            (a.setAttribute("role", s ? "combobox" : "listbox"),
             s
-              ? a.setAttribute('aria-autocomplete', 'list')
+              ? a.setAttribute("aria-autocomplete", "list")
               : r || Je(this._docRoot, this.passedElement.element.id, a),
-            a.setAttribute('aria-haspopup', 'true'),
-            a.setAttribute('aria-expanded', 'false')),
-          r && a.setAttribute('aria-labelledby', r),
+            a.setAttribute("aria-haspopup", "true"),
+            a.setAttribute("aria-expanded", "false")),
+          r && a.setAttribute("aria-labelledby", r),
           a
         );
       },
       containerInner: function (e) {
         var t = e.classNames.containerInner,
-          i = document.createElement('div');
+          i = document.createElement("div");
         return P(i, t), i;
       },
       itemList: function (e, t) {
@@ -2197,18 +2299,18 @@
           s = n.list,
           o = n.listSingle,
           r = n.listItems,
-          c = document.createElement('div');
+          c = document.createElement("div");
         return (
           P(c, s),
           P(c, t ? o : r),
-          this._isSelectElement && i && c.setAttribute('role', 'listbox'),
+          this._isSelectElement && i && c.setAttribute("role", "listbox"),
           c
         );
       },
       placeholder: function (e, t) {
         var i = e.allowHTML,
           n = e.classNames.placeholder,
-          s = document.createElement('div');
+          s = document.createElement("div");
         return P(s, n), N(s, i, t), s;
       },
       item: function (e, t, i) {
@@ -2223,40 +2325,42 @@
           u = c.itemSelectable,
           d = c.placeholder,
           p = L(t.value),
-          f = document.createElement('div');
+          f = document.createElement("div");
         if ((P(f, a), t.labelClass)) {
-          var m = document.createElement('span');
+          var m = document.createElement("span");
           N(m, n, t.label), P(m, t.labelClass), f.appendChild(m);
         } else N(f, n, t.label);
         if (
-          ((f.dataset.item = ''),
+          ((f.dataset.item = ""),
           (f.dataset.id = t.id),
           (f.dataset.value = p),
           ze(f, t, !0),
-          (t.disabled || this.containerOuter.isDisabled) && f.setAttribute('aria-disabled', 'true'),
+          (t.disabled || this.containerOuter.isDisabled) &&
+            f.setAttribute("aria-disabled", "true"),
           this._isSelectElement &&
-            (f.setAttribute('aria-selected', 'true'), f.setAttribute('role', 'option')),
-          t.placeholder && (P(f, d), (f.dataset.placeholder = '')),
+            (f.setAttribute("aria-selected", "true"),
+            f.setAttribute("role", "option")),
+          t.placeholder && (P(f, d), (f.dataset.placeholder = "")),
           P(f, t.highlighted ? l : u),
           i)
         ) {
-          t.disabled && j(f, u), (f.dataset.deletable = '');
-          var g = document.createElement('button');
-          (g.type = 'button'), P(g, h), N(g, !0, x(o, t.value));
+          t.disabled && j(f, u), (f.dataset.deletable = "");
+          var g = document.createElement("button");
+          (g.type = "button"), P(g, h), N(g, !0, x(o, t.value));
           var v = x(r, t.value);
-          v && g.setAttribute('aria-label', v),
-            (g.dataset.button = ''),
-            s ? f.insertAdjacentElement('afterbegin', g) : f.appendChild(g);
+          v && g.setAttribute("aria-label", v),
+            (g.dataset.button = ""),
+            s ? f.insertAdjacentElement("afterbegin", g) : f.appendChild(g);
         }
         return f;
       },
       choiceList: function (e, t) {
         var i = e.classNames.list,
-          n = document.createElement('div');
+          n = document.createElement("div");
         return (
           P(n, i),
-          t || n.setAttribute('aria-multiselectable', 'true'),
-          n.setAttribute('role', 'listbox'),
+          t || n.setAttribute("aria-multiselectable", "true"),
+          n.setAttribute("role", "listbox"),
           n
         );
       },
@@ -2270,16 +2374,16 @@
           a = t.label,
           h = t.disabled,
           l = L(a),
-          u = document.createElement('div');
+          u = document.createElement("div");
         P(u, s),
           h && P(u, r),
-          u.setAttribute('role', 'group'),
-          (u.dataset.group = ''),
+          u.setAttribute("role", "group"),
+          (u.dataset.group = ""),
           (u.dataset.id = c),
           (u.dataset.value = l),
-          h && u.setAttribute('aria-disabled', 'true');
-        var d = document.createElement('div');
-        return P(d, o), N(d, i, a || ''), u.appendChild(d), u;
+          h && u.setAttribute("aria-disabled", "true");
+        var d = document.createElement("div");
+        return P(d, o), N(d, i, a || ""), u.appendChild(d), u;
       },
       choice: function (e, t, i, n) {
         var s = e.allowHTML,
@@ -2293,37 +2397,39 @@
           d = o.placeholder,
           p = t.label,
           f = L(t.value),
-          m = document.createElement('div');
+          m = document.createElement("div");
         (m.id = t.elementId),
           P(m, r),
           P(m, c),
           n &&
-            'string' == typeof p &&
-            ((p = T(s, p)), (p = { trusted: (p += ' ('.concat(n, ')')) }));
+            "string" == typeof p &&
+            ((p = T(s, p)), (p = { trusted: (p += " (".concat(n, ")")) }));
         var g = m;
         if (t.labelClass) {
-          var v = document.createElement('span');
+          var v = document.createElement("span");
           N(v, s, p), P(v, t.labelClass), (g = v), m.appendChild(v);
         } else N(m, s, p);
         if (t.labelDescription) {
-          var _ = ''.concat(t.elementId, '-description');
-          g.setAttribute('aria-describedby', _);
-          var y = document.createElement('span');
+          var _ = "".concat(t.elementId, "-description");
+          g.setAttribute("aria-describedby", _);
+          var y = document.createElement("span");
           N(y, s, t.labelDescription), (y.id = _), P(y, u), m.appendChild(y);
         }
         return (
           t.selected && P(m, h),
           t.placeholder && P(m, d),
-          m.setAttribute('role', t.group ? 'treeitem' : 'option'),
-          (m.dataset.choice = ''),
+          m.setAttribute("role", t.group ? "treeitem" : "option"),
+          (m.dataset.choice = ""),
           (m.dataset.id = t.id),
           (m.dataset.value = f),
           i && (m.dataset.selectText = i),
-          t.group && (m.dataset.groupId = ''.concat(t.group.id)),
+          t.group && (m.dataset.groupId = "".concat(t.group.id)),
           ze(m, t, !1),
           t.disabled
-            ? (P(m, l), (m.dataset.choiceDisabled = ''), m.setAttribute('aria-disabled', 'true'))
-            : (P(m, a), (m.dataset.choiceSelectable = '')),
+            ? (P(m, l),
+              (m.dataset.choiceDisabled = ""),
+              m.setAttribute("aria-disabled", "true"))
+            : (P(m, a), (m.dataset.choiceSelectable = "")),
           m
         );
       },
@@ -2332,17 +2438,17 @@
           n = i.input,
           s = i.inputCloned,
           o = e.labelId,
-          r = document.createElement('input');
+          r = document.createElement("input");
         return (
-          (r.type = 'search'),
+          (r.type = "search"),
           P(r, n),
           P(r, s),
-          (r.autocomplete = 'off'),
-          (r.autocapitalize = 'off'),
+          (r.autocomplete = "off"),
+          (r.autocapitalize = "off"),
           (r.spellcheck = !1),
-          r.setAttribute('aria-autocomplete', 'list'),
+          r.setAttribute("aria-autocomplete", "list"),
           t
-            ? r.setAttribute('aria-label', t)
+            ? r.setAttribute("aria-label", t)
             : o || Je(this._docRoot, this.passedElement.element.id, r),
           r
         );
@@ -2351,8 +2457,8 @@
         var t = e.classNames,
           i = t.list,
           n = t.listDropdown,
-          s = document.createElement('div');
-        return P(s, i), P(s, n), s.setAttribute('aria-expanded', 'false'), s;
+          s = document.createElement("div");
+        return P(s, i), P(s, n), s.setAttribute("aria-expanded", "false"), s;
       },
       notice: function (e, t, i) {
         var n = e.classNames,
@@ -2362,8 +2468,8 @@
           c = n.noResults,
           a = n.noChoices,
           h = n.notice;
-        void 0 === i && (i = '');
-        var l = document.createElement('div');
+        void 0 === i && (i = "");
+        var l = document.createElement("div");
         switch ((N(l, !0, t), P(l, s), P(l, o), P(l, h), i)) {
           case ie:
             P(l, r);
@@ -2374,27 +2480,34 @@
           case ee:
             P(l, a);
         }
-        return i === ie && ((l.dataset.choiceSelectable = ''), (l.dataset.choice = '')), l;
+        return (
+          i === ie &&
+            ((l.dataset.choiceSelectable = ""), (l.dataset.choice = "")),
+          l
+        );
       },
       option: function (e) {
         var t = L(e.label),
           i = new Option(t, e.value, !1, e.selected);
         return (
-          ze(i, e, !0), (i.disabled = e.disabled), e.selected && i.setAttribute('selected', ''), i
+          ze(i, e, !0),
+          (i.disabled = e.disabled),
+          e.selected && i.setAttribute("selected", ""),
+          i
         );
       },
     },
     Qe =
-      '-ms-scroll-limit' in document.documentElement.style &&
-      '-ms-ime-align' in document.documentElement.style,
+      "-ms-scroll-limit" in document.documentElement.style &&
+      "-ms-ime-align" in document.documentElement.style,
     Ye = {},
     Ze = function (e) {
       if (e) return e.dataset.id ? parseInt(e.dataset.id, 10) : void 0;
     },
-    et = '[data-choice-selectable]';
+    et = "[data-choice-selectable]";
   return (function () {
     function e(t, n) {
-      void 0 === t && (t = '[data-choice]'), void 0 === n && (n = {});
+      void 0 === t && (t = "[data-choice]"), void 0 === n && (n = {});
       var s = this;
       (this.initialisedOK = void 0),
         (this._hasNonChoicePlaceholder = !1),
@@ -2409,14 +2522,16 @@
       r.silent || this._validateConfig();
       var c = r.shadowRoot || document.documentElement;
       this._docRoot = c;
-      var a = 'string' == typeof t ? c.querySelector(t) : t;
-      if (!a || 'object' != typeof a || ('INPUT' !== a.tagName && !z(a))) {
-        if (!a && 'string' == typeof t)
-          throw TypeError('Selector '.concat(t, ' failed to find an element'));
-        throw TypeError('Expected one of the following types text|select-one|select-multiple');
+      var a = "string" == typeof t ? c.querySelector(t) : t;
+      if (!a || "object" != typeof a || ("INPUT" !== a.tagName && !z(a))) {
+        if (!a && "string" == typeof t)
+          throw TypeError("Selector ".concat(t, " failed to find an element"));
+        throw TypeError(
+          "Expected one of the following types text|select-one|select-multiple"
+        );
       }
       var h = a.type,
-        l = 'text' === h;
+        l = "text" === h;
       (l || 1 !== r.maxItemCount) && (r.singleModeForMultiSelect = !1),
         r.singleModeForMultiSelect && (h = y);
       var u = h === _,
@@ -2429,20 +2544,24 @@
         (this._isSelectMultipleElement = d),
         (this._isSelectElement = u || d),
         (this._canAddUserChoices = (l && r.addItems) || (p && r.addChoices)),
-        'boolean' != typeof r.renderSelectedChoices &&
-          (r.renderSelectedChoices = 'always' === r.renderSelectedChoices || u),
+        "boolean" != typeof r.renderSelectedChoices &&
+          (r.renderSelectedChoices = "always" === r.renderSelectedChoices || u),
         (r.closeDropdownOnSelect =
-          'auto' === r.closeDropdownOnSelect
+          "auto" === r.closeDropdownOnSelect
             ? l || u || r.singleModeForMultiSelect
             : W(r.closeDropdownOnSelect)),
         r.placeholder &&
           (r.placeholderValue
             ? (this._hasNonChoicePlaceholder = !0)
             : a.dataset.placeholder &&
-              ((this._hasNonChoicePlaceholder = !0), (r.placeholderValue = a.dataset.placeholder))),
-        n.addItemFilter && 'function' != typeof n.addItemFilter)
+              ((this._hasNonChoicePlaceholder = !0),
+              (r.placeholderValue = a.dataset.placeholder))),
+        n.addItemFilter && "function" != typeof n.addItemFilter)
       ) {
-        var f = n.addItemFilter instanceof RegExp ? n.addItemFilter : new RegExp(n.addItemFilter);
+        var f =
+          n.addItemFilter instanceof RegExp
+            ? n.addItemFilter
+            : new RegExp(n.addItemFilter);
         r.addItemFilter = f.test.bind(f);
       }
       if (
@@ -2454,11 +2573,12 @@
               template: function (e) {
                 return s._templates.option(e);
               },
-              extractPlaceholder: r.placeholder && !this._hasNonChoicePlaceholder,
+              extractPlaceholder:
+                r.placeholder && !this._hasNonChoicePlaceholder,
             })),
         (this.initialised = !1),
         (this._store = new Z(r)),
-        (this._currentValue = ''),
+        (this._currentValue = ""),
         (r.searchEnabled = (!l && r.searchEnabled) || d),
         (this._canSearch = r.searchEnabled),
         (this._isScrollingOnIe = !1),
@@ -2466,17 +2586,22 @@
         (this._wasTap = !0),
         (this._placeholderValue = this._generatePlaceholderValue()),
         (this._baseId = (function (e) {
-          var t = e.id || (e.name && ''.concat(e.name, '-').concat(w(2))) || w(4);
-          return (t = t.replace(/(:|\.|\[|\]|,)/g, '')), ''.concat('choices-', '-').concat(t);
+          var t =
+            e.id || (e.name && "".concat(e.name, "-").concat(w(2))) || w(4);
+          return (
+            (t = t.replace(/(:|\.|\[|\]|,)/g, "")),
+            "".concat("choices-", "-").concat(t)
+          );
         })(a)),
         (this._direction = a.dir),
         !this._direction)
       ) {
         var m = window.getComputedStyle(a).direction;
-        m !== window.getComputedStyle(document.documentElement).direction && (this._direction = m);
+        m !== window.getComputedStyle(document.documentElement).direction &&
+          (this._direction = m);
       }
       if (
-        ((this._idNames = { itemChoice: 'item-choice' }),
+        ((this._idNames = { itemChoice: "item-choice" }),
         (this._templates = o.templates),
         (this._render = this._render.bind(this)),
         (this._onFocus = this._onFocus.bind(this)),
@@ -2499,9 +2624,12 @@
       )
         return (
           r.silent ||
-            console.warn('Trying to initialise Choices on element already initialised', {
-              element: t,
-            }),
+            console.warn(
+              "Trying to initialise Choices on element already initialised",
+              {
+                element: t,
+              }
+            ),
           (this.initialised = !0),
           void (this.initialisedOK = !1)
         );
@@ -2511,7 +2639,7 @@
         }));
     }
     return (
-      Object.defineProperty(e, 'defaults', {
+      Object.defineProperty(e, "defaults", {
         get: function () {
           return Object.preventExtensions({
             get options() {
@@ -2536,15 +2664,15 @@
             this._createElements(),
             this._createStructure(),
             (this._isTextElement && !this.config.addItems) ||
-            this.passedElement.element.hasAttribute('disabled') ||
-            this.passedElement.element.closest('fieldset:disabled')
+            this.passedElement.element.hasAttribute("disabled") ||
+            this.passedElement.element.closest("fieldset:disabled")
               ? this.disable()
               : (this.enable(), this._addEventListeners()),
             this._initStore(),
             (this.initialised = !0),
             (this.initialisedOK = !0);
           var e = this.config.callbackOnInit;
-          'function' == typeof e && e.call(this);
+          "function" == typeof e && e.call(this);
         }
       }),
       (e.prototype.destroy = function () {
@@ -2563,7 +2691,9 @@
         return (
           this.passedElement.isDisabled && this.passedElement.enable(),
           this.containerOuter.isDisabled &&
-            (this._addEventListeners(), this.input.enable(), this.containerOuter.enable()),
+            (this._addEventListeners(),
+            this.input.enable(),
+            this.containerOuter.enable()),
           this
         );
       }),
@@ -2571,7 +2701,9 @@
         return (
           this.passedElement.isDisabled || this.passedElement.disable(),
           this.containerOuter.isDisabled ||
-            (this._removeEventListeners(), this.input.disable(), this.containerOuter.disable()),
+            (this._removeEventListeners(),
+            this.input.disable(),
+            this.containerOuter.disable()),
           this
         );
       }),
@@ -2584,7 +2716,8 @@
           !i ||
             i.highlighted ||
             (this._store.dispatch(S(i, !0)),
-            t && this.passedElement.triggerEvent(g, this._getChoiceForOutput(i))),
+            t &&
+              this.passedElement.triggerEvent(g, this._getChoiceForOutput(i))),
           this
         );
       }),
@@ -2595,7 +2728,11 @@
         });
         return i && i.highlighted
           ? (this._store.dispatch(S(i, !1)),
-            t && this.passedElement.triggerEvent('unhighlightItem', this._getChoiceForOutput(i)),
+            t &&
+              this.passedElement.triggerEvent(
+                "unhighlightItem",
+                this._getChoiceForOutput(i)
+              ),
             this)
           : this;
       }),
@@ -2677,7 +2814,7 @@
               var i = t.dropdown.element.getBoundingClientRect();
               t.containerOuter.open(i.bottom, i.height),
                 e || t.input.focus(),
-                t.passedElement.triggerEvent('showDropdown');
+                t.passedElement.triggerEvent("showDropdown");
             })),
           this
         );
@@ -2688,8 +2825,10 @@
           ? (requestAnimationFrame(function () {
               t.dropdown.hide(),
                 t.containerOuter.close(),
-                !e && t._canSearch && (t.input.removeActiveDescendant(), t.input.blur()),
-                t.passedElement.triggerEvent('hideDropdown');
+                !e &&
+                  t._canSearch &&
+                  (t.input.removeActiveDescendant(), t.input.blur()),
+                t.passedElement.triggerEvent("hideDropdown");
             }),
             this)
           : this;
@@ -2699,7 +2838,9 @@
           i = this._store.items.map(function (i) {
             return e ? i.value : t._getChoiceForOutput(i);
           });
-        return this._isSelectOneElement || this.config.singleModeForMultiSelect ? i[0] : i;
+        return this._isSelectOneElement || this.config.singleModeForMultiSelect
+          ? i[0]
+          : i;
       }),
       (e.prototype.setValue = function (e) {
         var t = this;
@@ -2711,7 +2852,7 @@
             }),
             this._searcher.reset(),
             this)
-          : (this._warnChoicesInitFailed('setValue'), this);
+          : (this._warnChoicesInitFailed("setValue"), this);
       }),
       (e.prototype.setChoiceByValue = function (e) {
         var t = this;
@@ -2725,27 +2866,31 @@
               }),
               this._searcher.reset()),
             this)
-          : (this._warnChoicesInitFailed('setChoiceByValue'), this);
+          : (this._warnChoicesInitFailed("setChoiceByValue"), this);
       }),
       (e.prototype.setChoices = function (e, t, n, s, o, r) {
         var c = this;
         if (
           (void 0 === e && (e = []),
-          void 0 === t && (t = 'value'),
-          void 0 === n && (n = 'label'),
+          void 0 === t && (t = "value"),
+          void 0 === n && (n = "label"),
           void 0 === s && (s = !1),
           void 0 === o && (o = !0),
           void 0 === r && (r = !1),
           !this.initialisedOK)
         )
-          return this._warnChoicesInitFailed('setChoices'), this;
+          return this._warnChoicesInitFailed("setChoices"), this;
         if (!this._isSelectElement)
-          throw new TypeError("setChoices can't be used with INPUT based Choices");
-        if ('string' != typeof t || !t)
-          throw new TypeError("value parameter must be a name of 'value' field in passed objects");
-        if ('function' == typeof e) {
+          throw new TypeError(
+            "setChoices can't be used with INPUT based Choices"
+          );
+        if ("string" != typeof t || !t)
+          throw new TypeError(
+            "value parameter must be a name of 'value' field in passed objects"
+          );
+        if ("function" == typeof e) {
           var a = e(this);
-          if ('function' == typeof Promise && a instanceof Promise)
+          if ("function" == typeof Promise && a instanceof Promise)
             return new Promise(function (e) {
               return requestAnimationFrame(e);
             })
@@ -2769,7 +2914,7 @@
               });
           if (!Array.isArray(a))
             throw new TypeError(
-              '.setChoices first argument function must return either array of choices or Promise, got: '.concat(
+              ".setChoices first argument function must return either array of choices or Promise, got: ".concat(
                 typeof a
               )
             );
@@ -2777,16 +2922,16 @@
         }
         if (!Array.isArray(e))
           throw new TypeError(
-            '.setChoices must be called either with array of choices with a function resulting into Promise of array of choices'
+            ".setChoices must be called either with array of choices with a function resulting into Promise of array of choices"
           );
         return (
           this.containerOuter.removeLoadingState(),
           this._store.withTxn(function () {
             o && (c._isSearching = !1), s && c.clearChoices(!0, r);
-            var a = 'value' === t,
-              h = 'label' === n;
+            var a = "value" === t,
+              h = "label" === n;
             e.forEach(function (e) {
-              if ('choices' in e) {
+              if ("choices" in e) {
                 var s = e;
                 h || (s = i(i({}, s), { label: s[n] })), c._addGroup(G(s, !0));
               } else {
@@ -2824,7 +2969,7 @@
                   i ? n._store.dispatch(C(e)) : o[e.value] && (e.selected = !0);
                 };
                 s.forEach(function (e) {
-                  'choices' in e ? e.choices.forEach(r) : r(e);
+                  "choices" in e ? e.choices.forEach(r) : r(e);
                 }),
                   n._addPredefinedChoices(s, t, e),
                   n._isSearching && n._searchChoices(n.input.value);
@@ -2832,7 +2977,7 @@
               this)
             : (this.config.silent ||
                 console.warn(
-                  'refresh method can only be used on choices backed by a <select> element'
+                  "refresh method can only be used on choices backed by a <select> element"
                 ),
               this)
         );
@@ -2849,7 +2994,8 @@
               })(t)
             ),
             this._searcher.reset(),
-            t.selected && this.passedElement.triggerEvent(m, this._getChoiceForOutput(t)),
+            t.selected &&
+              this.passedElement.triggerEvent(m, this._getChoiceForOutput(t)),
             this)
           : this;
       }),
@@ -2860,14 +3006,14 @@
           void 0 === t && (t = !1),
           e &&
             (t
-              ? this.passedElement.element.replaceChildren('')
+              ? this.passedElement.element.replaceChildren("")
               : this.passedElement.element
-                  .querySelectorAll(':not([selected])')
+                  .querySelectorAll(":not([selected])")
                   .forEach(function (e) {
                     e.remove();
                   })),
-          this.itemList.element.replaceChildren(''),
-          this.choiceList.element.replaceChildren(''),
+          this.itemList.element.replaceChildren(""),
+          this.choiceList.element.replaceChildren(""),
           this._clearNotice(),
           this._store.withTxn(function () {
             var e = t ? [] : i._store.items;
@@ -2891,7 +3037,9 @@
         );
       }),
       (e.prototype.clearInput = function () {
-        return this.input.clear(!this._isSelectOneElement), this._stopSearch(), this;
+        return (
+          this.input.clear(!this._isSelectOneElement), this._stopSearch(), this
+        );
       }),
       (e.prototype._validateConfig = function () {
         var e,
@@ -2905,22 +3053,25 @@
             t.filter(function (e) {
               return i.indexOf(e) < 0;
             }));
-        s.length && console.warn('Unknown config option(s) passed', s.join(', ')),
+        s.length &&
+          console.warn("Unknown config option(s) passed", s.join(", ")),
           n.allowHTML &&
             n.allowHtmlUserInput &&
             (n.addItems &&
               console.warn(
-                'Warning: allowHTML/allowHtmlUserInput/addItems all being true is strongly not recommended and may lead to XSS attacks'
+                "Warning: allowHTML/allowHtmlUserInput/addItems all being true is strongly not recommended and may lead to XSS attacks"
               ),
             n.addChoices &&
               console.warn(
-                'Warning: allowHTML/allowHtmlUserInput/addChoices all being true is strongly not recommended and may lead to XSS attacks'
+                "Warning: allowHTML/allowHtmlUserInput/addChoices all being true is strongly not recommended and may lead to XSS attacks"
               ));
       }),
       (e.prototype._render = function (e) {
         void 0 === e && (e = { choices: !0, groups: !0, items: !0 }),
           this._store.inTxn() ||
-            (this._isSelectElement && (e.choices || e.groups) && this._renderChoices(),
+            (this._isSelectElement &&
+              (e.choices || e.groups) &&
+              this._renderChoices(),
             e.items && this._renderItems());
       }),
       (e.prototype._renderChoices = function () {
@@ -2946,7 +3097,10 @@
           var a = document.createDocumentFragment(),
             h = function (e) {
               return e.filter(function (e) {
-                return !e.placeholder && (i ? !!e.rank : t.renderSelectedChoices || !e.selected);
+                return (
+                  !e.placeholder &&
+                  (i ? !!e.rank : t.renderSelectedChoices || !e.selected)
+                );
               });
             },
             l = !1,
@@ -2956,8 +3110,15 @@
               (c = !s && r && c > r ? r : c),
                 c--,
                 n.every(function (n, s) {
-                  var r = n.choiceEl || e._templates.choice(t, n, t.itemSelectText, o);
-                  return (n.choiceEl = r), a.appendChild(r), (!i && n.selected) || (l = !0), s < c;
+                  var r =
+                    n.choiceEl ||
+                    e._templates.choice(t, n, t.itemSelectText, o);
+                  return (
+                    (n.choiceEl = r),
+                    a.appendChild(r),
+                    (!i && n.selected) || (l = !0),
+                    s < c
+                  );
                 });
             };
           o.length &&
@@ -2988,7 +3149,8 @@
                   var s = h(n.choices);
                   if (s.length) {
                     if (n.label) {
-                      var o = n.groupEl || e._templates.choiceGroup(e.config, n);
+                      var o =
+                        n.groupEl || e._templates.choiceGroup(e.config, n);
                       (n.groupEl = o), o.remove(), a.appendChild(o);
                     }
                     u(s, !0, t.appendGroupInSearch && i ? n.label : void 0);
@@ -3002,7 +3164,7 @@
                   text: O(i ? t.noResultsText : t.noChoicesText),
                   type: i ? te : ee,
                 }),
-              a.replaceChildren('')),
+              a.replaceChildren("")),
             this._renderNotice(a),
             this.choiceList.element.replaceChildren(a),
             l && this._highlightChoice();
@@ -3037,7 +3199,15 @@
               !this._placeholderValue ||
               ((c = !0),
               r(
-                G({ selected: !0, value: '', label: this._placeholderValue, placeholder: !0 }, !1)
+                G(
+                  {
+                    selected: !0,
+                    value: "",
+                    label: this._placeholderValue,
+                    placeholder: !0,
+                  },
+                  !1
+                )
               ));
         }
         c &&
@@ -3060,7 +3230,9 @@
       (e.prototype._displayNotice = function (e, t, i) {
         void 0 === i && (i = !0);
         var n = this._notice;
-        n && ((n.type === t && n.text === e) || (n.type === ie && (t === te || t === ee)))
+        n &&
+        ((n.type === t && n.text === e) ||
+          (n.type === ie && (t === te || t === ee)))
           ? i && this.showDropdown(!0)
           : (this._clearNotice(),
             (this._notice = e ? { text: e, type: t } : void 0),
@@ -3069,7 +3241,9 @@
       }),
       (e.prototype._clearNotice = function () {
         if (this._notice) {
-          var e = this.choiceList.element.querySelector(D(this.config.classNames.notice));
+          var e = this.choiceList.element.querySelector(
+            D(this.config.classNames.notice)
+          );
           e && e.remove(), (this._notice = void 0);
         }
       }),
@@ -3098,12 +3272,16 @@
         };
       }),
       (e.prototype._triggerChange = function (e) {
-        null != e && this.passedElement.triggerEvent('change', { value: e });
+        null != e && this.passedElement.triggerEvent("change", { value: e });
       }),
       (e.prototype._handleButtonAction = function (e) {
         var t = this,
           i = this._store.items;
-        if (i.length && this.config.removeItems && this.config.removeItemButton) {
+        if (
+          i.length &&
+          this.config.removeItems &&
+          this.config.removeItemButton
+        ) {
           var n = e && Ze(e.parentElement),
             s =
               n &&
@@ -3117,12 +3295,17 @@
                 t._triggerChange(s.value),
                 t._isSelectOneElement && !t._hasNonChoicePlaceholder)
               ) {
-                var e = (t.config.shouldSort ? t._store.choices.reverse() : t._store.choices).find(
-                  function (e) {
-                    return e.placeholder;
-                  }
-                );
-                e && (t._addItem(e), t.unhighlightAll(), e.value && t._triggerChange(e.value));
+                var e = (
+                  t.config.shouldSort
+                    ? t._store.choices.reverse()
+                    : t._store.choices
+                ).find(function (e) {
+                  return e.placeholder;
+                });
+                e &&
+                  (t._addItem(e),
+                  t.unhighlightAll(),
+                  e.value && t._triggerChange(e.value));
               }
             });
         }
@@ -3188,9 +3371,11 @@
             })),
             this.passedElement.value)
           ) {
-            var n = this.passedElement.value.split(i.delimiter).map(function (e) {
-              return G(e, !1, t.config.allowHtmlUserInput);
-            });
+            var n = this.passedElement.value
+              .split(i.delimiter)
+              .map(function (e) {
+                return G(e, !1, t.config.allowHtmlUserInput);
+              });
             this._presetChoices = this._presetChoices.concat(n);
           }
           this._presetChoices.forEach(function (e) {
@@ -3211,19 +3396,25 @@
           ? (this.disable(),
             this.containerOuter.addLoadingState(),
             this._isSelectOneElement
-              ? t.replaceChildren(this._templates.placeholder(this.config, this.config.loadingText))
+              ? t.replaceChildren(
+                  this._templates.placeholder(
+                    this.config,
+                    this.config.loadingText
+                  )
+                )
               : (this.input.placeholder = this.config.loadingText))
           : (this.enable(),
             this.containerOuter.removeLoadingState(),
             this._isSelectOneElement
-              ? (t.replaceChildren(''), this._render())
-              : (this.input.placeholder = this._placeholderValue || ''));
+              ? (t.replaceChildren(""), this._render())
+              : (this.input.placeholder = this._placeholderValue || ""));
       }),
       (e.prototype._handleSearch = function (e) {
         if (this.input.isFocussed)
           if (null != e && e.length >= this.config.searchFloor) {
             var t = this.config.searchChoices ? this._searchChoices(e) : 0;
-            null !== t && this.passedElement.triggerEvent(f, { value: e, resultCount: t });
+            null !== t &&
+              this.passedElement.triggerEvent(f, { value: e, resultCount: t });
           } else
             this._store.choices.some(function (e) {
               return !e.active;
@@ -3233,20 +3424,23 @@
         var e = this.config,
           t = e.maxItemCount,
           i = e.maxItemText;
-        return !e.singleModeForMultiSelect && t > 0 && t <= this._store.items.length
-          ? (this.choiceList.element.replaceChildren(''),
+        return !e.singleModeForMultiSelect &&
+          t > 0 &&
+          t <= this._store.items.length
+          ? (this.choiceList.element.replaceChildren(""),
             (this._notice = void 0),
-            this._displayNotice('function' == typeof i ? i(t) : i, ie),
+            this._displayNotice("function" == typeof i ? i(t) : i, ie),
             !1)
-          : (this._notice && this._notice.type === ie && this._clearNotice(), !0);
+          : (this._notice && this._notice.type === ie && this._clearNotice(),
+            !0);
       }),
       (e.prototype._canCreateItem = function (e) {
         var t = this.config,
           i = !0,
-          n = '';
+          n = "";
         if (
           (i &&
-            'function' == typeof t.addItemFilter &&
+            "function" == typeof t.addItemFilter &&
             !t.addItemFilter(e) &&
             ((i = !1), (n = x(t.customAddItemText, e))),
           i &&
@@ -3254,18 +3448,22 @@
               return t.valueComparer(i.value, e);
             }))
         ) {
-          if (this._isSelectElement) return this._displayNotice('', ie), !1;
+          if (this._isSelectElement) return this._displayNotice("", ie), !1;
           t.duplicateItemsAllowed || ((i = !1), (n = x(t.uniqueItemText, e)));
         }
-        return i && (n = x(t.addItemText, e)), n && this._displayNotice(n, ie), i;
+        return (
+          i && (n = x(t.addItemText, e)), n && this._displayNotice(n, ie), i
+        );
       }),
       (e.prototype._searchChoices = function (e) {
-        var t = e.trim().replace(/\s{2,}/, ' ');
+        var t = e.trim().replace(/\s{2,}/, " ");
         if (!t.length || t === this._currentValue) return null;
         var i = this._searcher;
         i.isEmptyIndex() && i.index(this._store.searchableChoices);
         var n = i.search(t);
-        (this._currentValue = t), (this._highlightPosition = 0), (this._isSearching = !0);
+        (this._currentValue = t),
+          (this._highlightPosition = 0),
+          (this._isSearching = !0);
         var s = this._notice;
         return (
           (s && s.type) !== ie &&
@@ -3282,50 +3480,60 @@
       }),
       (e.prototype._stopSearch = function () {
         this._isSearching &&
-          ((this._currentValue = ''),
+          ((this._currentValue = ""),
           (this._isSearching = !1),
           this._clearNotice(),
           this._store.dispatch({ type: a, active: !0 }),
-          this.passedElement.triggerEvent(f, { value: '', resultCount: 0 }));
+          this.passedElement.triggerEvent(f, { value: "", resultCount: 0 }));
       }),
       (e.prototype._addEventListeners = function () {
         var e = this._docRoot,
           t = this.containerOuter.element,
           i = this.input.element;
-        e.addEventListener('touchend', this._onTouchEnd, !0),
-          t.addEventListener('keydown', this._onKeyDown, !0),
-          t.addEventListener('mousedown', this._onMouseDown, !0),
-          e.addEventListener('click', this._onClick, { passive: !0 }),
-          e.addEventListener('touchmove', this._onTouchMove, { passive: !0 }),
-          this.dropdown.element.addEventListener('mouseover', this._onMouseOver, { passive: !0 }),
+        e.addEventListener("touchend", this._onTouchEnd, !0),
+          t.addEventListener("keydown", this._onKeyDown, !0),
+          t.addEventListener("mousedown", this._onMouseDown, !0),
+          e.addEventListener("click", this._onClick, { passive: !0 }),
+          e.addEventListener("touchmove", this._onTouchMove, { passive: !0 }),
+          this.dropdown.element.addEventListener(
+            "mouseover",
+            this._onMouseOver,
+            { passive: !0 }
+          ),
           this._isSelectOneElement &&
-            (t.addEventListener('focus', this._onFocus, { passive: !0 }),
-            t.addEventListener('blur', this._onBlur, { passive: !0 })),
-          i.addEventListener('keyup', this._onKeyUp, { passive: !0 }),
-          i.addEventListener('input', this._onInput, { passive: !0 }),
-          i.addEventListener('focus', this._onFocus, { passive: !0 }),
-          i.addEventListener('blur', this._onBlur, { passive: !0 }),
-          i.form && i.form.addEventListener('reset', this._onFormReset, { passive: !0 }),
+            (t.addEventListener("focus", this._onFocus, { passive: !0 }),
+            t.addEventListener("blur", this._onBlur, { passive: !0 })),
+          i.addEventListener("keyup", this._onKeyUp, { passive: !0 }),
+          i.addEventListener("input", this._onInput, { passive: !0 }),
+          i.addEventListener("focus", this._onFocus, { passive: !0 }),
+          i.addEventListener("blur", this._onBlur, { passive: !0 }),
+          i.form &&
+            i.form.addEventListener("reset", this._onFormReset, {
+              passive: !0,
+            }),
           this.input.addEventListeners();
       }),
       (e.prototype._removeEventListeners = function () {
         var e = this._docRoot,
           t = this.containerOuter.element,
           i = this.input.element;
-        e.removeEventListener('touchend', this._onTouchEnd, !0),
-          t.removeEventListener('keydown', this._onKeyDown, !0),
-          t.removeEventListener('mousedown', this._onMouseDown, !0),
-          e.removeEventListener('click', this._onClick),
-          e.removeEventListener('touchmove', this._onTouchMove),
-          this.dropdown.element.removeEventListener('mouseover', this._onMouseOver),
+        e.removeEventListener("touchend", this._onTouchEnd, !0),
+          t.removeEventListener("keydown", this._onKeyDown, !0),
+          t.removeEventListener("mousedown", this._onMouseDown, !0),
+          e.removeEventListener("click", this._onClick),
+          e.removeEventListener("touchmove", this._onTouchMove),
+          this.dropdown.element.removeEventListener(
+            "mouseover",
+            this._onMouseOver
+          ),
           this._isSelectOneElement &&
-            (t.removeEventListener('focus', this._onFocus),
-            t.removeEventListener('blur', this._onBlur)),
-          i.removeEventListener('keyup', this._onKeyUp),
-          i.removeEventListener('input', this._onInput),
-          i.removeEventListener('focus', this._onFocus),
-          i.removeEventListener('blur', this._onBlur),
-          i.form && i.form.removeEventListener('reset', this._onFormReset),
+            (t.removeEventListener("focus", this._onFocus),
+            t.removeEventListener("blur", this._onBlur)),
+          i.removeEventListener("keyup", this._onKeyUp),
+          i.removeEventListener("input", this._onInput),
+          i.removeEventListener("focus", this._onFocus),
+          i.removeEventListener("blur", this._onBlur),
+          i.form && i.form.removeEventListener("reset", this._onFormReset),
           this.input.removeEventListeners();
       }),
       (e.prototype._onKeyDown = function (e) {
@@ -3334,7 +3542,7 @@
           n =
             1 === e.key.length ||
             (2 === e.key.length && e.key.charCodeAt(0) >= 55296) ||
-            'Unidentified' === e.key;
+            "Unidentified" === e.key;
         switch (
           (this._isTextElement ||
             i ||
@@ -3344,7 +3552,8 @@
             (this.showDropdown(),
             !this.input.isFocussed &&
               n &&
-              ((this.input.value += e.key), ' ' === e.key && e.preventDefault())),
+              ((this.input.value += e.key),
+              " " === e.key && e.preventDefault())),
           t)
         ) {
           case 65:
@@ -3360,7 +3569,11 @@
             return this._onDirectionKey(e, i);
           case 8:
           case 46:
-            return this._onDeleteKey(e, this._store.items, this.input.isFocussed);
+            return this._onDeleteKey(
+              e,
+              this._store.items,
+              this.input.isFocussed
+            );
         }
       }),
       (e.prototype._onKeyUp = function () {
@@ -3373,7 +3586,8 @@
             (this._canSearch && this._handleSearch(e),
             this._canAddUserChoices &&
               (this._canCreateItem(e),
-              this._isSelectElement && ((this._highlightPosition = 0), this._highlightChoice())))
+              this._isSelectElement &&
+                ((this._highlightPosition = 0), this._highlightChoice())))
           : this._isTextElement
           ? this.hideDropdown(!0)
           : this._stopSearch();
@@ -3391,9 +3605,12 @@
         var i = this,
           n = this.input.value,
           s = e.target;
-        if ((e.preventDefault(), s && s.hasAttribute('data-button'))) this._handleButtonAction(s);
+        if ((e.preventDefault(), s && s.hasAttribute("data-button")))
+          this._handleButtonAction(s);
         else if (t) {
-          var o = this.dropdown.element.querySelector(D(this.config.classNames.highlightedState));
+          var o = this.dropdown.element.querySelector(
+            D(this.config.classNames.highlightedState)
+          );
           if (!o || !this._handleChoiceAction(o))
             if (s && n) {
               if (this._canAddItems()) {
@@ -3402,7 +3619,8 @@
                   if (!(r = i._findAndSelectChoiceByValue(n, !0))) {
                     if (!i._canAddUserChoices) return;
                     if (!i._canCreateItem(n)) return;
-                    i._addChoice(G(n, !1, i.config.allowHtmlUserInput), !0, !0), (r = !0);
+                    i._addChoice(G(n, !1, i.config.allowHtmlUserInput), !0, !0),
+                      (r = !0);
                   }
                   i.clearInput(), i.unhighlightAll();
                 }),
@@ -3430,14 +3648,22 @@
           var r = 40 === o || 34 === o ? 1 : -1,
             c = void 0;
           if (e.metaKey || 34 === o || 33 === o)
-            c = this.dropdown.element.querySelector(r > 0 ? ''.concat(et, ':last-of-type') : et);
+            c = this.dropdown.element.querySelector(
+              r > 0 ? "".concat(et, ":last-of-type") : et
+            );
           else {
-            var a = this.dropdown.element.querySelector(D(this.config.classNames.highlightedState));
+            var a = this.dropdown.element.querySelector(
+              D(this.config.classNames.highlightedState)
+            );
             c = a
               ? (function (e, t, i) {
                   void 0 === i && (i = 1);
                   for (
-                    var n = ''.concat(i > 0 ? 'next' : 'previous', 'ElementSibling'), s = e[n];
+                    var n = "".concat(
+                        i > 0 ? "next" : "previous",
+                        "ElementSibling"
+                      ),
+                      s = e[n];
                     s;
 
                   ) {
@@ -3454,7 +3680,8 @@
             void 0 === (s = r) && (s = 1),
             (s > 0
               ? n.scrollTop + n.offsetHeight >= i.offsetTop + i.offsetHeight
-              : i.offsetTop >= n.scrollTop) || this.choiceList.scrollToChildElement(c, r),
+              : i.offsetTop >= n.scrollTop) ||
+              this.choiceList.scrollToChildElement(c, r),
             this._highlightChoice(c)),
             e.preventDefault();
         }
@@ -3472,7 +3699,8 @@
         var t = (e || e.touches[0]).target;
         this._wasTap &&
           this.containerOuter.element.contains(t) &&
-          ((t === this.containerOuter.element || t === this.containerInner.element) &&
+          ((t === this.containerOuter.element ||
+            t === this.containerInner.element) &&
             (this._isTextElement
               ? this.input.focus()
               : this._isSelectMultipleElement && this.showDropdown()),
@@ -3485,23 +3713,27 @@
           if (Qe && this.choiceList.element.contains(t)) {
             var i = this.choiceList.element.firstElementChild;
             this._isScrollingOnIe =
-              'ltr' === this._direction ? e.offsetX >= i.offsetWidth : e.offsetX < i.offsetLeft;
+              "ltr" === this._direction
+                ? e.offsetX >= i.offsetWidth
+                : e.offsetX < i.offsetLeft;
           }
           if (t !== this.input.element) {
-            var n = t.closest('[data-button],[data-item],[data-choice]');
+            var n = t.closest("[data-button],[data-item],[data-choice]");
             n instanceof HTMLElement &&
-              ('button' in n.dataset
+              ("button" in n.dataset
                 ? this._handleButtonAction(n)
-                : 'item' in n.dataset
+                : "item" in n.dataset
                 ? this._handleItemAction(n, e.shiftKey)
-                : 'choice' in n.dataset && this._handleChoiceAction(n)),
+                : "choice" in n.dataset && this._handleChoiceAction(n)),
               e.preventDefault();
           }
         }
       }),
       (e.prototype._onMouseOver = function (e) {
         var t = e.target;
-        t instanceof HTMLElement && 'choice' in t.dataset && this._highlightChoice(t);
+        t instanceof HTMLElement &&
+          "choice" in t.dataset &&
+          this._highlightChoice(t);
       }),
       (e.prototype._onClick = function (e) {
         var t = e.target,
@@ -3513,9 +3745,12 @@
               !this.dropdown.element.contains(t) &&
               this.hideDropdown()
             : this._isTextElement
-            ? document.activeElement !== this.input.element && this.input.focus()
+            ? document.activeElement !== this.input.element &&
+              this.input.focus()
             : (this.showDropdown(), i.element.focus())
-          : (i.removeFocusState(), this.hideDropdown(!0), this.unhighlightAll());
+          : (i.removeFocusState(),
+            this.hideDropdown(!0),
+            this.unhighlightAll());
       }),
       (e.prototype._onFocus = function (e) {
         var t = e.target,
@@ -3536,7 +3771,8 @@
           ? t === this.input.element
             ? (i.removeFocusState(),
               this.hideDropdown(!0),
-              (this._isTextElement || this._isSelectMultipleElement) && this.unhighlightAll())
+              (this._isTextElement || this._isSelectMultipleElement) &&
+                this.unhighlightAll())
             : t === this.containerOuter.element &&
               (i.removeFocusState(), this._canSearch || this.hideDropdown(!0))
           : ((this._isScrollingOnIe = !1), this.input.element.focus());
@@ -3556,9 +3792,11 @@
         if (t.length) {
           var i = e,
             n = this.config.classNames.highlightedState;
-          Array.from(this.dropdown.element.querySelectorAll(D(n))).forEach(function (e) {
-            j(e, n), e.setAttribute('aria-selected', 'false');
-          }),
+          Array.from(this.dropdown.element.querySelectorAll(D(n))).forEach(
+            function (e) {
+              j(e, n), e.setAttribute("aria-selected", "false");
+            }
+          ),
             i
               ? (this._highlightPosition = t.indexOf(i))
               : (i =
@@ -3566,21 +3804,31 @@
                     ? t[this._highlightPosition]
                     : t[t.length - 1]) || (i = t[0]),
             P(i, n),
-            i.setAttribute('aria-selected', 'true'),
-            this.passedElement.triggerEvent('highlightChoice', { el: i }),
+            i.setAttribute("aria-selected", "true"),
+            this.passedElement.triggerEvent("highlightChoice", { el: i }),
             this.dropdown.isActive &&
-              (this.input.setActiveDescendant(i.id), this.containerOuter.setActiveDescendant(i.id));
+              (this.input.setActiveDescendant(i.id),
+              this.containerOuter.setActiveDescendant(i.id));
         }
       }),
       (e.prototype._addItem = function (e, t, i) {
         if ((void 0 === t && (t = !0), void 0 === i && (i = !1), !e.id))
-          throw new TypeError('item.id must be set before _addItem is called for a choice/item');
+          throw new TypeError(
+            "item.id must be set before _addItem is called for a choice/item"
+          );
         (this.config.singleModeForMultiSelect || this._isSelectOneElement) &&
           this.removeActiveItems(e.id),
           this._store.dispatch(E(e)),
           t &&
-            (this.passedElement.triggerEvent('addItem', this._getChoiceForOutput(e)),
-            i && this.passedElement.triggerEvent('choice', this._getChoiceForOutput(e)));
+            (this.passedElement.triggerEvent(
+              "addItem",
+              this._getChoiceForOutput(e)
+            ),
+            i &&
+              this.passedElement.triggerEvent(
+                "choice",
+                this._getChoiceForOutput(e)
+              ));
       }),
       (e.prototype._removeItem = function (e) {
         if (e.id) {
@@ -3592,7 +3840,9 @@
       }),
       (e.prototype._addChoice = function (e, t, i) {
         if ((void 0 === t && (t = !0), void 0 === i && (i = !1), e.id))
-          throw new TypeError('Can not re-add a choice which has already been added');
+          throw new TypeError(
+            "Can not re-add a choice which has already been added"
+          );
         var n = this.config;
         if (
           n.duplicateItemsAllowed ||
@@ -3602,9 +3852,9 @@
         ) {
           this._lastAddedChoiceId++,
             (e.id = this._lastAddedChoiceId),
-            (e.elementId = ''
-              .concat(this._baseId, '-')
-              .concat(this._idNames.itemChoice, '-')
+            (e.elementId = ""
+              .concat(this._baseId, "-")
+              .concat(this._idNames.itemChoice, "-")
               .concat(e.id));
           var s = n.prependValue,
             o = n.appendValue;
@@ -3619,7 +3869,9 @@
       (e.prototype._addGroup = function (e, t) {
         var i = this;
         if ((void 0 === t && (t = !0), e.id))
-          throw new TypeError('Can not re-add a group which has already been added');
+          throw new TypeError(
+            "Can not re-add a group which has already been added"
+          );
         this._store.dispatch(
           (function (e) {
             return { type: l, group: e };
@@ -3629,14 +3881,16 @@
             (this._lastAddedGroupId++,
             (e.id = this._lastAddedGroupId),
             e.choices.forEach(function (n) {
-              (n.group = e), e.disabled && (n.disabled = !0), i._addChoice(n, t);
+              (n.group = e),
+                e.disabled && (n.disabled = !0),
+                i._addChoice(n, t);
             }));
       }),
       (e.prototype._createTemplates = function () {
         var e = this,
           t = this.config.callbackOnCreateTemplates,
           i = {};
-        'function' == typeof t && (i = t.call(this, A, T, F));
+        "function" == typeof t && (i = t.call(this, A, T, F));
         var n = {};
         Object.keys(this._templates).forEach(function (t) {
           n[t] = t in i ? i[t].bind(e) : e._templates[t].bind(e);
@@ -3678,7 +3932,11 @@
           })),
           (this.choiceList = new H({ element: e.choiceList(t, i) })),
           (this.itemList = new H({ element: e.itemList(t, i) })),
-          (this.dropdown = new K({ element: e.dropdown(t), classNames: s, type: o }));
+          (this.dropdown = new K({
+            element: e.dropdown(t),
+            classNames: s,
+            type: o,
+          }));
       }),
       (e.prototype._createStructure = function () {
         var e = this,
@@ -3690,15 +3948,18 @@
           t.wrap(n.element),
           i.wrap(t.element),
           this._isSelectOneElement
-            ? (this.input.placeholder = this.config.searchPlaceholderValue || '')
-            : (this._placeholderValue && (this.input.placeholder = this._placeholderValue),
+            ? (this.input.placeholder =
+                this.config.searchPlaceholderValue || "")
+            : (this._placeholderValue &&
+                (this.input.placeholder = this._placeholderValue),
               this.input.setWidth()),
           i.element.appendChild(t.element),
           i.element.appendChild(s),
           t.element.appendChild(this.itemList.element),
           s.appendChild(this.choiceList.element),
           this._isSelectOneElement
-            ? this.config.searchEnabled && s.insertBefore(this.input.element, s.firstChild)
+            ? this.config.searchEnabled &&
+              s.insertBefore(this.input.element, s.firstChild)
             : t.element.appendChild(this.input.element),
           (this._highlightPosition = 0),
           (this._isSearching = !1);
@@ -3726,10 +3987,14 @@
                 return e.selected;
               }) &&
             e.some(function (e) {
-              return !e.disabled && !('choices' in e) && ((e.selected = !0), !0);
+              return (
+                !e.disabled && !("choices" in e) && ((e.selected = !0), !0)
+              );
             }),
           e.forEach(function (e) {
-            'choices' in e ? n._isSelectElement && n._addGroup(e, i) : n._addChoice(e, i);
+            "choices" in e
+              ? n._isSelectElement && n._addGroup(e, i)
+              : n._addChoice(e, i);
           });
       }),
       (e.prototype._findAndSelectChoiceByValue = function (e, t) {
@@ -3738,7 +4003,12 @@
         var n = this._store.choices.find(function (t) {
           return i.config.valueComparer(t.value, e);
         });
-        return !(!n || n.disabled || n.selected || (this._addItem(n, !0, t), 0));
+        return !(
+          !n ||
+          n.disabled ||
+          n.selected ||
+          (this._addItem(n, !0, t), 0)
+        );
       }),
       (e.prototype._generatePlaceholderValue = function () {
         var e = this.config;
@@ -3753,22 +4023,24 @@
       (e.prototype._warnChoicesInitFailed = function (e) {
         if (!this.config.silent) {
           if (!this.initialised)
-            throw new TypeError(''.concat(e, ' called on a non-initialised instance of Choices'));
+            throw new TypeError(
+              "".concat(e, " called on a non-initialised instance of Choices")
+            );
           if (!this.initialisedOK)
             throw new TypeError(
-              ''.concat(
+              "".concat(
                 e,
-                ' called for an element which has multiple instances of Choices initialised on it'
+                " called for an element which has multiple instances of Choices initialised on it"
               )
             );
         }
       }),
-      (e.version = '11.1.0'),
+      (e.version = "11.1.0"),
       e
     );
   })();
 });
-let style = document.createElement('style');
+let style = document.createElement("style");
 //style.textContent = "*{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}*,::after,::before{box-sizing:border-box}body,html{position:relative;margin:0;width:100%;height:100%}body{font-family:\"Helvetica Neue\",Helvetica,Arial,\"Lucida Grande\",sans-serif;font-size:16px;line-height:1.4;color:#fff;background-color:#333;overflow-x:hidden}hr,label{display:block}label,p{margin-bottom:8px}label{font-size:14px;font-weight:500;cursor:pointer}p{margin-top:0}hr{margin:30px 0;border:0;border-bottom:1px solid #eaeaea;height:1px}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:12px;font-weight:400;line-height:1.2}a,a:focus,a:visited{color:#fff;text-decoration:none;font-weight:600}.form-control{display:block;width:100%;background-color:#f9f9f9;padding:12px;border:1px solid #ddd;border-radius:2.5px;font-size:14px;appearance:none;margin-bottom:24px}.h1,h1{font-size:32px}.h2,h2{font-size:24px}.h3,h3{font-size:20px}.h4,h4{font-size:18px}.h5,h5{font-size:16px}.h6,h6{font-size:14px}label+p{margin-top:-4px}.container{display:block;margin:auto;max-width:40em;padding:48px}@media (max-width:620px){.container{padding:0}}.section{background-color:#fff;padding:24px;color:#333}.section a,.section a:focus,.section a:visited{color:#005f75}.logo{display:block;margin-bottom:12px}.logo-img{width:100%;height:auto;display:inline-block;max-width:100%;vertical-align:top;padding:6px 0}.visible-ie{display:none}.push-bottom{margin-bottom:24px}.zero-bottom{margin-bottom:0}.zero-top{margin-top:0}.text-center{text-align:center}[data-test-hook]{margin-bottom:24px}";
 //document.head.appendChild(style);
 //style = document.createElement('style');
@@ -3777,9 +4049,9 @@ style.textContent =
 document.head.appendChild(style);
 
 function GM_xmlhttpRequest(options) {
-  const { method = 'GET', url, headers = {}, data, onload, onerror } = options;
+  const { method = "GET", url, headers = {}, data, onload, onerror } = options;
   const fetchOptions = { method, headers };
-  if (method.toUpperCase() !== 'GET' && data !== undefined) {
+  if (method.toUpperCase() !== "GET" && data !== undefined) {
     fetchOptions.body = data;
   }
   fetch(url, fetchOptions)
@@ -3805,12 +4077,12 @@ function GM_xmlhttpRequest(options) {
 }
 function GM_getResourceText(resourceName) {
   // For example, you might fetch this text/string via a normal XHR or simply return an empty string.
-  return '';
+  return "";
 }
 
 //turn on console log
-let i = document.createElement('iframe');
-i.style.display = 'none';
+let i = document.createElement("iframe");
+i.style.display = "none";
 document.body.appendChild(i);
 window.console = i.contentWindow.console;
 
@@ -3850,14 +4122,13 @@ let styles = `
     color: #fcfcf7
 }
 .untradable::before {
-    content: "\\E0DA";
-    color: #fd4821;
-    font-family: UltimateTeam-Icons, sans-serif;
-    margin-left: .5rem;
-    font-size: 0.8rem;
-    right: 0;
-    bottom: 5px;
-    position: absolute;
+  color: #f40727ff;
+  font-family: UltimateTeam-Icons, sans-serif;
+  margin-left: .5rem;
+  font-size: 0.8rem;
+  right: 0;
+  bottom: 5px;
+  position: absolute;
 }
     .tradable::before {
     content: "\\E0D5";
@@ -3946,6 +4217,14 @@ word-wrap:breakword;
     width: 45%;
     padding: 10px;
 }
+    .sbc-settings-longField {
+    margin-top: 15px;
+    width: 90%;
+    padding: 10px;
+}
+    .spinnerLabel {
+    padding-bottom: 10px;
+    }
    .ut-tab-bar-item.icon-sbcSettings:before {
       content: "\\E052";
    }
@@ -4085,10 +4364,153 @@ min-height: 20px;
 color:black;
 padding-right: 5px;
 }
+.tooltip-container {
+          position: relative;
+}
+.tooltip-container::after {
+  content: "\\E093";
+  font-family: UltimateTeam-Icons, sans-serif;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #07f468;
+  font-size: 16px;
+  text-shadow: 0 0 3px rgba(7, 244, 104, 0.5);
+  cursor: help;
+}
+.tooltip-container:hover::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
 `;
-let styleSheet = document.createElement('style');
+let styleSheet = document.createElement("style");
 styleSheet.innerText = styles;
 document.head.appendChild(styleSheet);
+
+const createPseudoContentSync = (() => {
+  const FALLBACK_CONTENT = "\\E0DA";
+  const registry = new Map();
+
+  const normalizeContent = (rawContent) => {
+    if (!rawContent || rawContent === "none") {
+      return FALLBACK_CONTENT;
+    }
+    let value = rawContent.trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (!value) {
+      return FALLBACK_CONTENT;
+    }
+    if (value.startsWith("\\")) {
+      return value;
+    }
+    const codePoint = value.codePointAt(0);
+    if (!Number.isFinite(codePoint)) {
+      return FALLBACK_CONTENT;
+    }
+    return `\\${codePoint.toString(16).toUpperCase().padStart(4, "0")}`;
+  };
+
+  const splitSelectors = (selectorText) =>
+    selectorText
+      .split(",")
+      .map((sel) => sel.trim())
+      .filter(Boolean);
+
+  const findContentForSelector = (sourceSelector) => {
+    const selector = sourceSelector.trim();
+    const matches = (selectorText) =>
+      splitSelectors(selectorText).includes(selector);
+
+    const walkRules = (rules) => {
+      if (!rules) {
+        return null;
+      }
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText) {
+          if (matches(rule.selectorText)) {
+            const value = rule.style?.getPropertyValue("content");
+            if (value) {
+              return value;
+            }
+          }
+        }
+        if (rule.cssRules) {
+          const nested = walkRules(rule.cssRules);
+          if (nested) {
+            return nested;
+          }
+        }
+      }
+      return null;
+    };
+
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules;
+      try {
+        rules = sheet.cssRules || sheet.rules;
+      } catch (err) {
+        continue; // skip cross-origin stylesheets
+      }
+      const match = walkRules(rules);
+      if (match) {
+        return match;
+      }
+    }
+    return null;
+  };
+
+  return ({ sourceSelector, injectSelector }) => {
+    if (!sourceSelector || !injectSelector) {
+      throw new Error("sourceSelector and injectSelector are required");
+    }
+
+    const rawContent = findContentForSelector(sourceSelector);
+    const content = normalizeContent(rawContent);
+
+    let styleElement = registry.get(injectSelector);
+    if (!styleElement) {
+      styleElement = document.createElement("style");
+      styleElement.dataset.injectSelector = injectSelector;
+      document.head.appendChild(styleElement);
+      registry.set(injectSelector, styleElement);
+    }
+
+    styleElement.textContent = `${injectSelector} {\n  content: "${content}";\n}`;
+  };
+})();
+
+const syncBadgeContent = () => {
+  try {
+    createPseudoContentSync({
+      sourceSelector:
+        ".ut-store-pack-details-view.is-untradeable .ut-store-pack-details-view--title span::after",
+      injectSelector: ".untradable::before",
+    });
+    createPseudoContentSync({
+      sourceSelector:
+        ".ut-store-pack-details-view.is-tradeable .ut-store-pack-details-view--title span::after",
+      injectSelector: ".tradeable::before",
+    });
+  } catch (err) {
+    console.warn("Failed to sync badge content", err);
+  }
+};
 
 const getElement = (query, parent = document) => {
   return getRootElement(parent).querySelector(query);
@@ -4110,8 +4532,8 @@ const removeClass = (elem, className) => {
   return elem;
 };
 const getElementString = (node) => {
-  let DIV = document.createElement('div');
-  if ('outerHTML' in DIV) {
+  let DIV = document.createElement("div");
+  if ("outerHTML" in DIV) {
     return node.outerHTML;
   }
   let div = DIV.cloneNode();
@@ -4124,7 +4546,7 @@ const createElem = (tag, attrs, innerHtml) => {
   if (attrs) {
     for (let attr of Object.keys(attrs)) {
       if (!attrs[attr]) continue;
-      elem.setAttribute(attr === 'className' ? 'class' : attr, attrs[attr]);
+      elem.setAttribute(attr === "className" ? "class" : attr, attrs[attr]);
     }
   }
   return elem;
@@ -4142,33 +4564,36 @@ const insertBefore = (newNode, existingNode) => {
 };
 const insertAfter = (newNode, existingNode) => {
   existingNode = getRootElement(existingNode);
-  existingNode.parentNode.insertBefore(getRootElement(newNode), existingNode.nextSibling);
+  existingNode.parentNode.insertBefore(
+    getRootElement(newNode),
+    existingNode.nextSibling
+  );
   return newNode;
 };
-const createButton = (id, label, callback, buttonClass = 'btn-standard') => {
+const createButton = (id, label, callback, buttonClass = "btn-standard") => {
   const innerSpan = createElem(
-    'span',
+    "span",
     {
-      className: 'button__text',
+      className: "button__text",
     },
     label
   );
   const button = createElem(
-    'button',
+    "button",
     {
       className: buttonClass,
       id: id,
     },
     getElementString(innerSpan)
   );
-  button.addEventListener('click', function () {
+  button.addEventListener("click", function () {
     callback();
   });
-  button.addEventListener('mouseenter', () => {
-    addClass(button, 'hover');
+  button.addEventListener("mouseenter", () => {
+    addClass(button, "hover");
   });
-  button.addEventListener('mouseleave', () => {
-    removeClass(button, 'hover');
+  button.addEventListener("mouseleave", () => {
+    removeClass(button, "hover");
   });
   return button;
 };
@@ -4177,7 +4602,9 @@ const DEFAULT_SEARCH_BATCH_SIZE = 91;
 const MILLIS_IN_SECOND = 1000;
 const wait = async (maxWaitTime = 2) => {
   const factor = Math.random();
-  await new Promise((resolve) => setTimeout(resolve, factor * maxWaitTime * MILLIS_IN_SECOND));
+  await new Promise((resolve) =>
+    setTimeout(resolve, factor * maxWaitTime * MILLIS_IN_SECOND)
+  );
 };
 let fetchPlayers = ({ count = Infinity, level, rarities, sort } = {}) => {
   return new Promise((resolve) => {
@@ -4241,59 +4668,61 @@ let conceptPlayersCollected = false;
 // Global state to track active progress bars and their positions
 const activeProgressBars = [];
 
-const createProgressBar = (id, containerId, labelText = '') => {
+const createProgressBar = (id, containerId, labelText = "") => {
   // Remove existing progress bar if it exists
   let existingContainer = document.getElementById(containerId);
   if (existingContainer) {
     existingContainer.parentNode.removeChild(existingContainer);
     // Remove from active bars list
-    const index = activeProgressBars.findIndex((item) => item.id === containerId);
+    const index = activeProgressBars.findIndex(
+      (item) => item.id === containerId
+    );
     if (index !== -1) {
       activeProgressBars.splice(index, 1);
     }
   }
 
-  const progressBarContainer = document.createElement('div');
+  const progressBarContainer = document.createElement("div");
   progressBarContainer.id = containerId;
-  progressBarContainer.style.position = 'fixed';
-  progressBarContainer.style.bottom = '10px';
-  progressBarContainer.style.right = '130px';
-  progressBarContainer.style.width = '300px';
-  progressBarContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
-  progressBarContainer.style.borderRadius = '2px';
-  progressBarContainer.style.zIndex = '9999';
-  progressBarContainer.style.transition = 'bottom 0.3s ease-in-out';
+  progressBarContainer.style.position = "fixed";
+  progressBarContainer.style.bottom = "10px";
+  progressBarContainer.style.right = "130px";
+  progressBarContainer.style.width = "300px";
+  progressBarContainer.style.backgroundColor = "rgba(0, 0, 0, 0.3)";
+  progressBarContainer.style.borderRadius = "2px";
+  progressBarContainer.style.zIndex = "9999";
+  progressBarContainer.style.transition = "bottom 0.3s ease-in-out";
 
   // Create label element if label text is provided
   if (labelText) {
-    const label = document.createElement('div');
+    const label = document.createElement("div");
     label.id = `${id}-label`;
     label.textContent = labelText;
-    label.style.position = 'absolute';
-    label.style.top = '-20px';
-    label.style.left = '0';
-    label.style.width = '100%';
-    label.style.color = '#ffffff';
-    label.style.textAlign = 'center';
-    label.style.fontSize = '12px';
+    label.style.position = "absolute";
+    label.style.top = "-20px";
+    label.style.left = "0";
+    label.style.width = "100%";
+    label.style.color = "#ffffff";
+    label.style.textAlign = "center";
+    label.style.fontSize = "12px";
     progressBarContainer.appendChild(label);
   }
 
   // Add a container for the progress bar itself
-  const progressBarWrapper = document.createElement('div');
-  progressBarWrapper.style.height = '15px';
-  progressBarWrapper.style.width = '100%';
-  progressBarWrapper.style.position = 'relative';
-  progressBarWrapper.style.overflow = 'hidden';
+  const progressBarWrapper = document.createElement("div");
+  progressBarWrapper.style.height = "15px";
+  progressBarWrapper.style.width = "100%";
+  progressBarWrapper.style.position = "relative";
+  progressBarWrapper.style.overflow = "hidden";
   progressBarContainer.appendChild(progressBarWrapper);
 
-  const progressBar = document.createElement('div');
+  const progressBar = document.createElement("div");
   progressBar.id = id;
-  progressBar.style.height = '100%';
-  progressBar.style.width = '0%';
-  progressBar.style.backgroundColor = '#07f468';
-  progressBar.style.borderRadius = '2px';
-  progressBar.style.transition = 'width 0.3s ease-in-out';
+  progressBar.style.height = "100%";
+  progressBar.style.width = "0%";
+  progressBar.style.backgroundColor = "#07f468";
+  progressBar.style.borderRadius = "2px";
+  progressBar.style.transition = "width 0.3s ease-in-out";
 
   progressBarWrapper.appendChild(progressBar);
   document.body.appendChild(progressBarContainer);
@@ -4317,13 +4746,15 @@ const removeProgressBar = (containerId, delay = 2000) => {
   setTimeout(() => {
     const progressBarContainer = document.getElementById(containerId);
     if (progressBarContainer) {
-      progressBarContainer.style.opacity = '0';
-      progressBarContainer.style.transition = 'opacity 0.5s ease-in-out';
+      progressBarContainer.style.opacity = "0";
+      progressBarContainer.style.transition = "opacity 0.5s ease-in-out";
 
       setTimeout(() => {
         if (progressBarContainer && progressBarContainer.parentNode) {
           // Remove from active bars list
-          const index = activeProgressBars.findIndex((item) => item.id === containerId);
+          const index = activeProgressBars.findIndex(
+            (item) => item.id === containerId
+          );
           if (index !== -1) {
             activeProgressBars.splice(index, 1);
           }
@@ -4355,14 +4786,14 @@ let isConceptPlayerFetchInProgress = false;
 let getConceptPlayers = async function (playerCount = 999999) {
   // If already fetching concepts, return the current conceptPlayers array
   if (isConceptPlayerFetchInProgress || conceptPlayersCollected) {
-    console.log('Already fetching concept players or already collected.');
+    console.log("Already fetching concept players or already collected.");
 
     return conceptPlayers;
   }
 
   return new Promise((resolve, reject) => {
     isConceptPlayerFetchInProgress = true;
-    console.log('Getting Concept Players');
+    console.log("Getting Concept Players");
     const gatheredPlayers = [];
     const searchCriteria = new UTBucketedItemSearchViewModel().searchCriteria;
     searchCriteria.offset = 0;
@@ -4370,58 +4801,66 @@ let getConceptPlayers = async function (playerCount = 999999) {
     searchCriteria.count = DEFAULT_SEARCH_BATCH_SIZE;
 
     // Create progress bar using the extracted utility function
-    const containerId = 'concept-progress-container';
-    const progressBarId = 'concept-progress-bar';
-    createProgressBar(progressBarId, containerId, 'Fetching Concepts');
+    const containerId = "concept-progress-container";
+    const progressBarId = "concept-progress-bar";
+    createProgressBar(progressBarId, containerId, "Fetching Concepts");
 
     // Start with 0% progress
     updateProgressBar(progressBarId, 0);
 
     // Estimate total players to be around 20000 for progress calculation
     // Try to get saved total from localStorage first
-    const savedEstimatedTotal = localStorage.getItem('conceptPlayerTotal');
-    const estimatedTotal = savedEstimatedTotal ? parseInt(savedEstimatedTotal) : 20000;
+    const savedEstimatedTotal = localStorage.getItem("conceptPlayerTotal");
+    const estimatedTotal = savedEstimatedTotal
+      ? parseInt(savedEstimatedTotal)
+      : 20000;
 
     // Update the total once we have more data
     const updateTotal = (newTotal) => {
       if (newTotal > 1000) {
         // Only save if it seems like a reasonable count
-        localStorage.setItem('conceptPlayerTotal', newTotal);
+        localStorage.setItem("conceptPlayerTotal", newTotal);
         console.log(`Updated concept player count to ${newTotal}`);
       }
     };
 
     const getAllConceptPlayers = () => {
-      searchConceptPlayers(searchCriteria).observe(this, async function (sender, response) {
-        gatheredPlayers.push(...response.response.items);
+      searchConceptPlayers(searchCriteria).observe(
+        this,
+        async function (sender, response) {
+          gatheredPlayers.push(...response.response.items);
 
-        // Update progress based on current offset
-        const progress = (searchCriteria.offset / estimatedTotal) * 100;
-        updateProgressBar(progressBarId, progress);
+          // Update progress based on current offset
+          const progress = (searchCriteria.offset / estimatedTotal) * 100;
+          updateProgressBar(progressBarId, progress);
 
-        if (
-          response.status !== 400 &&
-          !response.response.endOfList &&
-          searchCriteria.offset <= playerCount
-        ) {
-          searchCriteria.offset += searchCriteria.count;
+          if (
+            response.status !== 400 &&
+            !response.response.endOfList &&
+            searchCriteria.offset <= playerCount
+          ) {
+            searchCriteria.offset += searchCriteria.count;
 
-          getAllConceptPlayers();
-        } else {
-          if (playerCount > 1) {
-            conceptPlayersCollected = true;
-            showNotification('Collected All Concept Players', UINotificationType.POSITIVE);
+            getAllConceptPlayers();
+          } else {
+            if (playerCount > 1) {
+              conceptPlayersCollected = true;
+              showNotification(
+                "Collected All Concept Players",
+                UINotificationType.POSITIVE
+              );
+            }
+            // Set progress to 100% when complete
+            updateProgressBar(progressBarId, 100);
+            // Remove progress bar after a delay
+            removeProgressBar(containerId);
+            // Reset the flag when done
+            isConceptPlayerFetchInProgress = false;
+            console.table(gatheredPlayers.slice(0, 10));
+            resolve(gatheredPlayers);
           }
-          // Set progress to 100% when complete
-          updateProgressBar(progressBarId, 100);
-          // Remove progress bar after a delay
-          removeProgressBar(containerId);
-          // Reset the flag when done
-          isConceptPlayerFetchInProgress = false;
-          console.table(gatheredPlayers.slice(0, 10));
-          resolve(gatheredPlayers);
         }
-      });
+      );
     };
     getAllConceptPlayers();
   });
@@ -4436,17 +4875,20 @@ let getStoragePlayers = async function () {
     searchCriteria.offset = 0;
     searchCriteria.count = DEFAULT_SEARCH_BATCH_SIZE;
     const getAllStoragePlayers = () => {
-      searchStoragePlayers(searchCriteria).observe(this, async function (sender, response) {
-        gatheredPlayers.push(...response.response.items);
-        if (response.status !== 400 && !response.response.endOfList) {
-          searchCriteria.offset += searchCriteria.count;
+      searchStoragePlayers(searchCriteria).observe(
+        this,
+        async function (sender, response) {
+          gatheredPlayers.push(...response.response.items);
+          if (response.status !== 400 && !response.response.endOfList) {
+            searchCriteria.offset += searchCriteria.count;
 
-          //console.log('Storages Retrieved',searchCriteria.offset)
-          getAllStoragePlayers();
-        } else {
-          resolve(gatheredPlayers);
+            //console.log('Storages Retrieved',searchCriteria.offset)
+            getAllStoragePlayers();
+          } else {
+            resolve(gatheredPlayers);
+          }
         }
-      });
+      );
     };
     getAllStoragePlayers();
   });
@@ -4456,138 +4898,151 @@ const searchStoragePlayers = (searchCriteria) => {
 };
 
 let dealWithUnassigned = async () => {
-  let storage = await getStoragePlayers();
-  let ulist = await fetchUnassigned();
-  let players = await fetchPlayers();
+  try {
+    let storage = await getStoragePlayers();
+    let ulist = await fetchUnassigned();
+    let players = await fetchPlayers();
 
-  // move to team any storage players not already in club
-  const storageToTeam = storage.filter(
-    (item) => !players.map((p) => p.definitionId).includes(item.definitionId)
-  );
-  if (storageToTeam.length > 0) {
-    console.log(
-      `Moving to club (storage → club): count=${storageToTeam.length}`,
-      storageToTeam.map((p) => ({
-        id: p.id,
-        definitionId: p.definitionId,
-        name: p._staticData?.name,
-      }))
+    // move to team any storage players not already in club
+    const storageToTeam = storage.filter(
+      (item) => !players.map((p) => p.definitionId).includes(item.definitionId)
+    );
+    if (storageToTeam.length > 0) {
+      console.log(
+        `Moving to club (storage → club): count=${storageToTeam.length}`,
+        storageToTeam.map((p) => ({
+          id: p.id,
+          definitionId: p.definitionId,
+          name: p._staticData?.name,
+        }))
+      );
+
+      services.Item.move(storageToTeam, 7);
+    }
+
+    // swap duplicates for tradable
+    const tradeableDefIds = new Set(
+      players.filter((p) => p.isTradeable()).map((m) => m.definitionId)
     );
 
-    services.Item.move(storageToTeam, 7);
-  }
-
-  // swap duplicates for tradable
-  const switchTradeable = ulist.filter((l) =>
-    players
-      .filter((p) => p.isTradeable())
-      .map((m) => m.definitionId)
-      .includes(l.definitionId)
-  );
-  const tradablePlayers = players.filter(
-    (f) => f.definitionId in switchTradeable.map((m) => m.definitionId)
-  );
-  if (tradablePlayers.length > 0) {
-    console.log(
-      `Moving duplicates to club (tradable swaps): count=${tradablePlayers.length}`,
-      tradablePlayers.map((p) => ({
-        id: p.id,
-        definitionId: p.definitionId,
-        name: p._staticData?.name,
-      }))
+    // filter unassigned by those tradeable definitionIds and ensure uniqueness by definitionId
+    const switchTradeable = Array.from(
+      new Map(
+        ulist
+          .filter((l) => tradeableDefIds.has(l.definitionId))
+          .map((item) => [item.definitionId, item])
+      ).values()
     );
+    const tradablePlayers = players.filter(
+      (f) => f.definitionId in switchTradeable.map((m) => m.definitionId)
+    );
+    if (tradablePlayers.length > 0) {
+      console.log(
+        `Moving duplicates to club (tradable swaps): count=${tradablePlayers.length}`,
+        tradablePlayers.map((p) => ({
+          id: p.id,
+          definitionId: p.definitionId,
+          name: p._staticData?.name,
+        }))
+      );
 
-    services.Item.move(tradablePlayers, 7);
-    goToUnassignedView();
+      services.Item.move(tradablePlayers, 7);
+      goToUnassignedView();
 
-    storage = await getStoragePlayers();
+      storage = await getStoragePlayers();
+      ulist = await fetchUnassigned();
+      players = await fetchPlayers();
+    }
+    // ulist = ulist.filter(item =>
+    //       !switchTradeable.some(sw => sw.id === item.id)
+    //     ).concat(players.filter(p => p.isTradeable()).map(m => m.definitionId).includes(ulist.map(p=>p.definitionId)));
+
+    const toTeam = ulist.filter((item) => item.isMovable());
+    if (toTeam.length > 0) {
+      console.log(
+        `Moving to club (unassigned → club): count=${toTeam.length}`,
+        toTeam.map((p) => ({
+          id: p.id,
+          definitionId: p.definitionId,
+          name: p._staticData?.name,
+        }))
+      );
+
+      services.Item.move(toTeam, 7);
+    }
+    // discard non-player dupes
+    //   const nonPlayerDupes = ulist.filter((l) => !l.isPlayer() && l.duplicateId > 0);
+    //   if (nonPlayerDupes.length > 0) {
+    //     console.log(
+    //       `Discarding non-player duplicates: count=${nonPlayerDupes.length}`,
+    //       nonPlayerDupes.map((p) => ({
+    //         id: p.id,
+    //         definitionId: p.definitionId,
+    //         name: p._staticData?.name,
+    //       }))
+    //     );
+
+    //     services.Item.discard(nonPlayerDupes);
+    //     goToUnassignedView();
+
+    //     storage = await getStoragePlayers();
+    //     ulist = await fetchUnassigned();
+    //     players = await fetchPlayers();
+    //   }
+
+    // sendDuplicatesToStorage
+    const toStorage = ulist
+      .filter(
+        (item) => item.isStorable() && !item.isMovable() && !item.isTradeable()
+      )
+      .sort((a, b) => getPrice(b) - getPrice(a))
+      .slice(0, Math.max(0, 100 - storage.length));
+    if (toStorage.length > 0) {
+      console.log(
+        `Moving to storage (duplicates): count=${toStorage.length}`,
+        toStorage.map((p) => ({
+          id: p.id,
+          definitionId: p.definitionId,
+          name: p._staticData?.name,
+        }))
+      );
+      services.Item.move(toStorage, 10);
+    }
+
+    //   // discard tradable fodder
+    //   const tradableFodder = ulist
+    //     .concat(tradablePlayers)
+    //     .filter((l) => l.isPlayer() && getPrice(l) < 20000 && !l.untradeable);
+    //   if (tradableFodder.length > 0) {
+    //     console.log(
+    //       `Discarding tradable fodder players: count=${tradableFodder.length}`,
+    //       tradableFodder.map((p) => ({
+    //         id: p.id,
+    //         definitionId: p.definitionId,
+    //         name: p._staticData?.name,
+    //       }))
+    //     );
+
+    //     services.Item.discard(tradableFodder);
+    //   }
+
     ulist = await fetchUnassigned();
-    players = await fetchPlayers();
+    if (ulist.length > 0) {
+      console.log(
+        `Remaining Unassigned: count=${ulist.length}`,
+        ulist.map((p) => ({
+          id: p.id,
+          definitionId: p.definitionId,
+          name: p._staticData?.name,
+        }))
+      );
+    }
+    await ratingCountUI();
+    return Promise.resolve(ulist);
+  } catch (error) {
+    console.error("Error in dealWithUnassigned:", error);
+    return Promise.reject(error);
   }
-  // ulist = ulist.filter(item =>
-  //       !switchTradeable.some(sw => sw.id === item.id)
-  //     ).concat(players.filter(p => p.isTradeable()).map(m => m.definitionId).includes(ulist.map(p=>p.definitionId)));
-
-  const toTeam = ulist.filter((item) => item.isMovable());
-  if (toTeam.length > 0) {
-    console.log(
-      `Moving to club (unassigned → club): count=${toTeam.length}`,
-      toTeam.map((p) => ({
-        id: p.id,
-        definitionId: p.definitionId,
-        name: p._staticData?.name,
-      }))
-    );
-
-    services.Item.move(toTeam, 7);
-  }
-  // discard non-player dupes
-//   const nonPlayerDupes = ulist.filter((l) => !l.isPlayer() && l.duplicateId > 0);
-//   if (nonPlayerDupes.length > 0) {
-//     console.log(
-//       `Discarding non-player duplicates: count=${nonPlayerDupes.length}`,
-//       nonPlayerDupes.map((p) => ({
-//         id: p.id,
-//         definitionId: p.definitionId,
-//         name: p._staticData?.name,
-//       }))
-//     );
-
-//     services.Item.discard(nonPlayerDupes);
-//     goToUnassignedView();
-
-//     storage = await getStoragePlayers();
-//     ulist = await fetchUnassigned();
-//     players = await fetchPlayers();
-//   }
-
-  // sendDuplicatesToStorage
-  const toStorage = ulist
-    .filter((item) => item.isStorable() && !item.isMovable() && !item.isTradeable())
-    .sort((a, b) => getPrice(b) - getPrice(a))
-    .slice(0, Math.max(0, 100 - storage.length));
-  if (toStorage.length > 0) {
-    console.log(
-      `Moving to storage (duplicates): count=${toStorage.length}`,
-      toStorage.map((p) => ({
-        id: p.id,
-        definitionId: p.definitionId,
-        name: p._staticData?.name,
-      }))
-    );
-    services.Item.move(toStorage, 10);
-  }
-
-//   // discard tradable fodder
-//   const tradableFodder = ulist
-//     .concat(tradablePlayers)
-//     .filter((l) => l.isPlayer() && getPrice(l) < 20000 && !l.untradeable);
-//   if (tradableFodder.length > 0) {
-//     console.log(
-//       `Discarding tradable fodder players: count=${tradableFodder.length}`,
-//       tradableFodder.map((p) => ({
-//         id: p.id,
-//         definitionId: p.definitionId,
-//         name: p._staticData?.name,
-//       }))
-//     );
-
-//     services.Item.discard(tradableFodder);
-//   }
-
-  ulist = await fetchUnassigned();
-  if (ulist.length > 0) {
-    console.log(
-      `Remaining Unassigned: count=${ulist.length}`,
-      ulist.map((p) => ({
-        id: p.id,
-        definitionId: p.definitionId,
-        name: p._staticData?.name,
-      }))
-    );
-  }
-  await ratingCountUI();
-  return Promise.resolve(ulist);
 };
 let fetchUnassigned = () => {
   repositories.Item.unassigned.clear();
@@ -4595,30 +5050,38 @@ let fetchUnassigned = () => {
 
   return new Promise((resolve) => {
     let result = [];
-    services.Item.requestUnassignedItems().observe(undefined, async (sender, response) => {
-      result = [...response.response.items];
-      await fetchPlayerPrices(result);
+    services.Item.requestUnassignedItems().observe(
+      undefined,
+      async (sender, response) => {
+        result = [...response.response.items];
+        await fetchPlayerPrices(result);
 
-      resolve(result);
-    });
+        resolve(result);
+      }
+    );
   });
 };
 let fetchDuplicateIds = () => {
   return new Promise((resolve) => {
     const result = [];
     repositories.Store.setDirty();
-    services.Item.requestUnassignedItems().observe(undefined, (sender, response) => {
-      const duplicates = [...response.response.items.filter((item) => item.duplicateId > 0)];
-      result.push(...duplicates.map((duplicate) => duplicate.duplicateId));
+    services.Item.requestUnassignedItems().observe(
+      undefined,
+      (sender, response) => {
+        const duplicates = [
+          ...response.response.items.filter((item) => item.duplicateId > 0),
+        ];
+        result.push(...duplicates.map((duplicate) => duplicate.duplicateId));
 
-      resolve(result);
-    });
+        resolve(result);
+      }
+    );
   });
 };
 
-let apiUrl = 'http://127.0.0.1:8000';
+let apiUrl = "http://127.0.0.1:8000";
 
-let LOCKED_ITEMS_KEY = 'excludePlayers';
+let LOCKED_ITEMS_KEY = "excludePlayers";
 let cachedLockedItems;
 let isItemLocked = function (item) {
   let lockedItems = getLockedItems();
@@ -4641,7 +5104,7 @@ let unlockItem = function (item) {
   saveLockedItems();
 };
 let getLockedItems = function () {
-  return getSettings(0, 0, 'excludePlayers');
+  return getSettings(0, 0, "excludePlayers");
 };
 let lockedItemsCleanup = function (clubPlayerIds) {
   let lockedItems = getLockedItems();
@@ -4660,7 +5123,7 @@ let saveLockedItems = function (set = 0, challenge = 0) {
   saveSettings(set, challenge, LOCKED_ITEMS_KEY, getLockedItems());
 };
 
-let FIXED_ITEMS_KEY = 'fixeditems';
+let FIXED_ITEMS_KEY = "fixeditems";
 let cachedFixedItems;
 let isItemFixed = function (item) {
   let fixedItems = getFixedItems();
@@ -4714,9 +5177,9 @@ const idToPlayerItem = {};
 
 // Add SBC and challenge information to the loader
 const addSbcInfo = (sbcName, challengeName) => {
-  let shield = getElement('.ut-click-shield');
-  let existingInfo = document.getElementById('sbc-info');
-  let logOverlay = document.getElementById('sbc-log-overlay');
+  let shield = getElement(".ut-click-shield");
+  let existingInfo = document.getElementById("sbc-info");
+  let logOverlay = document.getElementById("sbc-log-overlay");
 
   if (existingInfo) {
     existingInfo.remove();
@@ -4724,29 +5187,29 @@ const addSbcInfo = (sbcName, challengeName) => {
 
   if (!sbcName) return;
 
-  let infoDiv = document.createElement('div');
-  infoDiv.id = 'sbc-info';
-  infoDiv.style.position = 'fixed';
-  infoDiv.style.bottom = '10px';
-  infoDiv.style.left = '160px';
-  infoDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-  infoDiv.style.color = 'white';
-  infoDiv.style.padding = '10px 20px';
-  infoDiv.style.borderRadius = '5px';
-  infoDiv.style.fontSize = '1.2rem';
-  infoDiv.style.fontWeight = 'bold';
-  infoDiv.style.textAlign = 'center';
-  infoDiv.style.zIndex = '9999';
+  let infoDiv = document.createElement("div");
+  infoDiv.id = "sbc-info";
+  infoDiv.style.position = "fixed";
+  infoDiv.style.bottom = "10px";
+  infoDiv.style.left = "160px";
+  infoDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+  infoDiv.style.color = "white";
+  infoDiv.style.padding = "10px 20px";
+  infoDiv.style.borderRadius = "5px";
+  infoDiv.style.fontSize = "1.2rem";
+  infoDiv.style.fontWeight = "bold";
+  infoDiv.style.textAlign = "center";
+  infoDiv.style.zIndex = "9999";
 
-  let title = document.createElement('div');
-  title.textContent = sbcName || 'SBC';
+  let title = document.createElement("div");
+  title.textContent = sbcName || "SBC";
   infoDiv.appendChild(title);
 
   if (challengeName && challengeName !== sbcName) {
-    let subtitle = document.createElement('div');
+    let subtitle = document.createElement("div");
     subtitle.textContent = challengeName;
-    subtitle.style.fontSize = '1rem';
-    subtitle.style.opacity = '0.8';
+    subtitle.style.fontSize = "1rem";
+    subtitle.style.opacity = "0.8";
     infoDiv.appendChild(subtitle);
   }
 
@@ -4758,71 +5221,74 @@ const showLoader = (countdown = false) => {
     createLogOverlayToggle();
     updateLogOverlay();
     createStopOverlayButton();
-    const numCounterElement = document.querySelector('.numCounter');
+    const numCounterElement = document.querySelector(".numCounter");
     if (numCounterElement) {
-      numCounterElement.style.display = 'block';
+      numCounterElement.style.display = "block";
     }
   } else {
-    const toggleContainers = document.querySelectorAll('#sbc-log-toggle');
+    const toggleContainers = document.querySelectorAll("#sbc-log-toggle");
     toggleContainers.forEach((toggleContainer) => {
       toggleContainer.remove();
     });
-    let logOverlay = document.getElementById('sbc-log-overlay');
+    let logOverlay = document.getElementById("sbc-log-overlay");
     if (logOverlay) {
       logOverlay.remove();
     }
-    const numCounterElement = document.querySelector('.numCounter');
+    const numCounterElement = document.querySelector(".numCounter");
     if (numCounterElement) {
-      numCounterElement.style.display = 'none';
+      numCounterElement.style.display = "none";
     }
   }
 
-  const clickShield = document.querySelector('.ut-click-shield');
+  const clickShield = document.querySelector(".ut-click-shield");
 
   if (clickShield) {
-    clickShield.classList.add('showing');
+    clickShield.classList.add("showing");
   }
-  const loaderIcon = document.querySelector('.loaderIcon');
+  const loaderIcon = document.querySelector(".loaderIcon");
   if (loaderIcon) {
-    loaderIcon.style.display = 'block';
+    loaderIcon.style.display = "block";
   }
 };
 const hideLoader = () => {
-  const stopButtons = document.querySelectorAll('#sbc-stop-overlay');
+  const stopButtons = document.querySelectorAll("#sbc-stop-overlay");
   stopButtons.forEach((stopButton) => {
     stopButton.remove();
   });
-  const sbcNames = document.querySelectorAll('#sbc-info');
+  const sbcNames = document.querySelectorAll("#sbc-info");
   sbcNames.forEach((sbcName) => {
     sbcName.remove();
   });
-  const toggleContainers = document.querySelectorAll('#sbc-log-toggle');
+  const toggleContainers = document.querySelectorAll("#sbc-log-toggle");
   toggleContainers.forEach((toggleContainer) => {
     toggleContainer.remove();
   });
 
-  let logOverlay = document.getElementById('sbc-log-overlay');
+  let logOverlay = document.getElementById("sbc-log-overlay");
   if (logOverlay) {
     logOverlay.remove();
   }
   if (counter) {
     counter = null;
   }
-  document.querySelectorAll('.numCounter').forEach((element) => {
+  document.querySelectorAll(".numCounter").forEach((element) => {
     element.remove();
   });
-  const clickShield = document.querySelector('.ut-click-shield');
+  const clickShield = document.querySelector(".ut-click-shield");
   if (clickShield) {
-    clickShield.classList.remove('showing');
+    clickShield.classList.remove("showing");
   }
-  const loaderIcon = document.querySelector('.loaderIcon');
+  const loaderIcon = document.querySelector(".loaderIcon");
   if (loaderIcon) {
-    loaderIcon.style.display = 'block';
+    loaderIcon.style.display = "block";
   }
   clearInterval(logPollInterval);
   clearInterval(countDownInterval);
 };
-const showNotification = function (message, type = UINotificationType.POSITIVE) {
+const showNotification = function (
+  message,
+  type = UINotificationType.POSITIVE
+) {
   services.Notification.queue([message, type]);
 };
 const getCurrentViewController = () => {
@@ -4832,12 +5298,12 @@ const getCurrentViewController = () => {
     .getCurrentViewController();
 };
 const getControllerInstance = () => {
-  return getCurrentViewController().getCurrentController().childViewControllers[0];
+  return getCurrentViewController().getCurrentController()
+    .childViewControllers[0];
 };
 
 let sbcSets = async function () {
   return new Promise((resolve, reject) => {
-
     services.SBC.requestSets().observe(this, function (obs, res) {
       if (!res.success) {
         obs.unobserve(this);
@@ -4853,14 +5319,17 @@ let sbcSets = async function () {
 
 let getChallenges = async function (set) {
   return new Promise((resolve, reject) => {
-    services.SBC.requestChallengesForSet(set).observe(this, async function (obs, res) {
-      if (!res.success) {
-        obs.unobserve(this);
-        reject(res.status);
-      } else {
-        resolve(res.data);
+    services.SBC.requestChallengesForSet(set).observe(
+      this,
+      async function (obs, res) {
+        if (!res.success) {
+          obs.unobserve(this);
+          reject(res.status);
+        } else {
+          resolve(res.data);
+        }
       }
-    });
+    );
   }).catch((e) => {
     console.log(e);
   });
@@ -4871,17 +5340,20 @@ let loadChallenge = async function (currentChallenge, count = 0) {
     return;
   }
   return new Promise((resolve, reject) => {
-    services.SBC.loadChallenge(currentChallenge).observe(this, async function (obs, res) {
-      if (!res.success) {
-        obs.unobserve(this);
-        await wait(1000);
-        console.log('Loading Challenge again', currentChallenge.id, count);
-        await loadChallenge(currentChallenge, count + 1);
-        reject(res.status);
-      } else {
-        resolve(res.data);
+    services.SBC.loadChallenge(currentChallenge).observe(
+      this,
+      async function (obs, res) {
+        if (!res.success) {
+          obs.unobserve(this);
+          await wait(1000);
+          console.log("Loading Challenge again", currentChallenge.id, count);
+          await loadChallenge(currentChallenge, count + 1);
+          reject(res.status);
+        } else {
+          resolve(res.data);
+        }
       }
-    });
+    );
   });
 };
 
@@ -4890,7 +5362,7 @@ let fetchSBCData = async (sbcId, challengeId = 0) => {
 
   let sbcData = await sbcSets();
   if (sbcData === undefined) {
-    console.log('SBC DATA is not available');
+    console.log("SBC DATA is not available");
     createSBCTab();
     return null;
   }
@@ -4905,14 +5377,18 @@ let fetchSBCData = async (sbcId, challengeId = 0) => {
   let challenges = await getChallenges(sbcSet[0]);
   let awards = [];
 
-  let uncompletedChallenges = challenges?.challenges.filter((f) => f.status != 'COMPLETED');
+  let uncompletedChallenges = challenges?.challenges.filter(
+    (f) => f.status != "COMPLETED"
+  );
   if (uncompletedChallenges.length == 0) {
-    showNotification('SBC not available', UINotificationType.NEGATIVE);
+    showNotification("SBC not available", UINotificationType.NEGATIVE);
     createSBCTab();
     return null;
   }
   if (uncompletedChallenges.length == 1) {
-    awards = sbcSet[0].awards.filter((f) => f.isPack || f.isItem).map((m) => m.value);
+    awards = sbcSet[0].awards
+      .filter((f) => f.isPack || f.isItem)
+      .map((m) => m.value);
   }
 
   if (challengeId == 0) {
@@ -4920,39 +5396,47 @@ let fetchSBCData = async (sbcId, challengeId = 0) => {
 
     challengeId = uncompletedChallenges[uncompletedChallenges.length - 1].id;
   }
-
-  await loadChallenge(challenges.challenges.filter((i) => i.id == challengeId)[0]);
+  console.log("SBCData");
+  await loadChallenge(
+    challenges.challenges.filter((i) => i.id == challengeId)[0]
+  );
 
   let newSbcSquad = new UTSBCSquadOverviewViewController();
   (newSbcSquad._set = sbcSet[0]),
-    (newSbcSquad._challenge = challenges.challenges.filter((i) => i.id == challengeId)[0]);
-  newSbcSquad.initWithSquad(challenges.challenges.filter((i) => i.id == challengeId)[0].squad);
+    (newSbcSquad._challenge = challenges.challenges.filter(
+      (i) => i.id == challengeId
+    )[0]);
+  newSbcSquad.initWithSquad(
+    challenges.challenges.filter((i) => i.id == challengeId)[0].squad
+  );
   let { _challenge } = newSbcSquad;
 
   let totwIdx = -1;
-  const challengeRequirements = _challenge.eligibilityRequirements.map((eligibility, idx) => {
-    let keys = Object.keys(eligibility.kvPairs._collection);
-    if (
-      SBCEligibilityKey[keys[0]] == 'PLAYER_RARITY_GROUP' &&
-      eligibility.kvPairs._collection[keys[0]][0] == 23
-    ) {
-      totwIdx = idx;
+  const challengeRequirements = _challenge.eligibilityRequirements.map(
+    (eligibility, idx) => {
+      let keys = Object.keys(eligibility.kvPairs._collection);
+      if (
+        SBCEligibilityKey[keys[0]] == "PLAYER_RARITY_GROUP" &&
+        eligibility.kvPairs._collection[keys[0]][0] == 23
+      ) {
+        totwIdx = idx;
+      }
+      return {
+        scope: SBCEligibilityScope[eligibility.scope],
+        count: eligibility.count,
+        requirementKey: SBCEligibilityKey[keys[0]],
+        eligibilityValues: eligibility.kvPairs._collection[keys[0]],
+      };
     }
-    return {
-      scope: SBCEligibilityScope[eligibility.scope],
-      count: eligibility.count,
-      requirementKey: SBCEligibilityKey[keys[0]],
-      eligibilityValues: eligibility.kvPairs._collection[keys[0]],
-    };
-  });
-  if (getSettings(0, 0, 'saveTotw')) {
+  );
+  if (getSettings(0, 0, "saveTotw")) {
     if (totwIdx >= 0) {
-      challengeRequirements[totwIdx].scope = 'EXACT';
+      challengeRequirements[totwIdx].scope = "EXACT";
     } else {
       challengeRequirements.push({
-        scope: 'EXACT',
+        scope: "EXACT",
         count: 0,
-        requirementKey: 'PLAYER_RARITY_GROUP',
+        requirementKey: "PLAYER_RARITY_GROUP",
         eligibilityValues: [23],
       });
     }
@@ -4968,13 +5452,15 @@ let fetchSBCData = async (sbcId, challengeId = 0) => {
     setId: _challenge.setId,
     brickIndices: _challenge.squad.simpleBrickIndices,
     finalSBC: uncompletedChallenges.length == 1,
-    currentSolution: _challenge.squad._players.map((m) => m._item._metaData?.id).slice(0, 11),
+    currentSolution: _challenge.squad._players
+      .map((m) => m._item._metaData?.id)
+      .slice(0, 11),
     subs: _challenge.squad._players
       .map((m) => m._item.definitionId)
       .slice(11, 99)
       .filter((f) => f > 0),
     awards: _challenge.awards
-      .filter((f) => f.type == 'pack')
+      .filter((f) => f.type == "pack")
       .map((m) => m.value)
       .concat(awards),
     setAward: sbcSet[0].awards,
@@ -4987,101 +5473,111 @@ let sbcLogin = [];
 let players;
 let createSbcGrind = false;
 const futAutoGrind = async () => {
-  try{
-  services.Notification.queue(['Starting auto‐grind for favorites…'], UINotificationType.POSITIVE);
-  // loop until user clicks STOP
-  while (createSbcGrind) {
-    let sbcs = await sbcSets();
-    // get favourites and run 1 sbc of each continuously, opening packs in between
-    let favourites = sbcs.categories.find((f) => f.isFavourite).setIds; // only your “favorite” SBCs
-    if (!favourites.length) {
-      showNotification('No favorite SBCs found', UINotificationType.NEGATIVE);
-      return;
-    }
-
-    for (const fav of favourites) {
-      await ratingCountUI();
-
-      // after your regular SBC loop
-      // check storage for 76–83 rated players
-      const storageNow = await getStoragePlayers();
-      const players = await fetchPlayers();
-      const midCount = storageNow.filter((p) => p.rating > 75 && p.rating < 83).length;
-      const midPlayerCount = players.filter((p) => p.rating > 75 && p.rating < 84).length;
-      let targetSet;
-
-      if (midCount > 0) {
-        // find SBC set whose name contains “83+”
-        targetSet = sbcs.sets.find((f) => /83\+/.test(f.name));
+  try {
+    services.Notification.queue(
+      ["Starting auto‐grind for favorites…"],
+      UINotificationType.POSITIVE
+    );
+    // loop until user clicks STOP
+    while (createSbcGrind) {
+      let sbcs = await sbcSets();
+      // get favourites and run 1 sbc of each continuously, opening packs in between
+      let favourites = sbcs.categories.find((f) => f.isFavourite).setIds; // only your “favorite” SBCs
+      if (!favourites.length) {
+        showNotification("No favorite SBCs found", UINotificationType.NEGATIVE);
+        return;
       }
-      // if (storageNow.length < 50 && players.filter(p => p.rating > 88 && p.rating < 94).length + storageNow.filter(p => p.rating > 88 && p.rating < 94).length > 3) {
-      //     // if club storage drops below 50, target the "89 OVR" SBC
-      //     targetSet = sbcs.sets.find(s => s.name.includes("89 OVR"));
-      //   }
-      if (targetSet && storageNow.length==100) {
+
+      for (const fav of favourites) {
+        await ratingCountUI();
+
+        // after your regular SBC loop
+        // check storage for 76–83 rated players
+        const storageNow = await getStoragePlayers();
+        const players = await fetchPlayers();
+        const midCount = storageNow.filter(
+          (p) => p.rating > 75 && p.rating < 83
+        ).length;
+        const midPlayerCount = players.filter(
+          (p) => p.rating > 75 && p.rating < 84
+        ).length;
+        let targetSet;
+
+        if (midCount > 0) {
+          // find SBC set whose name contains “83+”
+          targetSet = sbcs.sets.find((f) => /83\+/.test(f.name));
+        }
+        // if (storageNow.length < 50 && players.filter(p => p.rating > 88 && p.rating < 94).length + storageNow.filter(p => p.rating > 88 && p.rating < 94).length > 3) {
+        //     // if club storage drops below 50, target the "89 OVR" SBC
+        //     targetSet = sbcs.sets.find(s => s.name.includes("89 OVR"));
+        //   }
+        if (targetSet && storageNow.length == 100) {
+          services.Notification.queue(
+            [`Running SBC: ${targetSet.name}`],
+            UINotificationType.POSITIVE
+          );
+          await solveSBC(targetSet.id, 0, true, 0);
+          await ratingCountUI();
+          continue;
+        }
+
         services.Notification.queue(
-          [`Running SBC: ${targetSet.name}`],
+          [`Running SBC: ${sbcs.sets.find((f) => f.id == fav).name}`],
           UINotificationType.POSITIVE
         );
-        await solveSBC(targetSet.id, 0, true, 0);
-        await ratingCountUI();
-        continue;
-      }
+        // solve one challenge of this set
+        const numberToSolve = getSettings(fav, 0, "repeatCount") || 0;
+        if (!createSbcGrind) break;
+        await solveSBC(fav, 0, true, 0);
+        if (!createSbcGrind) break;
+        // open your reward pack (if any)
+        // after solving an SBC, open every pending player‐pick if there are any
+        const unassignedAfter = await fetchUnassigned();
+        const pendingPicks = unassignedAfter.filter((item) =>
+          item.isPlayerPickItem()
+        );
 
-      services.Notification.queue(
-        [`Running SBC: ${sbcs.sets.find((f) => f.id == fav).name}`],
-        UINotificationType.POSITIVE
-      );
-      // solve one challenge of this set
-      const numberToSolve = getSettings(fav, 0, 'repeatCount') || 0;
-      if (!createSbcGrind) break;
-      await solveSBC(fav, 0, true, 0);
-      if (!createSbcGrind) break;
-      // open your reward pack (if any)
-      // after solving an SBC, open every pending player‐pick if there are any
-      const unassignedAfter = await fetchUnassigned();
-      const pendingPicks = unassignedAfter.filter((item) => item.isPlayerPickItem());
+        for (const pick of pendingPicks) {
+          await openPick(pick.definitionId);
+        }
+        try {
+          const freeCoins = unassignedAfter.filter((item) =>
+            item.isFreeCoins()
+          );
+          services.Item.redeem(freeCoins[0]);
+        } catch (e) {}
+        let packs = await getPacks();
+        let unassignedCount = await fetchUnassigned();
+        let myPack = packs.packs.find((p) => p.isMyPack);
+        if (myPack && unassignedCount.length == 0) {
+          let i = services.Localization;
 
-      for (const pick of pendingPicks) {
-        await openPick(pick.definitionId);
+          services.Notification.queue([
+            "Opening Pack:  " + i.localize(myPack.packName),
+            UINotificationType.POSITIVE,
+          ]);
+          await openPack(myPack, 0, true);
+        }
       }
-      try {
-        const freeCoins = unassignedAfter.filter((item) => item.isFreeCoins());
-        services.Item.redeem(freeCoins[0]);
-      } catch (e) {}
-      let packs = await getPacks();
-         let unassignedCount = await fetchUnassigned();
-      let myPack = packs.packs.find((p) => p.isMyPack);
-      if (myPack && unassignedCount.length==0) {
-        let i = services.Localization;
-
-        services.Notification.queue([
-          'Opening Pack:  ' + i.localize(myPack.packName),
-          UINotificationType.POSITIVE,
-        ]);
-        await openPack(myPack, 0, true);
-      }
+      await ratingCountUI();
     }
-    await ratingCountUI();
+  } catch (err) {
+    console.warn(err);
+    futAutoGrind();
   }
-}
-catch (err) {
-      console.warn( err);
-      futAutoGrind()
-      }
 };
 
-const ratingCountUI = async () => { 
-if  (!getSettings(0, 0, 'ratingUI')){
-    return
-}
+const ratingCountUI = async () => {
+  if (!getSettings(0, 0, "ratingUI")) {
+    return;
+  }
   // fetch current club players and storage players
   const clubPlayers = await fetchPlayers();
   const storagePlayers = await getStoragePlayers();
 
   // helper to count by rating bins
   const countByRating = (arr) => {
-    const bins = { '<65': 0, '<75': 0, '<83': 0 };
+    const bins = { "<65": 0, "<75": 0, "<83": 0 };
     // initialize bins for ratings 83–99
     for (let r = 83; r <= 99; r++) {
       bins[r] = 0;
@@ -5090,9 +5586,9 @@ if  (!getSettings(0, 0, 'ratingUI')){
     let total = 0;
     arr.forEach((p) => {
       const r = p.rating;
-      if (r < 65) bins['<65']++;
-      else if (r < 75) bins['<75']++;
-      else if (r < 83) bins['<83']++;
+      if (r < 65) bins["<65"]++;
+      else if (r < 75) bins["<75"]++;
+      else if (r < 83) bins["<83"]++;
       else if (r <= 99) bins[r]++;
       total++;
     });
@@ -5101,17 +5597,19 @@ if  (!getSettings(0, 0, 'ratingUI')){
     return bins;
   };
 
-  const clubCounts = countByRating(clubPlayers.filter((item) => item.loans < 0));
+  const clubCounts = countByRating(
+    clubPlayers.filter((item) => item.loans < 0)
+  );
   const storageCounts = countByRating(storagePlayers);
   const allRatings = Array.from(
     new Set([...Object.keys(clubCounts), ...Object.keys(storageCounts)])
   )
     // remove the "total" key from sorting
-    .filter((key) => key !== 'total')
+    .filter((key) => key !== "total")
     // sort by numeric value (strip leading "<" if present)
     .sort((a, b) => {
       const parseKey = (x) => {
-        if (typeof x === 'string' && x.startsWith('<')) {
+        if (typeof x === "string" && x.startsWith("<")) {
           return parseInt(x.substring(1), 10);
         }
         return Number(x);
@@ -5119,11 +5617,11 @@ if  (!getSettings(0, 0, 'ratingUI')){
       return parseKey(b) - parseKey(a);
     });
   // put "total" at the end
-  allRatings.push('total');
+  allRatings.push("total");
   // inject CSS for plus/minus flash
-  if (!document.getElementById('rating-count-anim-style')) {
-    const style = document.createElement('style');
-    style.id = 'rating-count-anim-style';
+  if (!document.getElementById("rating-count-anim-style")) {
+    const style = document.createElement("style");
+    style.id = "rating-count-anim-style";
     style.textContent = `
           .delta-plus   { animation: plusAnim   3s; }
           .delta-minus  { animation: minusAnim  3s; }
@@ -5133,7 +5631,7 @@ if  (!getSettings(0, 0, 'ratingUI')){
     document.head.appendChild(style);
   }
   // override the default 0.6s animation so cells stay highlighted for 3 seconds
-  const animStyle = document.getElementById('rating-count-anim-style');
+  const animStyle = document.getElementById("rating-count-anim-style");
   if (animStyle) {
     animStyle.textContent = `
           .delta-plus   { animation: plusAnim   3s forwards; }
@@ -5143,23 +5641,26 @@ if  (!getSettings(0, 0, 'ratingUI')){
         `;
   }
   // create container if missing
-  let container = document.getElementById('rating-count-ui');
+  let container = document.getElementById("rating-count-ui");
   if (!container) {
-    container = document.createElement('div');
-    container.id = 'rating-count-ui';
+    container = document.createElement("div");
+    container.id = "rating-count-ui";
     container.style.cssText = `
           position: fixed; bottom: 0; left: 6.5rem;  right: 6.5rem;
           background: rgba(0,0,0,0.8); color: #fff;
           font-size: 12px; padding: 8px; z-index: 9999;
           overflow-x: auto; white-space: nowrap;
         `;
-    const header = ['Type', ...allRatings].map((x) => `<th>${x}</th>`).join('');
-    const clubRow = ['Club', ...allRatings.map((r) => clubCounts[r] || 0)]
+    const header = ["Type", ...allRatings].map((x) => `<th>${x}</th>`).join("");
+    const clubRow = ["Club", ...allRatings.map((r) => clubCounts[r] || 0)]
       .map((x) => `<td>${x}</td>`)
-      .join('');
-    const storageRow = ['Storage', ...allRatings.map((r) => storageCounts[r] || 0)]
+      .join("");
+    const storageRow = [
+      "Storage",
+      ...allRatings.map((r) => storageCounts[r] || 0),
+    ]
       .map((x) => `<td>${x}</td>`)
-      .join('');
+      .join("");
     container.innerHTML = `
           <table style="width:100%;border-collapse:collapse;text-align:center">
             <thead><tr>${header}</tr></thead>
@@ -5169,19 +5670,23 @@ if  (!getSettings(0, 0, 'ratingUI')){
             </tbody>
           </table>
         `;
-    const target = document.querySelector('section.ut-navigation-container-view');
+    const target = document.querySelector(
+      "section.ut-navigation-container-view"
+    );
     if (target) {
       target.appendChild(container);
     } else {
-      console.warn('ut-navigation-container-view not found');
+      console.warn("ut-navigation-container-view not found");
     }
     return;
   }
 
   // update existing table cells with animations
-  const table = container.querySelector('table');
+  const table = container.querySelector("table");
   if (!table) return;
-  const ths = Array.from(table.querySelectorAll('thead th')).map((e) => e.textContent);
+  const ths = Array.from(table.querySelectorAll("thead th")).map(
+    (e) => e.textContent
+  );
   const bodyRows = table.tBodies[0].rows;
   const clubRow = bodyRows[0];
   const storageRow = bodyRows[1];
@@ -5196,15 +5701,25 @@ if  (!getSettings(0, 0, 'ratingUI')){
       const newClub = clubCounts[r] || 0;
       if (newClub !== oldClub) {
         clubCell.textContent = newClub;
-        clubCell.classList.add(newClub > oldClub ? 'delta-plus' : 'delta-minus');
-        setTimeout(() => clubCell.classList.remove('delta-plus', 'delta-minus'), 3000);
+        clubCell.classList.add(
+          newClub > oldClub ? "delta-plus" : "delta-minus"
+        );
+        setTimeout(
+          () => clubCell.classList.remove("delta-plus", "delta-minus"),
+          3000
+        );
       }
       const oldSto = parseInt(storageCell.textContent) || 0;
       const newSto = storageCounts[r] || 0;
       if (newSto !== oldSto) {
         storageCell.textContent = newSto;
-        storageCell.classList.add(newSto > oldSto ? 'delta-plus' : 'delta-minus');
-        setTimeout(() => storageCell.classList.remove('delta-plus', 'delta-minus'), 3000);
+        storageCell.classList.add(
+          newSto > oldSto ? "delta-plus" : "delta-minus"
+        );
+        setTimeout(
+          () => storageCell.classList.remove("delta-plus", "delta-minus"),
+          3000
+        );
       }
     }
   });
@@ -5217,7 +5732,9 @@ const futHomeOverride = async () => {
     players = await fetchPlayers();
     let storage = await getStoragePlayers();
 
-    players = players.filter((f) => !storage.map((m) => m.definitionId).includes(f.definitionId));
+    players = players.filter(
+      (f) => !storage.map((m) => m.definitionId).includes(f.definitionId)
+    );
     players = players.concat(storage);
     await fetchLowestPriceByRating();
     //    await fetchPlayerPrices(players);
@@ -5226,7 +5743,7 @@ const futHomeOverride = async () => {
       sbcs.sets.filter((s) => s.awards[0]?.item).map((s) => s.awards[0]?.item)
     );
     homeHubInit.call(this);
-    let sbcSettingsLogin = findSBCLogin(getSolverSettings(), 'sbcOnLogin');
+    let sbcSettingsLogin = findSBCLogin(getSolverSettings(), "sbcOnLogin");
 
     sbcs = sbcs.sets;
     sbcs
@@ -5247,7 +5764,7 @@ const futHomeOverride = async () => {
       let completedSbcs = 0;
 
       const processNextSbc = () => {
-        console.log('Processing next SBC:', sbcLogin);
+        console.log("Processing next SBC:", sbcLogin);
         if (sbcLogin.length === 0) {
           return;
         }
@@ -5266,7 +5783,7 @@ const futHomeOverride = async () => {
       processNextSbc();
     }
 
-    if (getSettings(0, 0, 'collectConcepts')) {
+    if (getSettings(0, 0, "collectConcepts")) {
       conceptPlayers = await getConceptPlayers();
       await fetchPlayerPrices(conceptPlayers);
     }
@@ -5276,8 +5793,8 @@ const futHomeOverride = async () => {
 let count;
 
 function pad(n, width, z) {
-  z = z || '0';
-  n = n + '';
+  z = z || "0";
+  n = n + "";
   return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 }
 
@@ -5292,31 +5809,49 @@ let getSBCPrice = (item, sbcId = 0, challengeId = 0) => {
     return 1;
   }
 
-  let sbcPrice = Math.max(getPrice(item), getPrice({ definitionId: item.rating + '_CBR' }), 100);
+  let sbcPrice = Math.max(
+    getPrice(item),
+    getPrice({ definitionId: item.rating + "_CBR" }),
+    100
+  );
 
   if (getPrice(item) == -1) {
     return sbcPrice * 1.5;
   }
 
   if (item.concept) {
-    return getSettings(0, 0, 'conceptPremium') * sbcPrice;
+    return getSettings(0, 0, "conceptPremium") * sbcPrice;
   }
   if (
     (
       (item.isSpecial()
-        ? ''
-        : services.Localization.localize('search.cardLevels.cardLevel' + item.getTier()) + ' ') +
-      services.Localization.localize('item.raretype' + item.rareflag)
-    ).includes('volution')
+        ? ""
+        : services.Localization.localize(
+            "search.cardLevels.cardLevel" + item.getTier()
+          ) + " ") +
+      services.Localization.localize("item.raretype" + item.rareflag)
+    ).includes("volution")
   ) {
-    return getSettings(0, 0, 'evoPremium') * sbcPrice;
+    return getSettings(0, 0, "evoPremium") * sbcPrice;
   }
   sbcPrice = sbcPrice - (100 - item.rating); //Rating Discount
 
-  sbcPrice = sbcPrice * (item.duplicateId > 0 ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1); // Dupe Discount
+  sbcPrice =
+    sbcPrice *
+    (item.duplicateId > 0
+      ? getSettings(sbcId, challengeId, "duplicateDiscount") / 100
+      : 1); // Dupe Discount
 
-  sbcPrice = sbcPrice * (item?.isStorage ? getSettings(sbcId, challengeId, 'duplicateDiscount') / 100 : 1);
-  sbcPrice = sbcPrice * (!item.isTradeable() ? getSettings(sbcId, challengeId, 'untradeableDiscount') / 100 : 1);
+  sbcPrice =
+    sbcPrice *
+    (item?.isStorage
+      ? getSettings(sbcId, challengeId, "duplicateDiscount") / 100
+      : 1);
+  sbcPrice =
+    sbcPrice *
+    (!item.isTradeable()
+      ? getSettings(sbcId, challengeId, "untradeableDiscount") / 100
+      : 1);
 
   return sbcPrice;
 };
@@ -5324,376 +5859,472 @@ let countDownInterval;
 let logPollInterval;
 let createSbc = true;
 let concepts = false;
-let solveSBC = async (sbcId, challengeId, autoSubmit = false, repeat = null, autoOpen = false , trynext = false) => {
-  if (createSbc != true) {
-    showNotification('SBC Stopped');
-    createSbc = true;
-    return;
-  }
-   let sbcData = await fetchSBCData(sbcId, challengeId);
-  console.log('Sbc Started',sbcData?.sbcName, sbcData?.challengeName,sbcData);
-  await ratingCountUI();
-  counter = new Counter('.numCounter', {
-    direction: 'rtl',
-    delay: 200,
-    digits: 3,
-  });
-
-  showLoader(true);
-  if (sbcData == null) {
-    hideLoader();
-    if (sbcLogin.length > 0) {
-      let sbcToTry = sbcLogin.shift();
-      sbcLogin = sbcLogin.slice();
-      services.Notification.queue([sbcToTry[2] + ' SBC Started', UINotificationType.POSITIVE]);
-      goToPacks();
-      await solveSBC(sbcToTry[0], sbcToTry[1], true);
+let solveSBC = async (
+  sbcId,
+  challengeId,
+  autoSubmit = false,
+  repeat = null,
+  autoOpen = false,
+  trynext = false
+) => {
+  try {
+    if (createSbc != true) {
+      showNotification("SBC Stopped");
+      createSbc = true;
       return;
     }
-    showNotification('SBC not available', UINotificationType.NEGATIVE);
-    return;
-  }
-  addSbcInfo(sbcData.sbcName, sbcData.challengeName);
-  await dealWithUnassigned();
-  // await sendUnassignedtoTeam();
-  // await swapDuplicates();
-  // await sendDuplicatesToStorage();
-  // await discardNonPlayerDupes();
-  let players = await fetchPlayers();
-  let storage = await getStoragePlayers();
-  let unassigned = await fetchUnassigned();
-  let PriceItems = getPriceItems();
-  if (getSettings(sbcId, sbcData.challengeId, 'useConcepts')) {
-    if (conceptPlayersCollected) {
-      players = players.concat(
-        conceptPlayers?.filter((f) => !PriceItems[f.definitionId].isExtinct)
-      );
-      console.log('conceptPlayers', conceptPlayers, conceptPlayers.length);
-    } else {
-      showNotification(
-        'Still Collecting Concept Players, They will not be used for this solution',
-        UINotificationType.NEGATIVE
-      );
-    }
-  }
-  showLoader(true);
-  let allSbcData = await sbcSets();
-  let sbcSet = allSbcData.sets.filter((e) => e.id == sbcData.setId)[0];
-  let challenges = await getChallenges(sbcSet);
-  let sbcChallenge = challenges.challenges.filter((i) => i.id == sbcData.challengeId)[0];
-  for (let challenge of challenges.challenges.filter(f=>f.status!="COMPLETED")) {
-    await loadChallenge(challenge);
-  }
-
-  // storage = storage.concat(unassigned)
-  players = players.filter((f) => !storage.map((m) => m.definitionId).includes(f?.definitionId));
-  players = players.concat(storage);
-  players = players.filter((item) => item != undefined);
-  await fetchPlayerPrices(players);
-
-  let maxRating = getSettings(sbcId, sbcData.challengeId, 'maxRating');
-  let useDupes = getSettings(sbcId, sbcData.challengeId, 'useDupes');
-
-  let duplicateIds = await fetchDuplicateIds();
-  let storageIds = storage.map((m) => m.id);
-  let chemUtil = new UTSquadChemCalculatorUtils();
-  chemUtil.chemService = services.Chemistry;
-  chemUtil.teamConfigRepo = repositories.TeamConfig;
-  let sbcPlayerIds = services.SBC.repository.getSets().filter(s => s.id === sbcId).reduce(function(e,t){t=t.getChallenges().filter(f=>f.id!=sbcData.challengeId);return 0<t.length&&t.forEach(function(t){t.squad&&e.push(t.squad._players.filter(f=>f._item.id>0).map(m=>m._item.id))}),e},[]).flat()
-  console.log('sbcPlayerIds', sbcPlayerIds);
-  players.forEach((item) => {
-    item.isStorage = storageIds.includes(item?.id);
-    item.isSbcPlayer = sbcPlayerIds.includes(item?.id);
-    item.isDuplicate = duplicateIds.includes(item?.id) || unassigned.includes(item?.id);
-    item.profile = chemUtil.getChemProfileForPlayer(item);
-    item.normalizeClubId = chemUtil.normalizeClubId(item.teamId);
-  });
-  let excludeLeagues = getSettings(sbcId, sbcData.challengeId, 'excludeLeagues') || [];
-  let excludeNations = getSettings(sbcId, sbcData.challengeId, 'excludeNations') || [];
-  let excludeRarity = getSettings(sbcId, sbcData.challengeId, 'excludeRarity') || [];
-  let excludeTeams = getSettings(sbcId, sbcData.challengeId, 'excludeTeams') || [];
-  let excludePlayers = getSettings(sbcId, sbcData.challengeId, 'excludePlayers') || [];
-  let excludeSbc = getSettings(sbcId, sbcData.challengeId, 'excludeSbc') || false;
-  let excludeObjective = getSettings(sbcId, sbcData.challengeId, 'excludeObjective') || false;
-  let excludeSpecial = getSettings(sbcId, sbcData.challengeId, 'excludeSpecial') || false;
-  let excludeTradable = getSettings(sbcId, sbcData.challengeId, 'excludeTradable') || false;
-  let excludeExtinct = getSettings(sbcId, sbcData.challengeId, 'excludeExtinct') || false;
-  let onlyStorage = getSettings(sbcId, sbcData.challengeId, 'onlyStorage') || false;
-  let excludeSbcSquads = getSettings(sbcId, sbcData.challengeId, 'excludeSbcSquads') || false;
-  let backendPlayersInput = players
-    .filter(
-      (item) =>
-        (useDupes && (item.isStorage || item.isDuplicate)) ||
-        (item.loans < 0 &&
-          getSBCPrice(item) < 100000 &&
-          item.rating <= maxRating &&
-          !excludePlayers.includes(item.definitionId) &&
-          !excludeLeagues.includes(item.leagueId) &&
-          !excludeNations.includes(item.nationId) &&
-          !excludeRarity.includes(
-            services.Localization.localize('item.raretype' + item.rareflag)
-          ) &&
-          (!item?.isSbcPlayer || !excludeSbcSquads) &&
-          !excludeTeams.includes(item.teamId) &&
-          !item.isTimeLimited() &&
-          !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
-          !(PriceItems[item.definitionId]?.isObjective && excludeObjective) &&
-          !(item?.isSpecial() && excludeSpecial) &&
-          !(item?.isTradeable() && excludeTradable) &&
-          !(PriceItems[item.definitionId]?.isExtinct && excludeExtinct) &&
-          (item?.isStorage || !onlyStorage) &&
-          !sbcData.subs.includes(item.definitionId))
-    )
-    .map((item) => {
-      if (!item.groups.length) {
-        item.groups = [0];
-      }
-
-      return {
-        id: item.id,
-        name: item._staticData.name,
-        cardType:
-          (item.isSpecial()
-            ? ''
-            : services.Localization.localize('search.cardLevels.cardLevel' + item.getTier()) +
-              ' ') + services.Localization.localize('item.raretype' + item.rareflag),
-        assetId: item._metaData?.id,
-        definitionId: item.definitionId,
-        rating: item.rating,
-        teamId: item.teamId,
-        leagueId: item.leagueId,
-        nationId: item.nationId,
-        rarityId: item.rareflag,
-        ratingTier: item.getTier(),
-        isUntradeable: item.isTradeable(),
-        isDuplicate: duplicateIds.includes(item.id),
-        isStorage: storageIds.includes(item.id),
-        preferredPosition: item.preferredPosition,
-        possiblePositions: item.possiblePositions,
-        groups: item.groups,
-        isFixed: isItemFixed(item),
-        concept: item.concept,
-        price: getSBCPrice(item, sbcId, challengeId) || -1,
-        futggPrice: getPrice(item),
-        maxChem: item.profile.maxChem,
-        teamChem: item.profile.rules[0],
-        leagueChem: item.profile.rules[1],
-        nationChem: item.profile.rules[2],
-        normalizeClubId: item.normalizeClubId,
-      };
+    let sbcData = await fetchSBCData(sbcId, challengeId);
+    console.log(
+      "Sbc Started",
+      sbcData?.sbcName,
+      sbcData?.challengeName,
+      sbcData
+    );
+    await ratingCountUI();
+    counter = new Counter(".numCounter", {
+      direction: "rtl",
+      delay: 200,
+      digits: 3,
     });
 
-  const input = JSON.stringify({
-    clubPlayers: backendPlayersInput,
-    sbcData: sbcData,
-    maxSolveTime: getSettings(sbcId, sbcData.challengeId, 'maxSolveTime'),
-  });
-
-  count = getSettings(sbcId, sbcData.challengeId, 'maxSolveTime');
-
-  clearInterval(countDownInterval);
-  countDownInterval = setInterval(countDown, 1000);
-
-  // Reset log index and start polling
-  lastLogIndex = 0;
-  logPollInterval = setInterval(pollSolverLogs, 1000);
-  showLoader(true);
-  let solution = await makePostRequest(apiUrl + '/solve', input);
-
-  // Stop polling when solve is complete
-  clearInterval(logPollInterval);
-  clearInterval(countDownInterval);
-  pollSolverLogs();
-  if (createSbc != true) {
-    hideLoader();
-    showNotification('SBC Stopped');
-    createSbc = true;
-    return;
-  }
-  if (solution.status_code != 2 && solution.status_code != 4) {
-    hideLoader();
-    if (getSettings(0, 0, 'playSounds')) {
-      wompSound.play();
-    }
-    showNotification(solution.status, UINotificationType.NEGATIVE);
-    
-    if (sbcLogin.length > 0) {
-      let sbcToTry = sbcLogin.shift();
-      sbcLogin = sbcLogin.slice();
-      services.Notification.queue([sbcToTry[2] + ' SBC Started', UINotificationType.POSITIVE]);
-      goToPacks();
-      solveSBC(sbcToTry[0], sbcToTry[1], true);
+    showLoader(true);
+    if (sbcData == null) {
+      hideLoader();
+      if (sbcLogin.length > 0) {
+        let sbcToTry = sbcLogin.shift();
+        sbcLogin = sbcLogin.slice();
+        services.Notification.queue([
+          sbcToTry[2] + " SBC Started",
+          UINotificationType.POSITIVE,
+        ]);
+        goToPacks();
+        await solveSBC(sbcToTry[0], sbcToTry[1], true);
+        return;
+      }
+      showNotification("SBC not available", UINotificationType.NEGATIVE);
       return;
     }
-  }
-
-  showNotification(
-    solution.status,
-    solution.status_code != 4 ? UINotificationType.NEUTRAL : UINotificationType.POSITIVE
-  );
-
-
-
-  window.sbcSet = sbcSet;
-  window.challengeId = sbcData.challengeId;
-
-  let newSbcSquad = new UTSBCSquadOverviewViewController();
-  newSbcSquad.initWithSBCSet(sbcSet, sbcData.challengeId);
-  let { _squad, _challenge } = newSbcSquad;
-
-  _squad.removeAllItems();
-
-  let _solutionSquad = [...Array(11)];
-  sbcData.brickIndices.forEach(function (item, index) {
-    _solutionSquad[item] = new UTItemEntity();
-  });
-  try {
-    JSON.parse(solution.results)
-      .sort((a, b) => b.Is_Pos - a.Is_Pos)
-      .forEach(function (item, index) {
-        let findMap = sbcData.formation.map(
-          (currValue, idx) =>
-            ((currValue == item.possiblePositions && item.Is_Pos == 1) || item.Is_Pos == 0) &&
-            _solutionSquad[idx] == undefined
+    addSbcInfo(sbcData.sbcName, sbcData.challengeName);
+    await dealWithUnassigned();
+    // await sendUnassignedtoTeam();
+    // await swapDuplicates();
+    // await sendDuplicatesToStorage();
+    // await discardNonPlayerDupes();
+    let players = await fetchPlayers();
+    let storage = await getStoragePlayers();
+    let unassigned = await fetchUnassigned();
+    let PriceItems = getPriceItems();
+    if (getSettings(sbcId, sbcData.challengeId, "useConcepts")) {
+      if (conceptPlayersCollected) {
+        players = players.concat(
+          conceptPlayers?.filter((f) => !PriceItems[f.definitionId].isExtinct)
         );
-        if (item.concept) {
-          concepts = true;
-        }
-        _solutionSquad[
-          findMap.findIndex((element) => {
-            return element;
-          })
-        ] = players.filter((f) => item.id == f.id)[0];
-      });
-  } catch (error) {
-    hideLoader();
-    return;
-  }
-  sbcData.subs.forEach(function (item, index) {
-    _solutionSquad.push(players.filter((f) => item == f.definitionId)[0]);
-  });
-  _squad.setPlayers(_solutionSquad, true);
-
-  await loadChallenge(_challenge);
-
-  let autoSubmitId = getSettings(sbcId, sbcData.challengeId, 'autoSubmit');
-  let sbcSubmitted = false;
-  if ((solution.status_code == autoSubmitId || autoSubmitId == 1) && autoSubmit && !concepts) {
-    try {
-      await sbcSubmit(_challenge, sbcSet);
-      sbcSubmitted = true;
-    } catch (error) {
-      console.error('Error submitting SBC:', error);
-      hideLoader();
-      sbcSubmitted = false;
+        console.log("conceptPlayers", conceptPlayers, conceptPlayers.length);
+      } else {
+        showNotification(
+          "Still Collecting Concept Players, They will not be used for this solution",
+          UINotificationType.NEGATIVE
+        );
+      }
     }
-  }
-  if (sbcSubmitted) {
-    if (getSettings(sbcId, sbcData.challengeId, 'autoOpenPacks')) {
-      repositories.Store.setDirty();
-      let item = sbcData.awards[0];
-      
-   
+    showLoader(true);
+    let allSbcData = await sbcSets();
+    let sbcSet = allSbcData.sets.filter((e) => e.id == sbcData.setId)[0];
+    let challenges = await getChallenges(sbcSet);
+    let sbcChallenge = challenges.challenges.filter(
+      (i) => i.id == sbcData.challengeId
+    )[0];
+    for (let challenge of challenges.challenges.filter(
+      (f) => f.status != "COMPLETED"
+    )) {
+      console.log("Loading Challenge:", challenge);
+      await loadChallenge(challenge);
+    }
+
+    // storage = storage.concat(unassigned)
+    players = players.filter(
+      (f) => !storage.map((m) => m.definitionId).includes(f?.definitionId)
+    );
+    players = players.concat(storage);
+    players = players.filter((item) => item != undefined);
+    await fetchPlayerPrices(players);
+
+    let ratingRange = getSettings(sbcId, sbcData.challengeId, "ratingRange");
+    let useDupes = getSettings(sbcId, sbcData.challengeId, "useDupes");
+
+    let duplicateIds = await fetchDuplicateIds();
+    let storageIds = storage.map((m) => m.id);
+    let chemUtil = new UTSquadChemCalculatorUtils();
+    chemUtil.chemService = services.Chemistry;
+    chemUtil.teamConfigRepo = repositories.TeamConfig;
+    let sbcPlayerIds = services.SBC.repository
+      .getSets()
+      .filter((s) => s.id === sbcId)
+      .reduce(function (e, t) {
+        t = t.getChallenges().filter((f) => f.id != sbcData.challengeId);
+        return (
+          0 < t.length &&
+            t.forEach(function (t) {
+              t.squad &&
+                e.push(
+                  t.squad._players
+                    .filter((f) => f._item.id > 0)
+                    .map((m) => m._item.id)
+                );
+            }),
+          e
+        );
+      }, [])
+      .flat();
+
+    players.forEach((item) => {
+      item.isStorage = storageIds.includes(item?.id);
+      item.isSbcPlayer = sbcPlayerIds.includes(item?.id);
+      item.isDuplicate =
+        duplicateIds.includes(item?.id) || unassigned.includes(item?.id);
+      item.profile = chemUtil.getChemProfileForPlayer(item);
+      item.normalizeClubId = chemUtil.normalizeClubId(item.teamId);
+    });
+    let excludeLeagues =
+      getSettings(sbcId, sbcData.challengeId, "excludeLeagues") || [];
+    let excludeNations =
+      getSettings(sbcId, sbcData.challengeId, "excludeNations") || [];
+    let excludeRarity =
+      getSettings(sbcId, sbcData.challengeId, "excludeRarity") || [];
+    let excludeTeams =
+      getSettings(sbcId, sbcData.challengeId, "excludeTeams") || [];
+    let excludePlayers =
+      getSettings(sbcId, sbcData.challengeId, "excludePlayers") || [];
+    let excludeSbc =
+      getSettings(sbcId, sbcData.challengeId, "excludeSbc") || false;
+    let excludeObjective =
+      getSettings(sbcId, sbcData.challengeId, "excludeObjective") || false;
+    let excludeSpecial =
+      getSettings(sbcId, sbcData.challengeId, "excludeSpecial") || false;
+    let excludeTradable =
+      getSettings(sbcId, sbcData.challengeId, "excludeTradable") || false;
+    let excludeExtinct =
+      getSettings(sbcId, sbcData.challengeId, "excludeExtinct") || false;
+    let onlyStorage =
+      getSettings(sbcId, sbcData.challengeId, "onlyStorage") || false;
+    let excludeSbcSquads =
+      getSettings(sbcId, sbcData.challengeId, "excludeSbcSquads") || false;
+    let backendPlayersInput = players
+      .filter(
+        (item) =>
+          (useDupes && (item.isStorage || item.isDuplicate)) ||
+          (item.loans < 0 &&
+            getSBCPrice(item) < 100000 &&
+            item.rating <= ratingRange[1] &&
+            item.rating >= ratingRange[0] &&
+            !excludePlayers.includes(item.definitionId) &&
+            !excludeLeagues.includes(item.leagueId) &&
+            !excludeNations.includes(item.nationId) &&
+            !excludeRarity.includes(
+              services.Localization.localize("item.raretype" + item.rareflag)
+            ) &&
+            (!item?.isSbcPlayer || !excludeSbcSquads) &&
+            !excludeTeams.includes(item.teamId) &&
+            !item.isTimeLimited() &&
+            !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
+            !(PriceItems[item.definitionId]?.isObjective && excludeObjective) &&
+            !(item?.isSpecial() && excludeSpecial) &&
+            !(item?.isTradeable() && excludeTradable) &&
+            !(PriceItems[item.definitionId]?.isExtinct && excludeExtinct) &&
+            (item?.isStorage || !onlyStorage) &&
+            !sbcData.subs.includes(item.definitionId))
+      )
+      .map((item) => {
+        if (!item.groups.length) {
+          item.groups = [0];
+        }
+
+        return {
+          id: item.id,
+          name: item._staticData.name,
+          cardType:
+            (item.isSpecial()
+              ? ""
+              : services.Localization.localize(
+                  "search.cardLevels.cardLevel" + item.getTier()
+                ) + " ") +
+            services.Localization.localize("item.raretype" + item.rareflag),
+          assetId: item._metaData?.id,
+          definitionId: item.definitionId,
+          rating: item.rating,
+          teamId: item.teamId,
+          leagueId: item.leagueId,
+          nationId: item.nationId,
+          rarityId: item.rareflag,
+          ratingTier: item.getTier(),
+          isUntradeable: item.isTradeable(),
+          isDuplicate: duplicateIds.includes(item.id),
+          isStorage: storageIds.includes(item.id),
+          preferredPosition: item.preferredPosition,
+          possiblePositions: item.possiblePositions,
+          groups: item.groups,
+          isFixed: isItemFixed(item),
+          concept: item.concept,
+          price: getSBCPrice(item, sbcId, challengeId) || -1,
+          futggPrice: getPrice(item),
+          maxChem: item.profile.maxChem,
+          teamChem: item.profile.rules[0],
+          leagueChem: item.profile.rules[1],
+          nationChem: item.profile.rules[2],
+          normalizeClubId: item.normalizeClubId,
+        };
+      });
+
+    const input = JSON.stringify({
+      clubPlayers: backendPlayersInput,
+      sbcData: sbcData,
+      maxSolveTime: getSettings(sbcId, sbcData.challengeId, "maxSolveTime"),
+    });
+
+    count = getSettings(sbcId, sbcData.challengeId, "maxSolveTime");
+
+    clearInterval(countDownInterval);
+    countDownInterval = setInterval(countDown, 1000);
+
+    // Reset log index and start polling
+    lastLogIndex = 0;
+    logPollInterval = setInterval(pollSolverLogs, 1000);
+    showLoader(true);
+    let solution = await makePostRequest(apiUrl + "/solve", input);
+
+    // Stop polling when solve is complete
+    clearInterval(logPollInterval);
+    clearInterval(countDownInterval);
+    pollSolverLogs();
+    if (createSbc != true) {
+      hideLoader();
+      showNotification("SBC Stopped");
+      createSbc = true;
+      return;
+    }
+    if (solution.status_code != 2 && solution.status_code != 4) {
+      hideLoader();
+      if (getSettings(0, 0, "playSounds")) {
+        wompSound.play();
+      }
+      showNotification(solution.status, UINotificationType.NEGATIVE);
+
+      if (sbcLogin.length > 0) {
+        let sbcToTry = sbcLogin.shift();
+        sbcLogin = sbcLogin.slice();
+        services.Notification.queue([
+          sbcToTry[2] + " SBC Started",
+          UINotificationType.POSITIVE,
+        ]);
+        goToPacks();
+        solveSBC(sbcToTry[0], sbcToTry[1], true);
+        return;
+      }
+    }
+
+    showNotification(
+      solution.status,
+      solution.status_code != 4
+        ? UINotificationType.NEUTRAL
+        : UINotificationType.POSITIVE
+    );
+
+    window.sbcSet = sbcSet;
+    window.challengeId = sbcData.challengeId;
+
+    let newSbcSquad = new UTSBCSquadOverviewViewController();
+    newSbcSquad.initWithSBCSet(sbcSet, sbcData.challengeId);
+    let { _squad, _challenge } = newSbcSquad;
+
+    _squad.removeAllItems();
+
+    let _solutionSquad = [...Array(11)];
+    sbcData.brickIndices.forEach(function (item, index) {
+      _solutionSquad[item] = new UTItemEntity();
+    });
+    try {
+      JSON.parse(solution.results)
+        .sort((a, b) => b.Is_Pos - a.Is_Pos)
+        .forEach(function (item, index) {
+          let findMap = sbcData.formation.map(
+            (currValue, idx) =>
+              ((currValue == item.possiblePositions && item.Is_Pos == 1) ||
+                item.Is_Pos == 0) &&
+              _solutionSquad[idx] == undefined
+          );
+          if (item.concept) {
+            concepts = true;
+          }
+          _solutionSquad[
+            findMap.findIndex((element) => {
+              return element;
+            })
+          ] = players.filter((f) => item.id == f.id)[0];
+        });
+    } catch (error) {
+      hideLoader();
+      return;
+    }
+    sbcData.subs.forEach(function (item, index) {
+      _solutionSquad.push(players.filter((f) => item == f.definitionId)[0]);
+    });
+    _squad.setPlayers(_solutionSquad, true);
+
+    await loadChallenge(_challenge);
+
+    let autoSubmitId = getSettings(sbcId, sbcData.challengeId, "autoSubmit");
+    let sbcSubmitted = false;
+    if (
+      (solution.status_code == autoSubmitId || autoSubmitId == 1) &&
+      autoSubmit &&
+      !concepts
+    ) {
+      try {
+        await sbcSubmit(_challenge, sbcSet);
+        sbcSubmitted = true;
+      } catch (error) {
+        console.error("Error submitting SBC:", error);
+        hideLoader();
+        sbcSubmitted = false;
+      }
+    }
+    if (sbcSubmitted) {
+      if (getSettings(sbcId, sbcData.challengeId, "autoOpenPacks")) {
+        repositories.Store.setDirty();
+        let item = sbcData.awards[0];
+
         let packs = await getPacks();
         await openPack(packs.packs.filter((f) => f.id == item)[0]);
-     
-    }
-    if (!getSettings(sbcId, sbcData.challengeId, 'autoOpenPacks')) {
-      goToPacks();
-    }
-    if (repeat == null) {
-      //  console.log('getRepeatCount')
-      repeat = getSettings(sbcId, sbcData.challengeId, 'repeatCount');
-    }
-
-    let totalRepeats = getSettings(sbcId, sbcData.challengeId, 'repeatCount') + 1;
-    if (repeat != 0) {
-      if (repeat < 0) {
-        showNotification(`${Math.abs(repeat)} Completed`);
-      } else {
-        showNotification(`${totalRepeats - repeat} / ${totalRepeats} Completed`);
       }
-      let newRepeat = sbcData.finalSBC ? repeat - 1 : repeat;
-      solveSBC(sbcId, 0, true, newRepeat);
-      return;
-    }
-    if (repeat == 0 && totalRepeats > 0) {
-      showNotification(`${totalRepeats} / ${totalRepeats} Completed`);
-    }
-  } else {
-    let showSBC = new UTSBCSquadSplitViewController();
-    showSBC.initWithSBCSet(sbcSet, sbcData.challengeId);
-    getCurrentViewController().rootController.getRootNavigationController().popViewController();
-    getCurrentViewController()
-      .rootController.getRootNavigationController()
-      .pushViewController(showSBC);
-    services.SBC.saveChallenge(_challenge).observe(undefined, async function (sender, data) {
-      if (!data.success) {
-        if (getSettings(0, 0, 'playSounds')) {
-          wompSound.play();
-        }
-        showNotification('Failed to save squad.', UINotificationType.NEGATIVE);
-
-        if (data.error) {
-          if (getSettings(0, 0, 'playSounds')) {
-            wompSound.play();
-          }
-          showNotification(`Error code: ${data.error.code}`, UINotificationType.NEGATIVE);
-        }
-        hideLoader();
-
-        return;
+      if (!getSettings(sbcId, sbcData.challengeId, "autoOpenPacks")) {
+        goToPacks();
       }
-    });
-    hideLoader();
-    if (getSettings(sbcId, sbcData.challengeId, 'sbcAllGroup') && trynext) {
-      try {
-      // Track which challenges in this set have already been tried during this solve cycle
-      window.__sbcTried = window.__sbcTried || {};
-      const key = String(sbcId);
-      const tried = window.__sbcTried[key] || new Set();
-      tried.add(sbcData.challengeId);
-      window.__sbcTried[key] = tried;
+      if (repeat == null) {
+        //  console.log('getRepeatCount')
+        repeat = getSettings(sbcId, sbcData.challengeId, "repeatCount");
+      }
 
-      const all = await sbcSets();
-      const setObj = all?.sets?.find(s => s.id == sbcId);
-      if (setObj) {
-        const chData = await getChallenges(setObj);
-        const uncompleted = (chData?.challenges || []).filter(c => c.status !== 'COMPLETED');
-        // Only consider challenges we haven't tried yet in this chain
-        const remaining = uncompleted.filter(c => !tried.has(c.id));
-        if (remaining.length > 0) {
-        // Try from the "hardest"/last first to preserve prior behavior
-        const nextChallenge = remaining[remaining.length - 1];
-        services.Notification.queue(
-          [`Trying another challenge: ${nextChallenge.name}`],
-          UINotificationType.NEUTRAL
-        );
-        await solveSBC(sbcId, nextChallenge.id, autoSubmit, repeat, autoOpen, trynext);
-        return;
+      let totalRepeats =
+        getSettings(sbcId, sbcData.challengeId, "repeatCount") + 1;
+      if (repeat != 0) {
+        if (repeat < 0) {
+          showNotification(`${Math.abs(repeat)} Completed`);
         } else {
-          if (window.__sbcTried[key].length>1){
-        services.Notification.queue(
-          [`All uncompleted challenges in "${setObj.name}" have been tried`],
-          UINotificationType.NEUTRAL
-        );
+          showNotification(
+            `${totalRepeats - repeat} / ${totalRepeats} Completed`
+          );
+        }
+        let newRepeat = sbcData.finalSBC ? repeat - 1 : repeat;
+        solveSBC(sbcId, 0, true, newRepeat);
+        return;
       }
-        window.__sbcTried = {};
+      if (repeat == 0 && totalRepeats > 0) {
+        showNotification(`${totalRepeats} / ${totalRepeats} Completed`);
+      }
+    } else {
+      let showSBC = new UTSBCSquadSplitViewController();
+      showSBC.initWithSBCSet(sbcSet, sbcData.challengeId);
+      getCurrentViewController()
+        .rootController.getRootNavigationController()
+        .popViewController();
+      getCurrentViewController()
+        .rootController.getRootNavigationController()
+        .pushViewController(showSBC);
+      services.SBC.saveChallenge(_challenge).observe(
+        undefined,
+        async function (sender, data) {
+          if (!data.success) {
+            if (getSettings(0, 0, "playSounds")) {
+              wompSound.play();
+            }
+            showNotification(
+              "Failed to save squad.",
+              UINotificationType.NEGATIVE
+            );
+
+            if (data.error) {
+              if (getSettings(0, 0, "playSounds")) {
+                wompSound.play();
+              }
+              showNotification(
+                `Error code: ${data.error.code}`,
+                UINotificationType.NEGATIVE
+              );
+            }
+            hideLoader();
+
+            return;
+          }
+        }
+      );
+      hideLoader();
+      if (getSettings(sbcId, sbcData.challengeId, "sbcAllGroup") && trynext) {
+        try {
+          // Track which challenges in this set have already been tried during this solve cycle
+          window.__sbcTried = window.__sbcTried || {};
+          const key = String(sbcId);
+          const tried = window.__sbcTried[key] || new Set();
+          tried.add(sbcData.challengeId);
+          window.__sbcTried[key] = tried;
+
+          const all = await sbcSets();
+          const setObj = all?.sets?.find((s) => s.id == sbcId);
+          if (setObj) {
+            const chData = await getChallenges(setObj);
+            const uncompleted = (chData?.challenges || []).filter(
+              (c) => c.status !== "COMPLETED"
+            );
+            // Only consider challenges we haven't tried yet in this chain
+            const remaining = uncompleted.filter((c) => !tried.has(c.id));
+            if (remaining.length > 0) {
+              // Try from the "hardest"/last first to preserve prior behavior
+              const nextChallenge = remaining[remaining.length - 1];
+              services.Notification.queue(
+                [`Trying another challenge: ${nextChallenge.name}`],
+                UINotificationType.NEUTRAL
+              );
+              await solveSBC(
+                sbcId,
+                nextChallenge.id,
+                autoSubmit,
+                repeat,
+                autoOpen,
+                trynext
+              );
+              return;
+            } else {
+              if (window.__sbcTried[key].length > 1) {
+                services.Notification.queue(
+                  [
+                    `All uncompleted challenges in "${setObj.name}" have been tried`,
+                  ],
+                  UINotificationType.NEUTRAL
+                );
+              }
+              window.__sbcTried = {};
+            }
+          }
+        } catch (err) {
+          console.warn("Could not try next challenge in set:", err);
         }
       }
-      } catch (err) {
-      console.warn('Could not try next challenge in set:', err);
-      }
     }
+
+    if (sbcLogin.length > 0) {
+      let sbcToTry = sbcLogin.shift();
+      sbcLogin = sbcLogin.slice();
+      services.Notification.queue([
+        sbcToTry[2] + " SBC Started",
+        UINotificationType.POSITIVE,
+      ]);
+      solveSBC(sbcToTry[0], sbcToTry[1], true);
+    }
+    hideLoader();
+  } catch (err) {
+    hideLoader();
+    console.error("Error in solveSBC:", err);
   }
 
-  if (sbcLogin.length > 0) {
-    let sbcToTry = sbcLogin.shift();
-    sbcLogin = sbcLogin.slice();
-    services.Notification.queue([sbcToTry[2] + ' SBC Started', UINotificationType.POSITIVE]);
-    solveSBC(sbcToTry[0], sbcToTry[1], true);
-  }
-  hideLoader();
   //getAppMain().getRootViewController().getPresentedViewController().getCurrentViewController().rootController.getRootNavigationController().pushViewController(currentView);
 };
 
@@ -5708,8 +6339,12 @@ let goToPacks = async () => {
   repositories.Store.setDirty();
   let n = new UTStorePackViewController();
   n.init();
-  getCurrentViewController().rootController.getRootNavigationController().popViewController();
-  getCurrentViewController().rootController.getRootNavigationController().pushViewController(n);
+  getCurrentViewController()
+    .rootController.getRootNavigationController()
+    .popViewController();
+  getCurrentViewController()
+    .rootController.getRootNavigationController()
+    .pushViewController(n);
 };
 let goToUnassignedView = async () => {
   return new Promise((resolve, reject) => {
@@ -5718,32 +6353,35 @@ let goToUnassignedView = async () => {
     var r = getCurrentViewController().rootController;
     hideLoader(),
       showLoader(),
-      services.Item.requestUnassignedItems().observe(this, async function (e, t) {
-        var i;
+      services.Item.requestUnassignedItems().observe(
+        this,
+        async function (e, t) {
+          var i;
 
-        e.unobserve(r);
-        var o = r.getRootNavigationController();
-        if (o) {
-          var n = isPhone()
-            ? new UTUnassignedItemsViewController()
-            : new UTUnassignedItemsSplitViewController();
-          t.success && JSUtils.isObject(t.response)
-            ? n.initWithItems(
-                null === (i = t.response) || void 0 === i
-                  ? void 0
-                  : i.items.sort(function (t, e) {
-                      return getSBCPrice(e) - getSBCPrice(t);
-                    })
-              )
-            : n.init();
-          services.Item.clearTransferMarketCache();
+          e.unobserve(r);
+          var o = r.getRootNavigationController();
+          if (o) {
+            var n = isPhone()
+              ? new UTUnassignedItemsViewController()
+              : new UTUnassignedItemsSplitViewController();
+            t.success && JSUtils.isObject(t.response)
+              ? n.initWithItems(
+                  null === (i = t.response) || void 0 === i
+                    ? void 0
+                    : i.items.sort(function (t, e) {
+                        return getSBCPrice(e) - getSBCPrice(t);
+                      })
+                )
+              : n.init();
+            services.Item.clearTransferMarketCache();
 
-          o.popToRootViewController();
-          o.pushViewController(n);
+            o.popToRootViewController();
+            o.pushViewController(n);
+          }
+          hideLoader();
+          resolve();
         }
-        hideLoader();
-        resolve();
-      });
+      );
 
     hideLoader();
   });
@@ -5752,15 +6390,18 @@ let getPacks = async () => {
   return new Promise((resolve, reject) => {
     let packResponse;
     repositories.Store.setDirty();
-    services.Store.getPacks('ALL', true, true).observe(this, function (obs, res) {
-      if (!res.success) {
-        obs.unobserve(this);
-        reject(res.status);
-      } else {
-        packResponse = res.response;
-        resolve(packResponse);
+    services.Store.getPacks("ALL", true, true).observe(
+      this,
+      function (obs, res) {
+        if (!res.success) {
+          obs.unobserve(this);
+          reject(res.status);
+        } else {
+          packResponse = res.response;
+          resolve(packResponse);
+        }
       }
-    });
+    );
   });
 };
 
@@ -5812,8 +6453,10 @@ const unassignedItemsOverride = () => {
     await fetchPlayerPrices(args[0]);
 
     // Only show player picks if above minimum rating threshold
-    const minRating = getSettings(0, 0, 'animateWalkouts');
-    const hasHighRatedPlayer = args[0].some((player) => player.rating >= minRating);
+    const minRating = getSettings(0, 0, "animateWalkouts");
+    const hasHighRatedPlayer = args[0].some(
+      (player) => player.rating >= minRating
+    );
 
     console.table(
       args[0]
@@ -5829,19 +6472,21 @@ const unassignedItemsOverride = () => {
             name: item._staticData.name,
             cardType:
               (item.isSpecial()
-                ? ''
-                : services.Localization.localize('search.cardLevels.cardLevel' + item.getTier()) +
-                  ' ') + services.Localization.localize('item.raretype' + item.rareflag),
+                ? ""
+                : services.Localization.localize(
+                    "search.cardLevels.cardLevel" + item.getTier()
+                  ) + " ") +
+              services.Localization.localize("item.raretype" + item.rareflag),
             rating: item.rating,
             futggPrice: getPrice(item),
             sbcPrice: getSBCPrice(item),
-            fodderPrice: getPrice({ definitionId: item.rating + '_CBR' }),
+            fodderPrice: getPrice({ definitionId: item.rating + "_CBR" }),
             isFodder: isFodder(item),
           };
         })
     );
     if (hasHighRatedPlayer) {
-      console.log('tada');
+      console.log("tada");
       let packs = await getPacks();
       await showPack(packs.packs[0], {
         items: args[0].sort(function (t, e) {
@@ -5863,27 +6508,27 @@ const unassignedItemsOverride = () => {
     ppItems.call(this, ...args);
   };
 
-  const ppRender = UTPlayerPicksViewController.prototype.render;
+  //   const ppRender = UTPlayerPicksViewController.prototype.render;
 
-  UTPlayerPicksViewController.prototype.render = async function (...args) {
-    ppController = this;
-    await fetchPlayerPrices(this.picks);
-    this.selectedPicks = this.picks
-      .sort(function (t, e) {
-        const priceDiff = getPrice(e) - getPrice(t);
-        if (priceDiff === 0) {
-          return e.rating - t.rating;
-        }
-        return priceDiff;
-      })
-      .slice(0, this.availablePicks);
-    r = this.getView();
+  //   UTPlayerPicksViewController.prototype.render = async function (...args) {
+  //     ppController = this;
+  //     await fetchPlayerPrices(this.picks);
+  //     this.selectedPicks = this.picks
+  //       .sort(function (t, e) {
+  //         const priceDiff = getPrice(e) - getPrice(t);
+  //         if (priceDiff === 0) {
+  //           return e.rating - t.rating;
+  //         }
+  //         return priceDiff;
+  //       })
+  //       .slice(0, this.availablePicks);
+  //     r = this.getView();
 
-    await ppRender.call(this, ...args);
-    console.log('here');
-    // ppController.view._triggerActions(UTPlayerPicksView.Event.CONTINUE);
-    // ppController.view._triggerActions(UTPlayerPicksView.Event.CONFIRM_PICK);
-  };
+  //     await ppRender.call(this, ...args);
+  //     console.log("here");
+  // //     // ppController.view._triggerActions(UTPlayerPicksView.Event.CONTINUE);
+  // //     // ppController.view._triggerActions(UTPlayerPicksView.Event.CONFIRM_PICK);
+  //   };
 };
 let sbcSubmit = async function (challenge, sbcSet, i) {
   services.Chemistry.resetCustomProfiles();
@@ -5903,15 +6548,15 @@ let sbcSubmit = async function (challenge, sbcSet, i) {
       if (!res.success) {
         obs.unobserve(this);
 
-        if (getSettings(0, 0, 'playSounds')) {
+        if (getSettings(0, 0, "playSounds")) {
           wompSound.play();
         }
-        showNotification('Failed to submit', UINotificationType.NEGATIVE);
+        showNotification("Failed to submit", UINotificationType.NEGATIVE);
         hideLoader();
 
         reject(res);
       } else {
-        showNotification('SBC Submitted', UINotificationType.POSITIVE);
+        showNotification("SBC Submitted", UINotificationType.POSITIVE);
         createSBCTab();
         resolve(res);
       }
@@ -5921,7 +6566,9 @@ let sbcSubmit = async function (challenge, sbcSet, i) {
 
 const sbcViewOverride = () => {
   UTSquadEntity.prototype._calculateRating = function () {
-    var t = this.isSBC() ? this.getFieldPlayers() : this.getFieldAndSubPlayers(),
+    var t = this.isSBC()
+        ? this.getFieldPlayers()
+        : this.getFieldAndSubPlayers(),
       e = services.Configuration.checkFeatureEnabled(
         UTServerSettingsRepository.KEY.SQUAD_RATING_FLOAT_CALCULATION_ENABLED
       ),
@@ -5930,7 +6577,8 @@ const sbcViewOverride = () => {
     if (
       (t.forEach(function (t, e) {
         var i = t.item;
-        i.isValid() && ((n += i.rating), UTSquadEntity.FIELD_PLAYERS <= e && r++);
+        i.isValid() &&
+          ((n += i.rating), UTSquadEntity.FIELD_PLAYERS <= e && r++);
       }),
       e)
     ) {
@@ -5943,7 +6591,10 @@ const sbcViewOverride = () => {
           var i = t.item;
           if (i.isValid()) {
             if (i.rating <= o) return;
-            a += e < UTSquadEntity.FIELD_PLAYERS ? i.rating - o : 0.5 * (i.rating - o);
+            a +=
+              e < UTSquadEntity.FIELD_PLAYERS
+                ? i.rating - o
+                : 0.5 * (i.rating - o);
           }
         }),
         (n = Math.round(a, 2));
@@ -5953,11 +6604,14 @@ const sbcViewOverride = () => {
         var i = t.item;
         if (i.isValid()) {
           if (i.rating <= s) return;
-          n += e < UTSquadEntity.FIELD_PLAYERS ? i.rating - s : Math.floor(0.5 * (i.rating - s));
+          n +=
+            e < UTSquadEntity.FIELD_PLAYERS
+              ? i.rating - s
+              : Math.floor(0.5 * (i.rating - s));
         }
       });
     }
-    this._rating = new Intl.NumberFormat('en', {
+    this._rating = new Intl.NumberFormat("en", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(Math.min(Math.max(n / r, 0), 99));
@@ -5967,12 +6621,300 @@ const sbcViewOverride = () => {
   UTSBCSquadDetailPanelView.prototype.init = function (...args) {
     const response = squadDetailPanelView.call(this, ...args);
 
-    const button = createButton('idSolveSbc', 'Solve SBC', async function () {
+    const button = createButton("idSolveSbc", "Solve SBC", async function () {
       const { _challenge } = getControllerInstance();
 
       solveSBC(_challenge.setId, _challenge.id);
     });
     insertAfter(button, this._btnExchange.__root);
+
+    const sleep = (ms) =>
+      new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+    const runCountdown = async (ms, target, labelPrefix = "Next buy in") => {
+      let remaining = Math.max(0, ms);
+      while (remaining > 0) {
+        if (target) {
+          const seconds = Math.ceil(remaining / 1000);
+          target.textContent = `${labelPrefix} ${seconds}s`;
+        }
+        const step = Math.min(1000, remaining);
+        await sleep(step);
+        remaining -= step;
+      }
+      if (target) {
+        target.textContent = "";
+      }
+    };
+    const formatPlayerName = (item) =>
+      item?._staticData?.name ||
+      item?._staticData?.commonName ||
+      item?._staticData?.lastName ||
+      item?.name ||
+      item?.definitionId ||
+      "Unknown";
+
+    const getCurrentConceptItems = () => {
+      const controller = getControllerInstance();
+      const { _squad } = controller || {};
+      const squadPlayers = Array.isArray(_squad?._players)
+        ? _squad._players
+        : [];
+      return squadPlayers
+        .map((slot) => slot?._item)
+        .filter((item) => item && item.concept);
+    };
+
+    const quickBuySquadButton = createButton(
+      "idQuickBuySquad",
+      "Quick Buy Squad",
+      async () => {
+        if (quickBuySquadButton.dataset.running === "true") {
+          return;
+        }
+        quickBuySquadButton.dataset.running = "true";
+        quickBuySquadButton.setAttribute("disabled", "disabled");
+        quickBuySquadButton.classList.add("disabled");
+
+        const {
+          container: statusContainer,
+          content: statusContent,
+          footer: timerFooter,
+        } = ensureStatusContainer();
+        statusContainer.style.display = "flex";
+        statusContent.innerHTML = "";
+        timerFooter.textContent = "";
+
+        const titleBlock = document.createElement("div");
+        titleBlock.textContent = "Quick Buy Squad";
+        titleBlock.style.fontWeight = "bold";
+        titleBlock.style.marginBottom = "0.35rem";
+        statusContent.appendChild(titleBlock);
+
+        const conceptItems = getCurrentConceptItems();
+     
+
+        if (!conceptItems.length) {
+          showNotification(
+            "No concept players found in the current squad.",
+            UINotificationType.NEGATIVE
+          );
+          delete quickBuySquadButton.dataset.running;
+          quickBuySquadButton.removeAttribute("disabled");
+          quickBuySquadButton.classList.remove("disabled");
+          return;
+        }
+
+        let successCount = 0;
+
+        try {
+          const headerRow = document.createElement("div");
+          headerRow.className = "quick-buy-squad-row quick-buy-squad-header";
+          headerRow.style.display = "grid";
+          headerRow.style.gridTemplateColumns = "2fr 1fr 1fr";
+          headerRow.style.gap = "0.5rem";
+          headerRow.style.fontWeight = "bold";
+          headerRow.style.borderBottom = "1px solid rgba(255, 255, 255, 0.1)";
+
+          const headerLabels = ["Player", "Expected", "Status"];
+          headerLabels.forEach((label) => {
+            const span = document.createElement("span");
+            span.textContent = label;
+            headerRow.appendChild(span);
+          });
+          statusContent.appendChild(headerRow);
+
+          const rowData = conceptItems.map((conceptItem) => {
+            const name = formatPlayerName(conceptItem);
+            const rawExpectedPrice = getPrice(conceptItem);
+            const expectedPrice =
+              typeof rawExpectedPrice === "number" &&
+              Number.isFinite(rawExpectedPrice) &&
+              rawExpectedPrice > 0
+                ? rawExpectedPrice
+                : NaN;
+            const expectedLabel = Number.isFinite(expectedPrice)
+              ? expectedPrice.toLocaleString()
+              : "N/A";
+
+            const row = document.createElement("div");
+            row.className = "quick-buy-squad-row";
+            row.style.display = "grid";
+            row.style.gridTemplateColumns = "2fr 1fr 1fr";
+            row.style.gap = "0.5rem";
+            row.style.alignItems = "center";
+
+            const nameSpan = document.createElement("span");
+            nameSpan.textContent = name;
+
+            const priceSpan = document.createElement("span");
+            priceSpan.textContent = expectedLabel;
+
+            const statusSpan = document.createElement("span");
+            statusSpan.textContent = "Queued";
+
+            row.append(nameSpan, priceSpan, statusSpan);
+            statusContent.appendChild(row);
+
+            return {
+              conceptItem,
+              expectedPrice,
+              expectedLabel,
+              statusSpan,
+            };
+          });
+
+          statusContent.scrollTop = statusContent.scrollHeight;
+
+          for (let i = 0; i < rowData.length; i++) {
+            const { conceptItem, expectedPrice, expectedLabel, statusSpan } =
+              rowData[i];
+
+            statusSpan.textContent = "Buying...";
+            statusSpan.style.color = "";
+
+            const result = await tryQuickBuy(
+              { quickBuyButton: { __root: quickBuySquadButton } },
+              conceptItem,
+              { suppressNotifications: true }
+            );
+
+            if (result?.success) {
+              successCount += 1;
+              const label = result?.priceLabel || expectedLabel;
+              statusSpan.textContent = label ? `Success @ ${label}` : "Success";
+              statusSpan.style.color = "#07f468";
+            } else {
+              let reasonLabel = "Failed";
+              if (result?.reason === "noCachedPrice") {
+                reasonLabel = "Missing cached price";
+              } else if (result?.reason === "noListing") {
+                reasonLabel = "No active listing";
+              } else if (result?.reason === "priceAboveBaseline") {
+                const baselineLabel =
+                  result?.baselineLabel ||
+                  (Number.isFinite(result?.baseline)
+                    ? result.baseline.toLocaleString()
+                    : "unknown");
+                const priceLabel = result?.priceLabel || expectedLabel;
+                reasonLabel =
+                  priceLabel && baselineLabel
+                    ? `Skipped ${priceLabel} > ${baselineLabel}`
+                    : "Skipped (price too high)";
+              } else if (result?.reason === "bidFailed") {
+                reasonLabel = "Bid rejected";
+              } else if (result?.reason === "error") {
+                reasonLabel = "Error";
+              }
+              statusSpan.textContent = reasonLabel;
+              statusSpan.style.color = "#f40727";
+            }
+
+            if (i < rowData.length - 1) {
+              const delay = 2000 + Math.floor(Math.random() * 3000);
+              await runCountdown(delay, timerFooter, "Next buy in");
+            } else {
+              timerFooter.textContent = "";
+            }
+          }
+
+          const total = conceptItems.length;
+          const summaryMessage = `Quick buy squad complete: ${successCount}/${total} players purchased`;
+          const summaryType =
+            successCount === total
+              ? UINotificationType.POSITIVE
+              : UINotificationType.NEGATIVE;
+          showNotification(summaryMessage, summaryType);
+        } catch (error) {
+          console.error("Quick buy squad error", error);
+          showNotification(
+            "Quick buy squad encountered an error",
+            UINotificationType.NEGATIVE
+          );
+        } finally {
+          await runCountdown(5000, timerFooter, "Closing in");
+          statusContainer.style.display = "none";
+          statusContent.innerHTML = "";
+          timerFooter.textContent = "";
+          delete quickBuySquadButton.dataset.running;
+          quickBuySquadButton.removeAttribute("disabled");
+          quickBuySquadButton.classList.remove("disabled");
+        }
+      }
+    );
+    
+
+     
+   
+    insertAfter(quickBuySquadButton, button);
+    
+
+    const ensureStatusContainer = () => {
+      const statusContainerId = "quick-buy-squad-status";
+      let container = document.getElementById(statusContainerId);
+      if (!container) {
+        container = document.createElement("div");
+        container.id = statusContainerId;
+        container.className = "quick-buy-squad-status";
+        container.style.padding = "0.75rem";
+        container.style.background = "rgba(17, 24, 39, 0.9)";
+        container.style.border = "1px solid rgba(255, 255, 255, 0.15)";
+        container.style.borderRadius = "10px";
+        container.style.display = "none";
+        container.style.flexDirection = "column";
+        container.style.gap = "0.35rem";
+        container.style.maxHeight = "90vh";
+        container.style.overflow = "hidden";
+        container.style.position = "fixed";
+        container.style.bottom = "1.5rem";
+        container.style.right = "2rem";
+        container.style.zIndex = "9999";
+        container.style.minWidth = "320px";
+        container.style.boxShadow = "0 12px 24px rgba(0, 0, 0, 0.45)";
+        container.style.boxSizing = "border-box";
+
+        const closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.textContent = "×";
+        closeButton.setAttribute("aria-label", "Close quick buy status");
+        closeButton.style.position = "absolute";
+        closeButton.style.top = "0.35rem";
+        closeButton.style.right = "0.5rem";
+        closeButton.style.background = "transparent";
+        closeButton.style.border = "none";
+        closeButton.style.color = "#ffffff";
+        closeButton.style.fontSize = "1.2rem";
+        closeButton.style.cursor = "pointer";
+        closeButton.style.lineHeight = "1";
+        closeButton.style.padding = "0";
+        closeButton.addEventListener("click", () => {
+          container.style.display = "none";
+        });
+
+        const content = document.createElement("div");
+        content.className = "quick-buy-squad-content";
+        content.style.display = "flex";
+        content.style.flexDirection = "column";
+        content.style.gap = "0.35rem";
+        content.style.overflowY = "auto";
+        content.style.maxHeight = "calc(90vh - 2.5rem)";
+
+        const footer = document.createElement("div");
+        footer.className = "quick-buy-squad-footer";
+        footer.style.marginTop = "0.5rem";
+        footer.style.fontSize = "0.85rem";
+        footer.style.opacity = "0.85";
+        footer.style.minHeight = "1.2rem";
+        footer.style.textAlign = "center";
+
+        container.append(closeButton, content, footer);
+        document.body.appendChild(container);
+      }
+
+      const content = container.querySelector(".quick-buy-squad-content");
+      const footer = container.querySelector(".quick-buy-squad-footer");
+      return { container, content, footer };
+    };
+
     return response;
   };
 };
@@ -5982,22 +6924,115 @@ const sbcButtonOverride = () => {
     UTSBCSetTileView_render.call(this);
     if (this.data) {
       insertBefore(
-        createElem('span', null, `COMPLETED: ${this.data.timesCompleted}. `),
+        createElem("span", null, `COMPLETED: ${this.data.timesCompleted}. `),
         this.__rewardsHeader
       );
     }
   };
 };
 
-const lockedLabel = 'SBC Unlock';
-const unlockedLabel = 'SBC Lock';
-const fixedLabel = 'SBC Use actual prices';
-const unfixedLabel = 'SBC Set Price to Zero';
+const tryQuickBuy = async (context = {}, item, options = {}) => {
+  const { suppressNotifications = false } = options;
+
+  const notify = (message, type) => {
+    if (!suppressNotifications) {
+      showNotification(message, type);
+    }
+  };
+
+  const buttonRoot = context?.quickBuyButton
+    ? context.quickBuyButton.__root || context.quickBuyButton
+    : null;
+
+  try {
+    const baselinePrice = Number(getPrice(item));
+    if (!Number.isFinite(baselinePrice) || baselinePrice <= 0) {
+      notify("No cached price available", UINotificationType.NEGATIVE);
+      return { success: false, reason: "noCachedPrice" };
+    }
+
+    const listing = await fetchLivePlayerPrice(item);
+    const listingPrice = Number(listing?._auction?.buyNowPrice);
+    if (!Number.isFinite(listingPrice) || listingPrice <= 0) {
+      notify("No active listing found", UINotificationType.NEGATIVE);
+      return { success: false, reason: "noListing" };
+    }
+
+    const lowestPrice = listingPrice;
+    const priceLabel = lowestPrice.toLocaleString();
+    if (buttonRoot?.setAttribute) {
+      buttonRoot.setAttribute("title", `Quick Buy @${priceLabel}`);
+    }
+
+    if (lowestPrice > baselinePrice) {
+      notify(
+        `Lowest listing (${priceLabel}) exceeds expected price (${baselinePrice.toLocaleString()})`,
+        UINotificationType.NEGATIVE
+      );
+      return {
+        success: false,
+        reason: "priceAboveBaseline",
+        price: lowestPrice,
+        priceLabel,
+        baseline: baselinePrice,
+        baselineLabel: baselinePrice.toLocaleString(),
+      };
+    }
+
+    const bidAttempt = services.Item.bid(listing, lowestPrice);
+    if (bidAttempt && typeof bidAttempt.observe === "function") {
+      return await new Promise((resolve) => {
+        bidAttempt.observe(context, async (_obs, response) => {
+          const success = response?.success !== false;
+          if (success) {
+            try {
+              await dealWithUnassigned();
+            } catch (err) {
+              console.error("dealWithUnassigned error", err);
+            }
+          }
+          notify(
+            success ? `Quick buy success at ${priceLabel}` : "Quick buy failed",
+            success ? UINotificationType.POSITIVE : UINotificationType.NEGATIVE
+          );
+          resolve({
+            success,
+            reason: success ? "success" : "bidFailed",
+            price: lowestPrice,
+            priceLabel,
+          });
+        });
+      });
+    }
+
+    notify(`Quick buy attempted at ${priceLabel}`, UINotificationType.POSITIVE);
+    return {
+      success: true,
+      reason: "attempted",
+      price: lowestPrice,
+      priceLabel,
+    };
+  } catch (error) {
+    console.error("Quick buy error", error);
+    notify("Quick buy encountered an error", UINotificationType.NEGATIVE);
+    return { success: false, reason: "error", error };
+  }
+};
+
+const lockedLabel = "SBC Unlock";
+const unlockedLabel = "SBC Lock";
+const fixedLabel = "SBC Use actual prices";
+const unfixedLabel = "SBC Set Price to Zero";
 
 const playerItemOverride = () => {
   UTItemEntity.prototype.init = UTItemEntity.prototype.update;
   UTItemEntity.prototype.isDuplicateLoanPlayer = function () {
-    return this.isValid() && this.isPlayer() && this.duplicateId > 0 && this.isLimitedUse();
+    return (
+      this.isValid() &&
+      this.isPlayer() &&
+      this.duplicateId > 0 &&
+      this.isLimitedUse()
+    );
   };
   UTItemEntity.prototype.isDuplicate = function () {
     return this.isValid() && this.isPlayer() && this.duplicateId > 0;
@@ -6008,16 +7043,33 @@ const playerItemOverride = () => {
       return e.isValid() && e.isPlayer() && e.duplicateId > 0;
     };
     e.isDuplicateLoanPlayer = function () {
-      return e.isValid() && e.isPlayer() && e.duplicateId > 0 && e.isLimitedUse();
+      return (
+        e.isValid() && e.isPlayer() && e.duplicateId > 0 && e.isLimitedUse()
+      );
     };
     const result = UTDefaultSetItem.call(this, e, t);
+
+    // Offer a quick buy helper before exposing the manual refresh button.
+    if (!this.quickBuyButton && e.isPlayer() && e.concept) {
+      const quickButton = new UTGroupButtonControl();
+      quickButton.init();
+      quickButton.setInteractionState(true);
+      quickButton.setText("Quick Buy");
+      insertAfter(quickButton, this._btnBio.__root);
+      quickButton.addTarget(this, () => tryQuickBuy(this, e), EventType.TAP);
+      this.quickBuyButton = quickButton;
+    }
+
     // Add refresh price button
     if (!this.refreshPriceButton && e.isPlayer()) {
       const refreshButton = new UTGroupButtonControl();
       refreshButton.init();
       refreshButton.setInteractionState(true);
-      refreshButton.setText('Refresh Price');
-      insertAfter(refreshButton, this._btnBio.__root);
+      refreshButton.setText("Refresh Price");
+      insertAfter(
+        refreshButton,
+        this.quickBuyButton ? this.quickBuyButton.__root : this._btnBio.__root
+      );
       refreshButton.addTarget(
         this,
         async () => {
@@ -6027,8 +7079,21 @@ const playerItemOverride = () => {
             delete PriceItems[e.definitionId];
             updateCBRMinPrice();
           }
-          await fetchPlayerPrices([e]);
-          showNotification(`Price refreshed`, UINotificationType.POSITIVE);
+          const listing = await fetchLivePlayerPrice(e);
+          const priceItems = getPriceItems();
+          const priceRecord = priceItems[e.definitionId];
+          const priceValue = Number.isFinite(listing?._auction?.buyNowPrice)
+            ? listing._auction.buyNowPrice
+            : priceRecord?.price;
+          const priceLabel = priceRecord?.isExtinct
+            ? "EXTINCT"
+            : Number.isFinite(priceValue)
+            ? priceValue.toLocaleString()
+            : "N/A";
+          showNotification(
+            `Price refreshed: ${priceLabel}`,
+            UINotificationType.POSITIVE
+          );
           getControllerInstance().applyDataChange();
           getCurrentViewController()
             .getCurrentController()
@@ -6112,28 +7177,61 @@ const playerItemOverride = () => {
       return e.isValid() && e.isPlayer() && e.duplicateId > 0;
     };
     e.isDuplicateLoanPlayer = function () {
-      return e.isValid() && e.isPlayer() && e.duplicateId > 0 && e.isLimitedUse();
+      return (
+        e.isValid() && e.isPlayer() && e.duplicateId > 0 && e.isLimitedUse()
+      );
     };
     const result = UTDefaultAction.call(this, e, t, i, o, n, r, s);
+    if (!this.quickBuyButton && e.isPlayer() && e.concept) {
+      const quickButton = new UTGroupButtonControl();
+      quickButton.init();
+      quickButton.setInteractionState(true);
+      quickButton.setText("Quick Buy");
+      insertAfter(quickButton, this._bioButton.__root);
+      quickButton.addTarget(this, () => tryQuickBuy(this, e), EventType.TAP);
+      this.quickBuyButton = quickButton;
+    }
     // Add refresh price button in default action panel
     if (!this.refreshPriceButton && e.isPlayer()) {
       const refreshButton = new UTGroupButtonControl();
       refreshButton.init();
       refreshButton.setInteractionState(true);
-      refreshButton.setText('Refresh Price');
-      insertAfter(refreshButton, this._bioButton.__root);
+      refreshButton.setText("Refresh Price");
+      insertAfter(
+        refreshButton,
+        this.quickBuyButton
+          ? this.quickBuyButton.__root
+          : this._bioButton.__root
+      );
       refreshButton.addTarget(
         this,
         async () => {
-          await fetchPlayerPrices([e]);
-          showNotification(`Price refreshed`, UINotificationType.POSITIVE);
+          const listing = await fetchLivePlayerPrice(e);
+          const priceItems = getPriceItems();
+          const priceRecord = priceItems[e.definitionId];
+          const priceValue = Number.isFinite(listing?._auction?.buyNowPrice)
+            ? listing._auction.buyNowPrice
+            : priceRecord?.price;
+          const priceLabel = priceRecord?.isExtinct
+            ? "EXTINCT"
+            : Number.isFinite(priceValue)
+            ? priceValue.toLocaleString()
+            : "N/A";
+          showNotification(
+            `Price refreshed: ${priceLabel}`,
+            UINotificationType.POSITIVE
+          );
           try {
-            getCurrentViewController().getCurrentController().leftController.renderView();
+            getCurrentViewController()
+              .getCurrentController()
+              .leftController.renderView();
             getCurrentViewController()
               .getCurrentController()
               .rightController.currentController.renderView();
           } catch (error) {
-            getCurrentViewController().getCurrentController().leftController.refreshList();
+            getCurrentViewController()
+              .getCurrentController()
+              .leftController.refreshList();
           }
         },
         EventType.TAP
@@ -6144,20 +7242,29 @@ const playerItemOverride = () => {
       const refreshButton = new UTGroupButtonControl();
       refreshButton.init();
       refreshButton.setInteractionState(true);
-      refreshButton.setText('Refresh Price');
-      insertAfter(refreshButton, this._bioButton.__root);
+      refreshButton.setText("Refresh Price");
+      insertAfter(
+        refreshButton,
+        this.quickBuyButton
+          ? this.quickBuyButton.__root
+          : this._bioButton.__root
+      );
       refreshButton.addTarget(
         this,
         async () => {
           await fetchPlayerPrices([e]);
           showNotification(`Price refreshed`, UINotificationType.POSITIVE);
           try {
-            getCurrentViewController().getCurrentController().leftController.renderView();
+            getCurrentViewController()
+              .getCurrentController()
+              .leftController.renderView();
             getCurrentViewController()
               .getCurrentController()
               .rightController.currentController.renderView();
           } catch (error) {
-            getCurrentViewController().getCurrentController().leftController.refreshList();
+            getCurrentViewController()
+              .getCurrentController()
+              .leftController.refreshList();
           }
         },
         EventType.TAP
@@ -6190,12 +7297,16 @@ const playerItemOverride = () => {
               showNotification(`Item locked`, UINotificationType.POSITIVE);
             }
             try {
-              getCurrentViewController().getCurrentController().leftController.renderView();
+              getCurrentViewController()
+                .getCurrentController()
+                .leftController.renderView();
               getCurrentViewController()
                 .getCurrentController()
                 .rightController.currentController.renderView();
             } catch (error) {
-              getCurrentViewController().getCurrentController().leftController.refreshList();
+              getCurrentViewController()
+                .getCurrentController()
+                .leftController.refreshList();
             }
           },
           EventType.TAP
@@ -6224,12 +7335,16 @@ const playerItemOverride = () => {
               showNotification(`Must Use Set`, UINotificationType.POSITIVE);
             }
             try {
-              getCurrentViewController().getCurrentController().leftController.renderView();
+              getCurrentViewController()
+                .getCurrentController()
+                .leftController.renderView();
               getCurrentViewController()
                 .getCurrentController()
                 .rightController.currentController.renderView();
             } catch (error) {
-              getCurrentViewController().getCurrentController().leftController.refreshList();
+              getCurrentViewController()
+                .getCurrentController()
+                .leftController.refreshList();
             }
           },
           EventType.TAP
@@ -6246,8 +7361,11 @@ const playerItemOverride = () => {
     const result = UTPlayerItemView_renderItem.call(this, item, t);
     const duplicateIds = await fetchDuplicateIds();
     let storage = await getStoragePlayers();
-    if (duplicateIds.includes(item.id) || storage.map((m) => m.id).includes(item.id)) {
-      this.__root.style.opacity = '0.4';
+    if (
+      duplicateIds.includes(item.id) ||
+      storage.map((m) => m.id).includes(item.id)
+    ) {
+      this.__root.style.opacity = "0.4";
     }
     let priceElement = await getPriceDiv(item);
     // Add the price element to the player item
@@ -6256,44 +7374,47 @@ const playerItemOverride = () => {
     }
 
     if (isItemLocked(item)) {
-      addClass(this, 'locked');
+      addClass(this, "locked");
     } else {
-      removeClass(this, 'locked');
+      removeClass(this, "locked");
     }
     if (isItemFixed(item)) {
-      addClass(this, 'fixed');
+      addClass(this, "fixed");
     } else {
-      removeClass(this, 'fixed');
+      removeClass(this, "fixed");
     }
     return result;
   };
 };
 const getPriceDiv = async (item) => {
-  if (getSettings(0, 0, 'showPrices') && item.definitionId > 0) {
+  if (getSettings(0, 0, "showPrices") && item.definitionId > 0) {
     let PriceItems = getPriceItems();
     if (!PriceItems[item.definitionId]) {
       return null;
     }
     let price = getPrice(item) * (isItemFixed(item) ? 0 : 1);
-    if (!(item.definitionId in PriceItems) || !('isSbc' in PriceItems[item.definitionId])) {
+    if (
+      !(item.definitionId in PriceItems) ||
+      !("isSbc" in PriceItems[item.definitionId])
+    ) {
     }
 
     let symbol = PriceItems[item.definitionId]?.isSbc
-      ? 'currency-sbc'
+      ? "currency-sbc"
       : PriceItems[item.definitionId]?.isObjective
-      ? 'currency-objective'
-      : 'currency-coins';
-    const priceElement = document.createElement('div');
+      ? "currency-objective"
+      : "currency-coins";
+    const priceElement = document.createElement("div");
     priceElement.className = `${symbol} item-price`;
 
     if (isFodder(item)) {
-      priceElement.style.border = '1px solid red'; // Add red border for fodder players
-      priceElement.style.color = '#ff0000'; // Change text color to red as well
+      priceElement.style.border = "1px solid red"; // Add red border for fodder players
+      priceElement.style.color = "#ff0000"; // Change text color to red as well
     }
     priceElement.textContent = PriceItems[item.definitionId]?.isExtinct
-      ? 'EXTINCT'
+      ? "EXTINCT"
       : PriceItems[item.definitionId]?.isObjective
-      ? ''
+      ? ""
       : price.toLocaleString();
 
     return priceElement;
@@ -6301,14 +7422,14 @@ const getPriceDiv = async (item) => {
   return null;
 };
 let priceCacheMinutes = 60;
-let PRICE_ITEMS_KEY = 'futggPrices';
+let PRICE_ITEMS_KEY = "futggPrices";
 let cachedPriceItems;
 let isPriceOld = function (item) {
   let PriceItems = getPriceItems();
   if (!(item?.definitionId in PriceItems)) {
     return true;
   }
-  let cacheMin = getSettings(0, 0, 'priceCacheMinutes');
+  let cacheMin = getSettings(0, 0, "priceCacheMinutes");
   let timeStamp = new Date(PriceItems[item.definitionId]?.timeStamp);
 
   let now = new Date(Date.now());
@@ -6332,7 +7453,7 @@ let getPrice = function (item) {
   return PriceItems[item.definitionId]?.price;
 
   //console.log(PriceItems[item.definitionId])
-  let cacheMin = item.concept ? 1440 : getSettings(0, 0, 'priceCacheMinutes');
+  let cacheMin = item.concept ? 1440 : getSettings(0, 0, "priceCacheMinutes");
   let timeStamp = new Date(PriceItems[item.definitionId]?.timeStamp);
 
   let now = new Date(Date.now());
@@ -6359,9 +7480,9 @@ const updateCBRMinPrice = () => {
 
   for (const key of Object.keys(PriceItems)) {
     // Skip rating reference entries
-    if (key.endsWith('_CBR')) continue;
+    if (key.endsWith("_CBR")) continue;
     const entry = PriceItems[key];
-    if (!entry || typeof entry.rating !== 'number') continue;
+    if (!entry || typeof entry.rating !== "number") continue;
     if (!entry.price || entry.isExtinct) continue;
 
     const currentMin = minByRating.get(entry.rating) ?? Infinity;
@@ -6394,12 +7515,12 @@ let PriceItem = function (items) {
   cachedPriceItems = getPriceItems();
   let timeStamp = new Date(Date.now());
   for (let key in items) {
-    items[key]['timeStamp'] = timeStamp;
-    cachedPriceItems[items[key]['eaId']] = items[key];
+    items[key]["timeStamp"] = timeStamp;
+    cachedPriceItems[items[key]["eaId"]] = items[key];
 
     // Check if this is a rating reference item (CBR)
-    if (items[key]['eaId'] && items[key]['eaId'].toString().includes('_CBR')) {
-      const rating = parseInt(items[key]['eaId'].toString().split('_')[0]);
+    if (items[key]["eaId"] && items[key]["eaId"].toString().includes("_CBR")) {
+      const rating = parseInt(items[key]["eaId"].toString().split("_")[0]);
       let cheapestPrice = items[key].price;
 
       // Look through all cached items to find cheaper options with same rating
@@ -6407,13 +7528,13 @@ let PriceItem = function (items) {
         const cachedItem = cachedPriceItems[cachedKey];
         if (
           cachedItem &&
-          !cachedKey.includes('_CBR') &&
+          !cachedKey.includes("_CBR") &&
           cachedItem.rating === rating &&
           cachedItem.price &&
           cachedItem.price < cheapestPrice &&
           !cachedItem.isExtinct
         ) {
-          console.log('Cheaper item found', items[key], cachedItem);
+          console.log("Cheaper item found", items[key], cachedItem);
           cheapestPrice = cachedItem.price;
         }
       }
@@ -6432,24 +7553,24 @@ let getPriceItems = function () {
   cachedPriceItems = {};
   function getFromIndexedDB() {
     return new Promise((resolve) => {
-      const dbName = 'futSBCDatabase';
-      const storeName = 'priceItems';
+      const dbName = "futSBCDatabase";
+      const storeName = "priceItems";
       const request = indexedDB.open(dbName, 1);
 
       request.onupgradeneeded = function (event) {
         const db = event.target.result;
         if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, { keyPath: 'id' });
+          db.createObjectStore(storeName, { keyPath: "id" });
         }
       };
 
       request.onsuccess = function (event) {
         const db = event.target.result;
-        const transaction = db.transaction([storeName], 'readonly');
+        const transaction = db.transaction([storeName], "readonly");
         const store = transaction.objectStore(storeName);
 
         // Get the single entry that contains all price items
-        const getAllRequest = store.get('allPriceItems');
+        const getAllRequest = store.get("allPriceItems");
 
         getAllRequest.onsuccess = function (event) {
           if (event.target.result && event.target.result.data) {
@@ -6460,13 +7581,13 @@ let getPriceItems = function () {
         };
 
         transaction.onerror = function () {
-          console.error('Error reading from IndexedDB');
+          console.error("Error reading from IndexedDB");
           resolve(null);
         };
       };
 
       request.onerror = function (event) {
-        console.error('Error opening IndexedDB:', event.target.error);
+        console.error("Error opening IndexedDB:", event.target.error);
         resolve(null);
       };
     });
@@ -6480,12 +7601,15 @@ let getPriceItems = function () {
 
 let isFodder = function (item) {
   let PriceItems = getPriceItems();
-  if (PriceItems[item.definitionId]?.isExtinct || PriceItems[item.definitionId]?.isObjective) {
+  if (
+    PriceItems[item.definitionId]?.isExtinct ||
+    PriceItems[item.definitionId]?.isObjective
+  ) {
     return false;
   }
   let price = getPrice(item);
   let fodderPrice = Math.max(
-    getPrice({ definitionId: item.rating + '_CBR' }),
+    getPrice({ definitionId: item.rating + "_CBR" }),
     item?._itemPriceLimits?.minimum || 0
   );
   // console.table(item.rating,price,fodderPrice)
@@ -6497,27 +7621,27 @@ let isFodder = function (item) {
 
 let savePriceItems = function () {
   function saveToIndexedDB() {
-    const dbName = 'futSBCDatabase';
-    const storeName = 'priceItems';
+    const dbName = "futSBCDatabase";
+    const storeName = "priceItems";
     const request = indexedDB.open(dbName, 1);
 
     request.onupgradeneeded = function (event) {
       const db = event.target.result;
       if (!db.objectStoreNames.contains(storeName)) {
-        db.createObjectStore(storeName, { keyPath: 'id' });
+        db.createObjectStore(storeName, { keyPath: "id" });
       }
     };
 
     request.onsuccess = function (event) {
       const db = event.target.result;
-      const transaction = db.transaction([storeName], 'readwrite');
+      const transaction = db.transaction([storeName], "readwrite");
       const store = transaction.objectStore(storeName);
 
       // First clear existing data
       store.clear().onsuccess = function () {
         // Store the entire price items collection in a single entry
         const allItems = {
-          id: 'allPriceItems',
+          id: "allPriceItems",
           data: cachedPriceItems,
         };
 
@@ -6525,18 +7649,18 @@ let savePriceItems = function () {
       };
 
       transaction.oncomplete = function () {
-        console.log('Price items saved to IndexedDB');
+        console.log("Price items saved to IndexedDB");
       };
 
       transaction.onerror = function (error) {
-        console.error('Error saving to IndexedDB:', error);
+        console.error("Error saving to IndexedDB:", error);
         // Fallback to localStorage if IndexedDB fails
         localStorage.setItem(PRICE_ITEMS_KEY, JSON.stringify(cachedPriceItems));
       };
     };
 
     request.onerror = function (event) {
-      console.error('IndexedDB error:', event.target.error);
+      console.error("IndexedDB error:", event.target.error);
       // Fallback to localStorage if IndexedDB cannot be opened
       localStorage.setItem(PRICE_ITEMS_KEY, JSON.stringify(cachedPriceItems));
     };
@@ -6549,7 +7673,7 @@ let savePriceItems = function () {
 function makeGetRequest(url) {
   return new Promise((resolve, reject) => {
     GM_xmlhttpRequest({
-      method: 'GET',
+      method: "GET",
       url: url,
       onload: function (response) {
         resolve(response.responseText);
@@ -6564,7 +7688,7 @@ function makeGetRequest(url) {
 function makePostRequest(url, data) {
   return new Promise((resolve, reject) => {
     fetch(url, {
-      method: 'POST',
+      method: "POST",
       body: data,
     })
       .then((response) => {
@@ -6579,10 +7703,13 @@ function makePostRequest(url, data) {
       })
       .catch((error) => {
         console.log(error);
-        if (getSettings(0, 0, 'playSounds')) {
+        if (getSettings(0, 0, "playSounds")) {
           wompSound.play();
         }
-        showNotification(`Please check backend API is running`, UINotificationType.NEGATIVE);
+        showNotification(
+          `Please check backend API is running`,
+          UINotificationType.NEGATIVE
+        );
         clearInterval(logPollInterval);
         clearInterval(countDownInterval);
         hideLoader();
@@ -6605,7 +7732,7 @@ const fetchLowestPriceByRating = async () => {
   let timeStamp = new Date(Date.now());
 
   for (let i = 45; i <= 81; i++) {
-    PriceItems[i + '_CBR'] = {
+    PriceItems[i + "_CBR"] = {
       price: i < 75 ? 200 : 400,
       timestamp: timeStamp,
       rating: i,
@@ -6615,7 +7742,7 @@ const fetchLowestPriceByRating = async () => {
   let highestRating = await getConceptPlayers(1);
   updateCBRMinPrice();
   for (let i = 81; i <= Math.max(...highestRating.map((m) => m.rating)); i++) {
-    if (isPriceOld({ definitionId: i + '_CBR' })) {
+    if (isPriceOld({ definitionId: i + "_CBR" })) {
       await fetchSingleCheapest(i);
     }
     await fetchSingleCheapest(i);
@@ -6623,18 +7750,21 @@ const fetchLowestPriceByRating = async () => {
   updateCBRMinPrice();
 };
 const fetchSingleCheapest = async (rating) => {
-  return //this doesnt work any more since futgg changed their site
+  return; //this doesnt work any more since futgg changed their site
   const futggSingleCheapestByRatingResponse = await makeGetRequest(
     `https://www.fut.gg/players/?overall__gte=${rating}&overall__lte=${rating}&price__gte=100&sorts=current_price&market_players=1`
   );
 
-  const doc = new DOMParser().parseFromString(futggSingleCheapestByRatingResponse, 'text/html');
+  const doc = new DOMParser().parseFromString(
+    futggSingleCheapestByRatingResponse,
+    "text/html"
+  );
 
   try {
     let playerLink = doc
-      .getElementsByClassName('fut-card-container')[0]
-      .href?.split('25-')[1]
-      .replace('/', '');
+      .getElementsByClassName("fut-card-container")[0]
+      .href?.split("25-")[1]
+      .replace("/", "");
 
     const futggResponse = await makeGetRequest(
       `https://www.fut.gg/api/fut/player-prices/25/?ids=${playerLink}`
@@ -6651,24 +7781,448 @@ const fetchSingleCheapest = async (rating) => {
   let PriceItems = getPriceItems();
   let timeStamp = new Date(Date.now());
   for (let key in priceResponse) {
-    priceResponse[key]['timeStamp'] = timeStamp;
-    priceResponse[key]['rating'] = rating;
-    PriceItems[rating + '_CBR'] = priceResponse[key];
+    priceResponse[key]["timeStamp"] = timeStamp;
+    priceResponse[key]["rating"] = rating;
+    PriceItems[rating + "_CBR"] = priceResponse[key];
   }
   cachedPriceItems = PriceItems;
-  console.log(rating, PriceItems[rating + '_CBR']);
+  console.log(rating, PriceItems[rating + "_CBR"]);
 };
+let fetchLivePlayerPrice = async (player) => {
+  if (!player) return null;
+
+  const DEFAULT_TIERS = [
+    { min: 0, inc: 50 },
+    { min: 1000, inc: 100 },
+    { min: 10000, inc: 250 },
+    { min: 50000, inc: 500 },
+    { min: 100000, inc: 1000 },
+    { min: 200000, inc: 2000 },
+    { min: 500000, inc: 5000 },
+    { min: 1000000, inc: 10000 },
+  ];
+
+  const tiers =
+    Array.isArray(UTCurrencyInputControl?.PRICE_TIERS) &&
+    UTCurrencyInputControl.PRICE_TIERS.length
+      ? [...UTCurrencyInputControl.PRICE_TIERS].sort((a, b) => a.min - b.min)
+      : DEFAULT_TIERS;
+
+  const MAX_RESULTS = 21;
+  const MAX_CAP_LIMIT = 15000000;
+  const playerName =
+    player?._staticData?.name ||
+    player?._staticData?.lastName ||
+    player?.name ||
+    player?.definitionId;
+
+  const log = (message, extra = {}) => {
+    console.log("[fetchLivePlayerPrice]", message, {
+      playerId: player?.definitionId,
+      name: playerName,
+      ...extra,
+    });
+  };
+
+  let bestListing = null;
+  let bestPrice = Number.POSITIVE_INFINITY;
+
+  const registerCandidate = (price, item) => {
+    if (!Number.isFinite(price) || !item) {
+      return;
+    }
+    if (price < bestPrice || !bestListing) {
+      bestPrice = price;
+      bestListing = item;
+    }
+  };
+
+  const persistLivePrice = (listing, isExtinct = false) => {
+    const defId = player?.definitionId;
+    if (!defId) return;
+
+    const rating = Number.isFinite(player?.rating)
+      ? player.rating
+      : Number(player?._staticData?.rating ?? 0);
+
+    let normalizedPrice = null;
+    if (!isExtinct) {
+      const listingPrice = Number(listing?._auction?.buyNowPrice);
+      if (Number.isFinite(listingPrice)) {
+        normalizedPrice = Math.max(0, Math.floor(listingPrice));
+      } else if (Number.isFinite(bestPrice)) {
+        normalizedPrice = Math.max(0, Math.floor(bestPrice));
+      }
+    }
+
+    if (!isExtinct && !Number.isFinite(normalizedPrice)) {
+      return;
+    }
+
+    const itemPayload = {
+      [defId]: {
+        eaId: defId,
+        rating,
+        price: isExtinct ? 0 : normalizedPrice,
+        isExtinct: Boolean(isExtinct),
+        name: playerName,
+        source: "liveSearch",
+      },
+    };
+
+    PriceItem(itemPayload);
+    updateCBRMinPrice();
+  };
+
+  const finishSuccess = (reason) => {
+    const price = Number.isFinite(bestPrice)
+      ? bestPrice
+      : Number(bestListing?._auction?.buyNowPrice);
+    const priceLabel = Number.isFinite(price) ? price.toLocaleString() : "N/A";
+    log("price found", { price, reason, listing: bestListing });
+    if (typeof showNotification === "function") {
+      try {
+        showNotification(
+          `${playerName}: ${priceLabel}`,
+          UINotificationType.POSITIVE
+        );
+      } catch (e) {
+        log("failed to show success notification", { error: e });
+      }
+    }
+    persistLivePrice(bestListing, false);
+    return bestListing;
+  };
+
+  const finishExtinct = () => {
+    log("no price found - marking extinct", {});
+    if (typeof showNotification === "function") {
+      try {
+        showNotification(
+          `${playerName} appears to be extinct`,
+          UINotificationType.NEGATIVE
+        );
+      } catch (e) {
+        log("failed to show extinct notification", { error: e });
+      }
+    }
+    persistLivePrice(null, true);
+    return null;
+  };
+
+  const getIncrement = (price) => {
+    let inc = tiers[0]?.inc || 50;
+    for (const tier of tiers) {
+      if (price >= tier.min) {
+        inc = tier.inc;
+      } else {
+        break;
+      }
+    }
+    return inc || 50;
+  };
+
+  const alignDown = (price) => {
+    if (!Number.isFinite(price) || price <= 0) return 0;
+    const inc = getIncrement(price);
+    return Math.max(0, Math.floor(price / inc) * inc);
+  };
+
+  const alignUp = (price) => {
+    if (!Number.isFinite(price) || price <= 0) return 0;
+    const inc = getIncrement(price);
+    return Math.max(0, Math.ceil(price / inc) * inc);
+  };
+
+  const limits = player._itemPriceLimits || {};
+  const MIN_CAP = alignDown(Math.max(0, limits.minimum || 0));
+  const MAX_CAP = Math.min(
+    MAX_CAP_LIMIT,
+    alignUp(Math.max(limits.maximum || MAX_CAP_LIMIT, MIN_CAP || 0))
+  );
+  const ensurePlayerFilter = (criteria) => {
+    const defId = player.definitionId;
+    criteria.defId = [defId];
+    console.log("[fetchLivePlayerPrice] using defId filter", {
+      defId,
+      criteria,
+    });
+    return criteria;
+  };
+
+  const searchViewModel = new UTBucketedItemSearchViewModel();
+
+  const getBaseCriteria = () => {
+    const base = searchViewModel.searchCriteria || {};
+    searchViewModel.searchCriteria = ensurePlayerFilter(base);
+    return searchViewModel.searchCriteria;
+  };
+
+  const buildCriteria = (maxBuy) => {
+    const criteria = getBaseCriteria();
+    if (typeof maxBuy === "number" && Number.isFinite(maxBuy) && maxBuy > 0) {
+      criteria.maxBuy = Math.floor(maxBuy);
+    } else {
+      delete criteria.maxBuy;
+    }
+    return criteria;
+  };
+
+  const stepDown = (price) => {
+    if (!Number.isFinite(price) || price <= 0) return 0;
+    let current = alignDown(price);
+    let guard = 0;
+    while (current > MIN_CAP && guard < 5) {
+      const inc = getIncrement(current);
+      const next = alignDown(Math.max(MIN_CAP, current - inc));
+      if (next !== current) return Math.max(next, MIN_CAP);
+      current = Math.max(MIN_CAP, current - inc);
+      guard += 1;
+    }
+    return MIN_CAP;
+  };
+
+  const stepUp = (price) => {
+    const base = Math.max(0, Number(price) || 0);
+    let current = alignUp(base);
+    let guard = 0;
+    while (guard < 5) {
+      const inc = getIncrement(current || base || 0);
+      const next = alignUp(current + inc);
+      if (next > current) return Math.min(next, MAX_CAP);
+      current = Math.min(current + inc, MAX_CAP);
+      guard += 1;
+    }
+    return Math.min(current, MAX_CAP);
+  };
+
+  const doSearch = async (maxBuy) =>
+    new Promise((resolve) => {
+      services.Item.clearTransferMarketCache();
+      const criteria = buildCriteria(maxBuy);
+
+      services.Item.searchTransferMarket(criteria, 1).observe(
+        undefined,
+        (_s, response) => {
+          const items = Array.isArray(response?.data?.items)
+            ? response.data.items.filter(
+                (item) => item._auction && item._auction.tradeState === "active"
+              )
+            : [];
+          console.log(
+            "[fetchLivePlayerPrice]",
+            response.data.items.map((item) => ({
+              playerId: player?.definitionId,
+              name: playerName,
+              item: item.definitionId,
+              buyNowPrice: item._auction?.buyNowPrice,
+            }))
+          );
+          resolve(items);
+        }
+      );
+    });
+
+  const extractBuy = (item) =>
+    item && item._auction && typeof item._auction.buyNowPrice === "number"
+      ? item._auction.buyNowPrice
+      : Number.POSITIVE_INFINITY;
+
+  const evaluate = async (cap) => {
+    let bounded = cap;
+    if (bounded !== undefined && bounded !== null) {
+      bounded = Math.min(MAX_CAP, Math.max(MIN_CAP, bounded));
+    }
+
+    const rawEntries = await doSearch(bounded);
+    const entries = Array.isArray(rawEntries) ? rawEntries : [];
+    const priceList = [];
+    let minItem = null;
+    let minPrice = Number.POSITIVE_INFINITY;
+    for (const entry of entries) {
+      const price = extractBuy(entry);
+      if (!Number.isFinite(price)) {
+        continue;
+      }
+      priceList.push(price);
+      if (price < minPrice) {
+        minPrice = price;
+        minItem = entry;
+      }
+    }
+    registerCandidate(minPrice, minItem);
+    log("search result", {
+      maxBuy: bounded ?? "unbounded",
+      pricesReturned: priceList.length,
+      priceList,
+    });
+    return {
+      count: priceList.length,
+      min: priceList.length ? minPrice : Number.POSITIVE_INFINITY,
+      item: minItem,
+    };
+  };
+
+  const refineBetween = async (emptyCap, filledCap) => {
+    let low = Math.max(MIN_CAP, emptyCap || MIN_CAP);
+    let high = Math.max(low + getIncrement(filledCap || low), filledCap);
+    high = Math.min(high, MAX_CAP);
+    let guard = 0;
+
+    while (low + getIncrement(high) < high && guard < 40) {
+      const rawMid = Math.floor((low + high) / 2);
+      let mid = alignUp(rawMid);
+      if (mid <= low) mid = alignUp(low + getIncrement(low || high));
+      if (mid >= high) mid = alignDown(high - getIncrement(high));
+      if (mid <= low || mid >= high) break;
+
+      const midEval = await evaluate(mid);
+      guard += 1;
+
+      if (midEval.count === 0) {
+        low = mid;
+      } else {
+        if (midEval.count < MAX_RESULTS) {
+          return Number.isFinite(bestPrice)
+            ? bestPrice
+            : Number.isFinite(midEval.min)
+            ? midEval.min
+            : Number.POSITIVE_INFINITY;
+        }
+        high = mid;
+      }
+    }
+
+    return Number.isFinite(bestPrice) ? bestPrice : Number.POSITIVE_INFINITY;
+  };
+
+  const ensureResults = async (cap) => {
+    let upper = cap !== null ? alignUp(Math.max(cap, MIN_CAP)) : null;
+    let evalResult = await evaluate(upper);
+
+    if (evalResult.count === 0) {
+      let low = upper ?? MIN_CAP;
+      let high = upper ?? Math.max(MIN_CAP, stepUp(MIN_CAP));
+      let guard = 0;
+
+      while (evalResult.count === 0 && guard < 50 && high <= MAX_CAP) {
+        low = high;
+        high = stepUp(high);
+        evalResult = await evaluate(high);
+        guard += 1;
+      }
+
+      if (evalResult.count === 0) {
+        const fallback = await evaluate(undefined);
+        if (!fallback.count) return { cap: null, eval: fallback };
+        if (fallback.count < MAX_RESULTS) return { cap: null, eval: fallback };
+
+        upper = alignUp(fallback.min);
+        evalResult = await evaluate(upper);
+        if (!evalResult.count) {
+          const stepped = stepUp(upper);
+          evalResult = await evaluate(stepped);
+          return { cap: stepped, eval: evalResult };
+        }
+        return { cap: upper, eval: evalResult };
+      }
+
+      return { cap: high, lowerBound: low, eval: evalResult };
+    }
+
+    return { cap: upper, eval: evalResult };
+  };
+
+  const stored = getPrice(player);
+  const startCap =
+    Number.isFinite(stored) && stored > 0
+      ? Math.min(MAX_CAP, Math.max(MIN_CAP, stored))
+      : null;
+
+  log("search start", {
+    storedPrice: stored,
+    startCap,
+    minCap: MIN_CAP,
+    maxCap: MAX_CAP,
+  });
+  let {
+    cap: upperCap,
+    lowerBound,
+    eval: upperEval,
+  } = await ensureResults(startCap);
+
+  if (upperEval.count === 0) {
+    return finishExtinct();
+  }
+
+  if (upperEval.count < MAX_RESULTS) {
+    return finishSuccess("upper-cap");
+  }
+
+  if (!upperCap || !Number.isFinite(upperCap)) {
+    upperCap = alignUp(upperEval.min);
+    upperEval = await evaluate(upperCap);
+    if (upperEval.count === 0) {
+      const stepped = stepUp(upperCap);
+      upperCap = stepped;
+      upperEval = await evaluate(upperCap);
+      if (upperEval.count === 0) return finishExtinct();
+      if (upperEval.count < MAX_RESULTS) return finishSuccess("stepped-upper");
+    }
+    if (upperEval.count < MAX_RESULTS) return finishSuccess("aligned-upper");
+  }
+
+  let best = upperEval.min;
+  let lowerCapValue = lowerBound ?? stepDown(upperCap);
+  let lowerEval = await evaluate(lowerCapValue);
+  let guardDown = 0;
+
+  while (lowerCapValue > MIN_CAP && lowerEval.count > 0 && guardDown < 50) {
+    best = Math.min(best, lowerEval.min);
+    if (lowerEval.count < MAX_RESULTS) {
+      return finishSuccess("downward-window");
+    }
+    upperCap = lowerCapValue;
+    upperEval = lowerEval;
+    lowerCapValue = stepDown(lowerCapValue);
+    lowerEval = await evaluate(lowerCapValue);
+    guardDown += 1;
+  }
+
+  if (lowerEval.count === 0) {
+    const refined = await refineBetween(lowerCapValue, upperCap);
+    if (Number.isFinite(refined)) {
+      return finishSuccess("refined-window");
+    }
+    if (Number.isFinite(best)) {
+      return finishSuccess("refined-fallback");
+    }
+    return finishExtinct();
+  }
+
+  const finalBest = Math.min(best, lowerEval.min);
+  if (Number.isFinite(finalBest)) {
+    return finishSuccess("final");
+  }
+  return finishExtinct();
+};
+
+// expose as global to avoid "declared but its value is never read" warnings
+window.fetchLivePlayerPrice = fetchLivePlayerPrice;
+
 let fetchPlayerPrices = async (players) => {
   // Filter out players that need price updates
-  let idsArray = players.filter((f) => isPriceOld(f) && f?.isPlayer()).map((p) => p.definitionId);
+  let idsArray = players
+    .filter((f) => isPriceOld(f) && f?.isPlayer())
+    .map((p) => p.definitionId);
 
   // If no prices to fetch, return early
   if (idsArray.length === 0) return;
 
   // Create progress bar
-  const progressBarId = 'prices-progress-bar';
-  const containerId = 'prices-progress-container';
-  createProgressBar(progressBarId, containerId, 'Fetching Player Prices');
+  const progressBarId = "prices-progress-bar";
+  const containerId = "prices-progress-container";
+  createProgressBar(progressBarId, containerId, "Fetching Player Prices");
 
   let duplicateIds = await fetchDuplicateIds();
   let totalPrices = idsArray.length;
@@ -6686,10 +8240,12 @@ let fetchPlayerPrices = async (players) => {
       // Add rating and name information to the price response
       for (let key in priceResponse) {
         // Find the matching player in the players array
-        const matchingPlayer = players.find((p) => p.definitionId == priceResponse[key]['eaId']);
+        const matchingPlayer = players.find(
+          (p) => p.definitionId == priceResponse[key]["eaId"]
+        );
 
         priceResponse[key].rating = matchingPlayer.rating;
-        priceResponse[key].name = matchingPlayer._staticData?.name || '';
+        priceResponse[key].name = matchingPlayer._staticData?.name || "";
       }
       PriceItem(priceResponse);
 
@@ -6709,26 +8265,40 @@ let fetchPlayerPrices = async (players) => {
   removeProgressBar(containerId);
 
   if (totalPrices > 0) {
-    showNotification(`Fetched ${totalPrices} player prices`, UINotificationType.POSITIVE);
+    showNotification(
+      `Fetched ${totalPrices} player prices`,
+      UINotificationType.POSITIVE
+    );
   }
 };
-let sound = new Audio('https://raw.githubusercontent.com/Yousuke777/sound/main/kansei.mp3');
-let wompSound = new Audio('https://www.myinstants.com/media/sounds/downer_noise.mp3');
-let nopeSound = new Audio('https://www.myinstants.com/media/sounds/engineer_no01.mp3');
+let sound = new Audio(
+  "https://raw.githubusercontent.com/Yousuke777/sound/main/kansei.mp3"
+);
+let wompSound = new Audio(
+  "https://www.myinstants.com/media/sounds/downer_noise.mp3"
+);
+let nopeSound = new Audio(
+  "https://www.myinstants.com/media/sounds/engineer_no01.mp3"
+);
 const openPick = async (id) => {
   try {
     let pp = await fetchUnassigned();
-    let playerPicks = pp.filter((m) => m.isPlayerPickItem() && m.definitionId === id);
+    let playerPicks = pp.filter(
+      (m) => m.isPlayerPickItem() && m.definitionId === id
+    );
     services.Item.redeem(playerPicks[0]);
     let n = new UTItemDetailsViewController();
-    services.Item.requestPendingPlayerPickItemSelection().observe(n, function (e, t) {
-      e.unobserve(n),
-        t.success && JSUtils.isObject(t.response)
-          ? n.showPlayerPicks(t.response.items, t.response.availablePicks, !0)
-          : NetworkErrorManager.handleStatus(t.status);
-    });
+    services.Item.requestPendingPlayerPickItemSelection().observe(
+      n,
+      function (e, t) {
+        e.unobserve(n),
+          t.success && JSUtils.isObject(t.response)
+            ? n.showPlayerPicks(t.response.items, t.response.availablePicks, !0)
+            : NetworkErrorManager.handleStatus(t.status);
+      }
+    );
   } catch (err) {
-    console.error('Error fetching or filtering:', err);
+    console.error("Error fetching or filtering:", err);
   }
 };
 let openPack = async (pack, repeat = 0, allPacks = false) => {
@@ -6766,10 +8336,13 @@ let openPack = async (pack, repeat = 0, allPacks = false) => {
                 name: item._staticData.name,
                 cardType:
                   (item.isSpecial()
-                    ? ''
+                    ? ""
                     : services.Localization.localize(
-                        'search.cardLevels.cardLevel' + item.getTier()
-                      ) + ' ') + services.Localization.localize('item.raretype' + item.rareflag),
+                        "search.cardLevels.cardLevel" + item.getTier()
+                      ) + " ") +
+                  services.Localization.localize(
+                    "item.raretype" + item.rareflag
+                  ),
                 rating: item.rating,
                 futggPrice: getPrice(item),
                 sbcPrice: getSBCPrice(item),
@@ -6778,7 +8351,7 @@ let openPack = async (pack, repeat = 0, allPacks = false) => {
         );
         if (
           packPlayers.items.filter(function (e) {
-            return e.rating >= getSettings(0, 0, 'animateWalkouts');
+            return e.rating >= getSettings(0, 0, "animateWalkouts");
           }).length > 0
         ) {
           createSbc = false;
@@ -6821,8 +8394,8 @@ let showPack = async (pack, packPlayers) => {
         (!o || o.discardValue < e.discardValue) && (o = e);
       });
 
-    if (o && o.rating >= getSettings(0, 0, 'animateWalkouts')) {
-      if (getSettings(0, 0, 'playSounds')) {
+    if (o && o.rating >= getSettings(0, 0, "animateWalkouts")) {
+      if (getSettings(0, 0, "playSounds")) {
         sound.play();
       }
       var a = new UTPackAnimationViewController();
@@ -6835,7 +8408,7 @@ let showPack = async (pack, packPlayers) => {
               repositories.Store.setDirty();
           }.bind(c)
         ),
-        (a.modalDisplayStyle = 'fullscreen'),
+        (a.modalDisplayStyle = "fullscreen"),
         c.presentViewController(a, !0);
     }
 
@@ -6857,7 +8430,7 @@ const packOverRide = async () => {
     let i = services.Localization;
 
     services.Notification.queue([
-      'Opening Pack:  ' + i.localize(packToOpen.packName),
+      "Opening Pack:  " + i.localize(packToOpen.packName),
       UINotificationType.POSITIVE,
     ]);
     if (packs.packs.filter((f) => f.id == item).length > 0) {
@@ -6866,16 +8439,18 @@ const packOverRide = async () => {
       } else {
         let e = args[1];
         let m =
-          e === 'UTStorePackDetailsView.Event.BUY_POINTS' ||
-          e === 'UTStoreBundleDetailsView.Event.BUY_POINTS' ||
-          e === 'UTStoreRevealModalListView.Event.POINTS_PURCHASE'
+          e === "UTStorePackDetailsView.Event.BUY_POINTS" ||
+          e === "UTStoreBundleDetailsView.Event.BUY_POINTS" ||
+          e === "UTStoreRevealModalListView.Event.POINTS_PURCHASE"
             ? GameCurrency.POINTS
             : GameCurrency.COINS;
 
-        packToOpen.purchase(m).observe(new UTStoreViewController(), (obs, event) => {
-          console.log('coin pack', obs, event);
-          openPack(packToOpen);
-        });
+        packToOpen
+          .purchase(m)
+          .observe(new UTStoreViewController(), (obs, event) => {
+            console.log("coin pack", obs, event);
+            openPack(packToOpen);
+          });
       }
 
       goToUnassignedView();
@@ -6925,7 +8500,7 @@ const appendSlotPrice = async (squadSlots) => {
   let PriceItems = getPriceItems();
   for (const { rootElement, item } of squadSlots) {
     if (duplicateIds.includes(item.id)) {
-      rootElement.style.opacity = '0.4';
+      rootElement.style.opacity = "0.4";
     }
 
     const element = rootElement;
@@ -6936,11 +8511,11 @@ const appendSlotPrice = async (squadSlots) => {
   appendSquadTotal(total);
 };
 const appendSquadTotal = (total) => {
-  if (getSettings(0, 0, 'showPrices')) {
+  if (getSettings(0, 0, "showPrices")) {
     // Check if any element with class "squadTotal" exists
-    if (document.querySelector('.squadTotal')) {
+    if (document.querySelector(".squadTotal")) {
       // Update textContent of all elements with class "squadTotal"
-      document.querySelectorAll('.squadTotal').forEach(function (el) {
+      document.querySelectorAll(".squadTotal").forEach(function (el) {
         el.textContent = total.toLocaleString();
       });
     } else {
@@ -6951,15 +8526,18 @@ const appendSquadTotal = (total) => {
                   <span class="ratingValue squadTotal currency-coins">${total.toLocaleString()}</span>
                 </div>
               </div>`;
-      var tempDiv = document.createElement('div');
+      var tempDiv = document.createElement("div");
       tempDiv.innerHTML = html;
       var newElem = tempDiv.firstElementChild;
 
       // Find the element with class "chemistry"
-      var chemistryElem = document.querySelector('.chemistry');
+      var chemistryElem = document.querySelector(".chemistry");
       if (chemistryElem && chemistryElem.parentNode) {
         // Insert newElem immediately after the chemistry element
-        chemistryElem.parentNode.insertBefore(newElem, chemistryElem.nextSibling);
+        chemistryElem.parentNode.insertBefore(
+          newElem,
+          chemistryElem.nextSibling
+        );
       }
     }
   }
@@ -6973,9 +8551,9 @@ const appendPriceToSlot = async (rootElement, item) => {
 
 const getUserPlatform = () => {
   if (services.User.getUser().getSelectedPersona().isPC) {
-    return 'pc';
+    return "pc";
   }
-  return 'ps';
+  return "ps";
 };
 const favTagOverride = () => {
   const favTag = UTSBCFavoriteButtonControl.prototype.watchSBCSet;
@@ -6988,13 +8566,13 @@ const favTagOverride = () => {
 };
 
 const createNavButton = (id, content, hover, callback, style = {}) => {
-  const button = document.createElement('button');
-  button.classList.add('ut-tab-bar-item');
+  const button = document.createElement("button");
+  button.classList.add("ut-tab-bar-item");
   button.id = id;
   const defaultStyles = {
-    width: '100%',
-    background: '#1e1f1f',
-    marginTop: '0px',
+    width: "100%",
+    background: "#1e1f1f",
+    marginTop: "0px",
   };
 
   const combinedStyles = { ...defaultStyles, ...style };
@@ -7002,23 +8580,23 @@ const createNavButton = (id, content, hover, callback, style = {}) => {
     button.style[key] = combinedStyles[key];
   });
   button.innerHTML = content;
-  button.addEventListener('click', () => {
-    let hoverNav = document.getElementById('hoverNav');
+  button.addEventListener("click", () => {
+    let hoverNav = document.getElementById("hoverNav");
 
     if (hoverNav) {
       hoverNav.remove();
     }
     callback();
   });
-  button.addEventListener('mouseenter', async (e) => {
-    button.classList.add('sbcToolBarHover');
+  button.addEventListener("mouseenter", async (e) => {
+    button.classList.add("sbcToolBarHover");
 
     let parentElement = e.target.parentElement;
-    while (parentElement && parentElement.tagName !== 'NAV') {
+    while (parentElement && parentElement.tagName !== "NAV") {
       parentElement = parentElement.parentElement;
     }
-    if (parentElement.id == 'sbcToolbar') {
-      let hoverNav = document.getElementById('hoverNav');
+    if (parentElement.id == "sbcToolbar") {
+      let hoverNav = document.getElementById("hoverNav");
 
       if (hoverNav) {
         hoverNav.remove();
@@ -7026,42 +8604,42 @@ const createNavButton = (id, content, hover, callback, style = {}) => {
     }
 
     if (hover) {
-      let sbcToolbar = document.getElementById('sbcToolbar');
+      let sbcToolbar = document.getElementById("sbcToolbar");
       if (sbcToolbar) {
         let hoverTimeout = setTimeout(async () => {
           let hoverBtn = await hover();
-          let sbcToolbar = document.getElementById('sbcToolbar');
+          let sbcToolbar = document.getElementById("sbcToolbar");
           if (sbcToolbar) {
             sbcToolbar.appendChild(hoverBtn);
           }
         }, 500);
 
-        button.addEventListener('mouseleave', () => {
+        button.addEventListener("mouseleave", () => {
           clearTimeout(hoverTimeout);
         });
       }
     }
   });
-  button.addEventListener('mouseleave', () => {
-    button.classList.remove('sbcToolBarHover');
+  button.addEventListener("mouseleave", () => {
+    button.classList.remove("sbcToolBarHover");
   });
   return button;
 };
 
 const createHoverNav = (id, title, footer, buttons, style = {}) => {
-  const nav = document.createElement('nav');
-  nav.classList.add('ut-tab-bar', 'sbc-auto');
-  nav.id = 'hoverNav';
+  const nav = document.createElement("nav");
+  nav.classList.add("ut-tab-bar", "sbc-auto");
+  nav.id = "hoverNav";
   const defaultStyles = {
-    backgroundImage: 'none',
-    paddingTop: '5px',
-    right: '6.5rem',
-    width: 'auto',
-    position: 'absolute',
-    zIndex: '1000',
-    direction: 'rtl',
-    maxHeight: '70vh',
-    background: 'none',
+    backgroundImage: "none",
+    paddingTop: "5px",
+    right: "6.5rem",
+    width: "auto",
+    position: "absolute",
+    zIndex: "1000",
+    direction: "rtl",
+    maxHeight: "70vh",
+    background: "none",
   };
   const combinedStyles = { ...defaultStyles, ...style };
   Object.keys(combinedStyles).forEach((key) => {
@@ -7069,33 +8647,33 @@ const createHoverNav = (id, title, footer, buttons, style = {}) => {
   });
 
   if (title) {
-    let navTitle = document.createElement('span');
+    let navTitle = document.createElement("span");
     navTitle.innerHTML = `<b>${title}</b>`;
-    navTitle.style.display = 'block';
-    navTitle.style.textAlign = 'center';
-    navTitle.style.background = '#1e1f1f';
+    navTitle.style.display = "block";
+    navTitle.style.textAlign = "center";
+    navTitle.style.background = "#1e1f1f";
     nav.appendChild(navTitle);
   }
   let btnDiv = createDiv(`btnDiv${id}`, {});
-  btnDiv.style.overflowY = 'auto';
-  btnDiv.style.height = 'auto';
-  btnDiv.style.width = 'auto !important';
-  btnDiv.style.display = 'block';
-  btnDiv.style.textAlign = 'center';
-  btnDiv.style.borderBottomLeftRadius = '20px';
-  btnDiv.style.borderBottomRightRadius = '20px';
+  btnDiv.style.overflowY = "auto";
+  btnDiv.style.height = "auto";
+  btnDiv.style.width = "auto !important";
+  btnDiv.style.display = "block";
+  btnDiv.style.textAlign = "center";
+  btnDiv.style.borderBottomLeftRadius = "20px";
+  btnDiv.style.borderBottomRightRadius = "20px";
   buttons.forEach((button) => {
     btnDiv.appendChild(button);
   });
   nav.appendChild(btnDiv);
   if (footer) {
-    let navFooter = document.createElement('span');
+    let navFooter = document.createElement("span");
     navFooter.innerHTML = `<i>${footer}</i>`;
-    navFooter.style.display = 'block';
-    navFooter.style.textAlign = 'center';
+    navFooter.style.display = "block";
+    navFooter.style.textAlign = "center";
     nav.appendChild(navFooter);
   }
-  nav.addEventListener('mouseleave', () => {
+  nav.addEventListener("mouseleave", () => {
     nav.remove();
   });
 
@@ -7103,7 +8681,7 @@ const createHoverNav = (id, title, footer, buttons, style = {}) => {
 };
 
 const createDiv = (id, style) => {
-  const div = document.createElement('div');
+  const div = document.createElement("div");
   div.id = id;
   Object.keys(style).forEach((key) => {
     div.style[key] = style[key];
@@ -7115,12 +8693,16 @@ const createPackList = async () => {
   let packs = await getPacks();
   let i = services.Localization;
   let packContent = `<span>Packs<br>${
-    packs.packs.filter((f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101).length
+    packs.packs.filter(
+      (f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101
+    ).length
   }</span>`;
   let packCounts = packs.packs
     .filter((f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101)
     .reduce((acc, pack) => {
-      let key = `${pack.packName} ${pack.tradeable ? '(Tradable)' : '(Untradable)'}`;
+      let key = `${pack.packName} ${
+        pack.tradeable ? "(Tradable)" : "(Untradable)"
+      }`;
 
       acc[key] = acc[key] || {};
       acc[key].count = (acc[key]?.count || 0) + 1;
@@ -7128,8 +8710,8 @@ const createPackList = async () => {
         i.localize(pack.packName) +
         (pack?.prices?._collection?.COINS?.amount
           ? ` (${pack.prices._collection.COINS.amount} coins)`
-          : '');
-      acc[key].class = pack.tradable ? 'tradable' : 'untradable';
+          : "");
+      acc[key].class = pack.tradable ? "tradable" : "untradable";
       acc[key].description = i.localize(pack.packDesc);
       acc[key].pack = pack;
 
@@ -7137,24 +8719,24 @@ const createPackList = async () => {
     }, {});
 
   if (Object.keys(packCounts).length > 1) {
-    packCounts['Open All Packs'] = {
+    packCounts["Open All Packs"] = {
       count: 0,
-      packName: 'Open All Packs',
-      class: 'OpenAll',
-      description: 'Open all available packs',
+      packName: "Open All Packs",
+      class: "OpenAll",
+      description: "Open all available packs",
       pack: Object.values(packCounts)[0]?.pack || null,
     };
   }
   let packHoverButtons = Object.keys(packCounts).map((packName) => {
     let pack = packCounts[packName];
 
-    let navLabelSpan = document.createElement('span');
+    let navLabelSpan = document.createElement("span");
     navLabelSpan.title = pack.description; // Add tooltip with pack description
     navLabelSpan.classList.add(pack.class);
-    navLabelSpan.style.direction = 'ltr';
-    let packCountLabel = document.createElement('div');
-    packCountLabel.classList.add('ut-tab-bar-item-notif');
-    packCountLabel.style.left = '5px';
+    navLabelSpan.style.direction = "ltr";
+    let packCountLabel = document.createElement("div");
+    packCountLabel.classList.add("ut-tab-bar-item-notif");
+    packCountLabel.style.left = "5px";
     packCountLabel.innerHTML = pack.count;
     navLabelSpan.innerHTML = pack.packName;
     if (pack.count > 1) {
@@ -7162,13 +8744,13 @@ const createPackList = async () => {
     }
 
     let btn = createNavButton(
-      'openPackItem',
+      "openPackItem",
       navLabelSpan.outerHTML,
       async () => {},
       async () => {
         let packToOpen = pack.pack;
         if (pack.pack.isMyPack) {
-          await openPack(packToOpen, pack.count, packName === 'Open All Packs');
+          await openPack(packToOpen, pack.count, packName === "Open All Packs");
         } else {
           packToOpen
             .purchase(GameCurrency.COINS)
@@ -7177,22 +8759,28 @@ const createPackList = async () => {
             });
         }
       },
-      { width: '20vw', marginTop: '0px' }
+      { width: "20vw", marginTop: "0px" }
     );
 
     return btn;
   });
 
-  let packDiv = document.createElement('div');
+  let packDiv = document.createElement("div");
   packHoverButtons.forEach((button) => {
     packDiv.appendChild(button);
   });
   let packNavBtn = createNavButton(
-    'navPacks',
+    "navPacks",
     packContent,
     async () => {
       if (Object.keys(packCounts).length > 0) {
-        return createHoverNav('myPacks', 'My Packs', 'click to open', [packDiv], { width: '20vw' });
+        return createHoverNav(
+          "myPacks",
+          "My Packs",
+          "click to open",
+          [packDiv],
+          { width: "20vw" }
+        );
       }
       return null;
     },
@@ -7202,7 +8790,7 @@ const createPackList = async () => {
         await openPack(packToOpen, 0, true);
       }
     },
-    { background: 'none' }
+    { background: "none" }
   );
 
   return packNavBtn;
@@ -7211,73 +8799,80 @@ const createPackList = async () => {
 const createCategoryPicker = async () => {
   let sets = await sbcSets();
   if (sets === undefined) {
-    console.log('createCategoryPicker: sets are undefined');
+    console.log("createCategoryPicker: sets are undefined");
     return null;
   }
   // Only keep categories that contain at least one incomplete set
-  const incompleteSetIds = (sets.sets || []).filter((s) => !s.isComplete()).map((s) => s.id);
+  const incompleteSetIds = (sets.sets || [])
+    .filter((s) => !s.isComplete())
+    .map((s) => s.id);
   const filteredCategories = (sets.categories || []).filter(
-    (cat) => Array.isArray(cat.setIds) && cat.setIds.some((id) => incompleteSetIds.includes(id))
+    (cat) =>
+      Array.isArray(cat.setIds) &&
+      cat.setIds.some((id) => incompleteSetIds.includes(id))
   );
   // Fallback to original categories if filtering results in none (avoids empty UI)
-  let categories = filteredCategories.length ? filteredCategories.map((c) => c.name) : (sets.categories || []).map((c) => c.name);
-
+  let categories = filteredCategories.length
+    ? filteredCategories.map((c) => c.name)
+    : (sets.categories || []).map((c) => c.name);
 
   // Add a "Daily" category if it doesn't already exist
-  if (!categories.includes('Daily')) {
+  if (!categories.includes("Daily")) {
     // Find all SBCs with "daily" in their name (case insensitive)
-    let dailySbcs = sets.sets.filter((set) => set.name.toLowerCase().includes('daily'));
+    let dailySbcs = sets.sets.filter((set) =>
+      set.name.toLowerCase().includes("daily")
+    );
 
     // If we found any daily SBCs, add a Daily category
     if (dailySbcs.length > 0) {
       // Create a new "Daily" category with the set IDs of matching SBCs
       sets.categories.push({
-        name: 'Daily',
+        name: "Daily",
         setIds: dailySbcs.map((sbc) => sbc.id),
       });
 
       // Update the categories list for the dropdown
-      categories.push('Daily');
+      categories.push("Daily");
     }
   }
   let categoryButtons = [];
   categories.forEach((category) => {
-    let navLabelSpan = document.createElement('span');
+    let navLabelSpan = document.createElement("span");
     navLabelSpan.innerHTML = category;
-    navLabelSpan.style.display = 'inline-block';
-    navLabelSpan.style.verticalAlign = 'middle';
-    navLabelSpan.style.width = '50px';
+    navLabelSpan.style.display = "inline-block";
+    navLabelSpan.style.verticalAlign = "middle";
+    navLabelSpan.style.width = "50px";
     let navBtn = createNavButton(
       category,
       navLabelSpan.outerHTML,
       () => {},
       async () => {
-        saveSettings(0, 0, 'sbcType', category);
+        saveSettings(0, 0, "sbcType", category);
         services.Notification.queue([
-          'Updating SBC toolbar to ' + category,
+          "Updating SBC toolbar to " + category,
           UINotificationType.POSITIVE,
         ]);
         createSBCTab();
       },
-      { width: '20vw', marginTop: '0px' }
+      { width: "20vw", marginTop: "0px" }
     );
     categoryButtons.push(navBtn);
   });
 
   let categoryNavBtn = createNavButton(
-    'navCategory',
-    `SBC 1-click <br>${getSettings(0, 0, 'sbcType')}`,
+    "navCategory",
+    `SBC 1-click <br>${getSettings(0, 0, "sbcType")}`,
     async () => {
       return createHoverNav(
-        'categoryPicker',
-        'SBC Categories',
-        'click to select',
+        "categoryPicker",
+        "SBC Categories",
+        "click to select",
         categoryButtons,
-        { width: '20vw' }
+        { width: "20vw" }
       );
     },
     () => {},
-    { background: 'none' }
+    { background: "none" }
   );
   return categoryNavBtn;
 };
@@ -7285,24 +8880,27 @@ const createCategoryPicker = async () => {
 const createSBCButtons = async () => {
   let sets = await sbcSets();
   if (sets === undefined) {
-    console.log('createSBCButtons: sets are undefined');
+    console.log("createSBCButtons: sets are undefined");
     return null;
   }
 
   let sbcSetIds;
-  if (getSettings(0, 0, 'sbcType') === 'Daily') {
+  if (getSettings(0, 0, "sbcType") === "Daily") {
     // Find all SBCs with "daily" in their name (case insensitive)
     sbcSetIds = sets.sets
-      .filter((set) => set.name.toLowerCase().includes('daily'))
+      .filter((set) => set.name.toLowerCase().includes("daily"))
       .map((set) => set.id);
   } else {
     // Use the normal category method for other types
     sbcSetIds =
-      sets.categories.filter((f) => f.name == getSettings(0, 0, 'sbcType'))[0]?.setIds || [];
+      sets.categories.filter((f) => f.name == getSettings(0, 0, "sbcType"))[0]
+        ?.setIds || [];
   }
 
-  let allSbcSets = sets.sets.filter((f) => sbcSetIds.includes(f.id) && !f.isComplete()).reverse();
-  if (getSettings(0, 0, 'sbcType') === 'Favourites') {
+  let allSbcSets = sets.sets
+    .filter((f) => sbcSetIds.includes(f.id) && !f.isComplete())
+    .reverse();
+  if (getSettings(0, 0, "sbcType") === "Favourites") {
     allSbcSets = allSbcSets.sort((a, b) => b.timesCompleted - a.timesCompleted);
   }
   let sbcTiles = [];
@@ -7310,15 +8908,15 @@ const createSBCButtons = async () => {
     var t = new UTSBCSetTileView();
     t.init(), (t.title = set.name), t.setData(set), t.render();
     let pb = t._progressBar;
-    let sbcDiv = document.createElement('div');
-    var img = document.createElement('img');
-    img.setAttribute('src', t._setImage.src);
-    img.width = img.height = '64';
+    let sbcDiv = document.createElement("div");
+    var img = document.createElement("img");
+    img.setAttribute("src", t._setImage.src);
+    img.width = img.height = "64";
     sbcDiv.appendChild(img);
     if (!t.data.isSingleChallenge) {
       sbcDiv.appendChild(pb.getRootElement());
     }
-    var label = document.createElement('span');
+    var label = document.createElement("span");
     label.innerHTML = set.name;
     sbcDiv.appendChild(label);
 
@@ -7331,17 +8929,22 @@ const createSBCButtons = async () => {
         async () => {
           let hoverSet = await createSBCHover(set);
 
-          let hoverNav = createHoverNav(set.id, '', 'click to start', [hoverSet]);
+          let hoverNav = createHoverNav(set.id, "", "click to start", [
+            hoverSet,
+          ]);
           return hoverNav;
         },
         () => {
           createSbc = true;
           createSBCTab();
-          services.Notification.queue([set.name + ' SBC Started', UINotificationType.POSITIVE]);
+          services.Notification.queue([
+            set.name + " SBC Started",
+            UINotificationType.POSITIVE,
+          ]);
 
-          solveSBC(set.id, 0, true ,null, true, true);
+          solveSBC(set.id, 0, true, null, true, true);
         },
-        { background: 'none' }
+        { background: "none" }
       )
     );
   });
@@ -7349,21 +8952,26 @@ const createSBCButtons = async () => {
 };
 
 const createSBCHover = async (set) => {
-  let layoutHubDiv = document.createElement('div');
-  layoutHubDiv.style.padding = '0';
-  layoutHubDiv.style.width = '50vw';
-  layoutHubDiv.style.maxWidth = '500px';
-  layoutHubDiv.style.direction = 'ltr';
-  layoutHubDiv.style.overflowY = 'none';
+  let layoutHubDiv = document.createElement("div");
+  layoutHubDiv.style.padding = "0";
+  layoutHubDiv.style.width = "50vw";
+  layoutHubDiv.style.maxWidth = "500px";
+  layoutHubDiv.style.direction = "ltr";
+  layoutHubDiv.style.overflowY = "none";
   var s = new UTSBCSetTileView();
   s.init(), (s.title = set.name), s.setData(set), s.render();
   layoutHubDiv.appendChild(s.getRootElement());
-  layoutHubDiv.querySelectorAll('div').forEach((div) => {
-    div.classList.remove('col-1-2-md');
+  layoutHubDiv.querySelectorAll("div").forEach((div) => {
+    div.classList.remove("col-1-2-md");
   });
-  let progressBlock = layoutHubDiv.querySelector('.ut-sbc-set-tile-view--progress-block');
+  let progressBlock = layoutHubDiv.querySelector(
+    ".ut-sbc-set-tile-view--progress-block"
+  );
   if (progressBlock) {
-    progressBlock.insertBefore(s._progressBar.getRootElement(), progressBlock.firstChild);
+    progressBlock.insertBefore(
+      s._progressBar.getRootElement(),
+      progressBlock.firstChild
+    );
   }
 
   let c = await getChallenges(set);
@@ -7375,59 +8983,62 @@ const createSBCHover = async (set) => {
       i = new UTSBCChallengeTableRowView();
       i.init(), i.setTitle(e.name), i.render(e);
       let rowRoot = i.getRootElement();
-      rowRoot.querySelectorAll('div').forEach((div) => {
-        div.classList.remove('has-tap-callback');
-        if (div.classList.contains('ut-progress-bar')) {
+      rowRoot.querySelectorAll("div").forEach((div) => {
+        div.classList.remove("has-tap-callback");
+        if (div.classList.contains("ut-progress-bar")) {
           div.remove();
         }
 
-        rowRoot.querySelectorAll('img').forEach((img) => {
-          img.style.width = '15%';
+        rowRoot.querySelectorAll("img").forEach((img) => {
+          img.style.width = "15%";
         });
       });
-      rowRoot.addEventListener('mouseenter', async () => {
+      rowRoot.addEventListener("mouseenter", async () => {
         let s = new UTSBCChallengeRequirementsView();
         s.renderChallengeRequirements(e, true);
-        let challengeDiv = document.createElement('div');
-        challengeDiv.id = 'challengeNav';
-        challengeDiv.style.position = 'absolute';
+        let challengeDiv = document.createElement("div");
+        challengeDiv.id = "challengeNav";
+        challengeDiv.style.position = "absolute";
 
-        challengeDiv.style.top = '355px';
-        challengeDiv.style.right = 'calc(100% + 5px)';
-        challengeDiv.style.padding = '5px';
-        challengeDiv.style.width = '25vw';
-        challengeDiv.style.borderRadius = '20px';
-        challengeDiv.style.background = '#1e1f1f';
+        challengeDiv.style.top = "355px";
+        challengeDiv.style.right = "calc(100% + 5px)";
+        challengeDiv.style.padding = "5px";
+        challengeDiv.style.width = "25vw";
+        challengeDiv.style.borderRadius = "20px";
+        challengeDiv.style.background = "#1e1f1f";
         challengeDiv.appendChild(s.getRootElement());
         layoutHubDiv.appendChild(challengeDiv);
       });
-      rowRoot.addEventListener('mouseleave', () => {
-        let challengeDiv = document.getElementById('challengeNav');
+      rowRoot.addEventListener("mouseleave", () => {
+        let challengeDiv = document.getElementById("challengeNav");
         if (challengeDiv) {
           challengeDiv.remove();
         }
       });
-      rowRoot.addEventListener('click', () => {
-        let hoverNav = document.getElementById('hoverNav');
+      rowRoot.addEventListener("click", () => {
+        let hoverNav = document.getElementById("hoverNav");
 
         if (hoverNav) {
           hoverNav.remove();
         }
         createSbc = true;
         createSBCTab();
-        services.Notification.queue([set.name + ' SBC Started', UINotificationType.POSITIVE]);
+        services.Notification.queue([
+          set.name + " SBC Started",
+          UINotificationType.POSITIVE,
+        ]);
 
         solveSBC(e.setId, e.id, true);
       });
       return rowRoot;
     });
 
-  let rowDiv = document.createElement('div');
-  rowDiv.id = 'challengeRow';
-  rowDiv.style.padding = '5px';
-  rowDiv.style.borderRadius = '20px';
-  rowDiv.style.background = '#1e1f1f';
-  rowDiv.style.overflowY = 'auto';
+  let rowDiv = document.createElement("div");
+  rowDiv.id = "challengeRow";
+  rowDiv.style.padding = "5px";
+  rowDiv.style.borderRadius = "20px";
+  rowDiv.style.background = "#1e1f1f";
+  rowDiv.style.overflowY = "auto";
   row.forEach((r) => {
     rowDiv.appendChild(r);
   });
@@ -7437,15 +9048,15 @@ const createSBCHover = async (set) => {
 };
 
 let createSBCTab = async () => {
-  if (!getSettings(0, 0, 'showSbcTab')) {
-    document.querySelectorAll('.sbc-auto').forEach((el) => el.remove());
+  if (!getSettings(0, 0, "showSbcTab")) {
+    document.querySelectorAll(".sbc-auto").forEach((el) => el.remove());
     return;
   }
 
   // inject spinner CSS once
-  if (!document.getElementById('auto-grind-spinner-style')) {
-    const styleTag = document.createElement('style');
-    styleTag.id = 'auto-grind-spinner-style';
+  if (!document.getElementById("auto-grind-spinner-style")) {
+    const styleTag = document.createElement("style");
+    styleTag.id = "auto-grind-spinner-style";
     styleTag.textContent = `
         .button-spinner {
           display: inline-block;
@@ -7466,17 +9077,22 @@ let createSBCTab = async () => {
   }
 
   services.SBC.repository.reset();
-  const nav = document.createElement('nav');
-  nav.id = 'sbcToolbar';
-  nav.classList.add('ut-tab-bar', 'sbc-auto');
+  const nav = document.createElement("nav");
+  nav.id = "sbcToolbar";
+  nav.classList.add("ut-tab-bar", "sbc-auto");
   // inside createSBCTab, before appending autoGrindBtn:
   const sbcData = await sbcSets();
   const favCategory = sbcData.categories.find((c) => c.isFavourite);
-  const favSets = sbcData.sets.filter((s) => favCategory?.setIds.includes(s.id));
-  const totalFavCompleted = favSets.reduce((sum, s) => sum + (s.timesCompleted || 0), 0);
+  const favSets = sbcData.sets.filter((s) =>
+    favCategory?.setIds.includes(s.id)
+  );
+  const totalFavCompleted = favSets.reduce(
+    (sum, s) => sum + (s.timesCompleted || 0),
+    0
+  );
 
   const autoGrindBtn = createNavButton(
-    'btnAutoGrind',
+    "btnAutoGrind",
     /* html */ `
         <div style="text-align:center;line-height:1.2">
           <span>Auto Grind</span>
@@ -7490,22 +9106,22 @@ let createSBCTab = async () => {
       `,
     null,
     async () => {
-      const spinner = document.getElementById('btnAutoGrind-spinner');
+      const spinner = document.getElementById("btnAutoGrind-spinner");
       if (createSbcGrind) {
         createSbcGrind = false;
-        spinner.style.display = 'none';
+        spinner.style.display = "none";
         return;
       }
       createSbcGrind = true;
-      spinner.style.display = 'inline-block';
+      spinner.style.display = "inline-block";
       try {
         await futAutoGrind();
       } finally {
-        spinner.style.display = 'none';
+        spinner.style.display = "none";
         autoGrindBtn.disabled = false;
       }
     },
-    { background: 'none', color: '#fff' }
+    { background: "none", color: "#fff" }
   );
 
   nav.appendChild(autoGrindBtn);
@@ -7516,15 +9132,15 @@ let createSBCTab = async () => {
   let categoryPicker = await createCategoryPicker();
   nav.appendChild(categoryPicker);
 
-  let sbcDiv = document.createElement('div');
-  sbcDiv.style.overflowY = 'auto';
-  sbcDiv.style.height = 'auto';
+  let sbcDiv = document.createElement("div");
+  sbcDiv.style.overflowY = "auto";
+  sbcDiv.style.height = "auto";
   let sbcTiles = await createSBCButtons();
   sbcTiles.forEach((tile) => sbcDiv.appendChild(tile));
   nav.appendChild(sbcDiv);
 
-  document.querySelectorAll('.sbc-auto').forEach((el) => el.remove());
-  document.querySelectorAll('.ut-tab-bar-view').forEach((el) => {
+  document.querySelectorAll(".sbc-auto").forEach((el) => el.remove());
+  document.querySelectorAll(".ut-tab-bar-view").forEach((el) => {
     el.insertBefore(nav, el.firstChild);
   });
 };
@@ -7534,13 +9150,18 @@ const sideBarNavOverride = () => {
   UTGameTabBarController.prototype.initWithViewControllers = function (tabs) {
     // Check if SBC Solver tab already exists
     const sbcSolverExists = tabs.some(
-      (tab) => tab.tabBarItem && tab.tabBarItem.getText && tab.tabBarItem.getText() === 'SBC Solver'
+      (tab) =>
+        tab.tabBarItem &&
+        tab.tabBarItem.getText &&
+        tab.tabBarItem.getText() === "SBC Solver"
     );
 
     // Check if Club Analysis tab already exists
     const clubAnalysisExists = tabs.some(
       (tab) =>
-        tab.tabBarItem && tab.tabBarItem.getText && tab.tabBarItem.getText() === 'Club Analysis'
+        tab.tabBarItem &&
+        tab.tabBarItem.getText &&
+        tab.tabBarItem.getText() === "Club Analysis"
     );
 
     // Add SBC Solver tab if it doesn't exist
@@ -7555,14 +9176,17 @@ const sideBarNavOverride = () => {
   };
 };
 
-let SOLVER_SETTINGS_KEY = 'sbcSolverSettings';
+let SOLVER_SETTINGS_KEY = "sbcSolverSettings";
 let cachedSolverSettings;
 
 let setSolverSettings = function (key, Settings) {
   let SolverSettings = getSolverSettings();
   SolverSettings[key] = Settings;
   cachedSolverSettings = SolverSettings;
-  localStorage.setItem(SOLVER_SETTINGS_KEY, JSON.stringify(cachedSolverSettings));
+  localStorage.setItem(
+    SOLVER_SETTINGS_KEY,
+    JSON.stringify(cachedSolverSettings)
+  );
 };
 
 let getSolverSettings = function () {
@@ -7584,8 +9208,8 @@ const generateSbcSolveTab = () => {
   const sbcSolveTab = new UTTabBarItemView();
   sbcSolveTab.init();
   sbcSolveTab.setTag(6);
-  sbcSolveTab.setText('SBC Solver');
-  sbcSolveTab.addClass('icon-sbcSettings');
+  sbcSolveTab.setText("SBC Solver");
+  sbcSolveTab.addClass("icon-sbcSettings");
   return sbcSolveTab;
 };
 
@@ -7611,152 +9235,162 @@ sbcSettingsController.prototype.viewWillDisappear = function () {
   this.getNavigationController().setNavigationVisibility(false, false);
 };
 sbcSettingsController.prototype.getNavigationTitle = function () {
-  return 'SBC Solver';
+  return "SBC Solver";
 };
-sbcSettingsView.prototype.destroyGeneratedElements = function destroyGeneratedElements() {
-  DOMKit.remove(this.__root), (this.__root = null);
-};
+sbcSettingsView.prototype.destroyGeneratedElements =
+  function destroyGeneratedElements() {
+    DOMKit.remove(this.__root), (this.__root = null);
+  };
 
 sbcSettingsView.prototype._generate = function _generate() {
-  if (document.contains(document.getElementsByClassName('ut-sbc-challenge-requirements-view')[0])) {
-    document.getElementsByClassName('ut-sbc-challenge-requirements-view')[0].remove();
+  if (
+    document.contains(
+      document.getElementsByClassName("ut-sbc-challenge-requirements-view")[0]
+    )
+  ) {
+    document
+      .getElementsByClassName("ut-sbc-challenge-requirements-view")[0]
+      .remove();
   }
 
-  var e = document.createElement('div');
-  e.classList.add('ut-market-search-filters-view'), e.classList.add('floating');
-  e.classList.add('sbc-settings-container');
-  e.setAttribute('id', 'SettingsPanel');
+  var e = document.createElement("div");
+  e.classList.add("ut-market-search-filters-view"), e.classList.add("floating");
+  e.classList.add("sbc-settings-container");
+  e.setAttribute("id", "SettingsPanel");
 
-  var f = document.createElement('div');
-  f.classList.add('ut-pinned-list'), f.classList.add('sbc-settings');
+  var f = document.createElement("div");
+  f.classList.add("ut-pinned-list"), f.classList.add("sbc-settings");
   e.appendChild(f);
 
-  var g = document.createElement('div');
+  var g = document.createElement("div");
 
-  g.classList.add('sbc-settings-header'), g.classList.add('main-header');
-  var h1 = document.createElement('H1');
-  h1.innerHTML = 'SBC Solver Settings';
+  g.classList.add("sbc-settings-header"), g.classList.add("main-header");
+  var h1 = document.createElement("H1");
+  h1.innerHTML = "SBC Solver Settings";
   g.appendChild(h1);
   f.appendChild(g);
-  let sbcUITile = createSettingsTile(f, 'Customise UI', 'ui');
+  let sbcUITile = createSettingsTile(f, "Customise UI", "ui");
   createToggle(
     sbcUITile,
-    'Collect Concept Player Prices (Must be enabled to use concepts in SBC)',
-    'collectConcepts',
-    getSettings(0, 0, 'collectConcepts'),
+    "Collect Concept Player Prices (Must be enabled to use concepts in SBC)",
+    "collectConcepts",
+    getSettings(0, 0, "collectConcepts"),
     (toggleCC) => {
-      saveSettings(0, 0, 'collectConcepts', toggleCC.getToggleState());
-      if (getSettings(0, 0, 'collectConcepts')) {
+      saveSettings(0, 0, "collectConcepts", toggleCC.getToggleState());
+      if (getSettings(0, 0, "collectConcepts")) {
         getConceptPlayers();
       }
     }
   );
   createToggle(
     sbcUITile,
-    'Play Sounds',
-    'playSounds',
-    getSettings(0, 0, 'playSounds'),
+    "Play Sounds",
+    "playSounds",
+    getSettings(0, 0, "playSounds"),
     (togglePS) => {
-      saveSettings(0, 0, 'playSounds', togglePS.getToggleState());
+      saveSettings(0, 0, "playSounds", togglePS.getToggleState());
     }
   );
 
   createNumberSpinner(
     sbcUITile,
-    'Min Rating for Pack Animation',
-    'animateWalkouts',
+    "Min Rating for Pack Animation",
+    "animateWalkouts",
     1,
     100,
-    getSettings(0, 0, 'animateWalkouts'),
+    getSettings(0, 0, "animateWalkouts"),
     (toggleAW) => {
-      saveSettings(0, 0, 'animateWalkouts', toggleAW.getValue());
+      saveSettings(0, 0, "animateWalkouts", toggleAW.getValue());
     }
   );
   createToggle(
     sbcUITile,
-    'Show Club and storage stats',
-    'ratingUI',
-    getSettings(0, 0, 'ratingUI'),
+    "Show Club and storage stats",
+    "ratingUI",
+    getSettings(0, 0, "ratingUI"),
     (toggleST) => {
-      saveSettings(0, 0, 'ratingUI', toggleST.getToggleState());
+      saveSettings(0, 0, "ratingUI", toggleST.getToggleState());
     }
   );
   createToggle(
     sbcUITile,
-    'Show Prices',
-    'showPrices',
-    getSettings(0, 0, 'showPrices'),
+    "Show Prices",
+    "showPrices",
+    getSettings(0, 0, "showPrices"),
     (toggleSP) => {
-      saveSettings(0, 0, 'showPrices', toggleSP.getToggleState());
+      saveSettings(0, 0, "showPrices", toggleSP.getToggleState());
     }
   );
   createNumberSpinner(
     sbcUITile,
-    'Price Cache Minutes',
-    'priceCacheMinutes',
+    "Price Cache Minutes",
+    "priceCacheMinutes",
     1,
     1440,
-    getSettings(0, 0, 'priceCacheMinutes'),
+    getSettings(0, 0, "priceCacheMinutes"),
     (numberspinnerPCM) => {
-      saveSettings(0, 0, 'priceCacheMinutes', numberspinnerPCM.getValue());
+      saveSettings(0, 0, "priceCacheMinutes", numberspinnerPCM.getValue());
     }
   );
   createToggle(
     sbcUITile,
-    'Show SBCs Tab',
-    'showSbcTab',
-    getSettings(0, 0, 'showSbcTab'),
+    "Show SBCs Tab",
+    "showSbcTab",
+    getSettings(0, 0, "showSbcTab"),
     (toggleSBCT) => {
-      saveSettings(0, 0, 'showSbcTab', toggleSBCT.getToggleState());
+      saveSettings(0, 0, "showSbcTab", toggleSBCT.getToggleState());
       createSBCTab();
     }
   );
   createToggle(
     sbcUITile,
-    'Show Debug Log Overlay',
-    'showLogOverlay',
-    getSettings(0, 0, 'showLogOverlay'),
+    "Show Debug Log Overlay",
+    "showLogOverlay",
+    getSettings(0, 0, "showLogOverlay"),
     (toggleLog) => {
-      saveSettings(0, 0, 'showLogOverlay', toggleLog.getToggleState());
+      saveSettings(0, 0, "showLogOverlay", toggleLog.getToggleState());
     }
   );
   let panel = createPanel();
 
-  let clearPricesBtn = createButton('clearPrices', 'Clear All Prices', () => {
+  let clearPricesBtn = createButton("clearPrices", "Clear All Prices", () => {
     cachedPriceItems = null;
     // Clear prices from localStorage
     localStorage.removeItem(PRICE_ITEMS_KEY);
 
     // Clear prices from IndexedDB
-    const dbName = 'futSBCDatabase';
-    const storeName = 'priceItems';
+    const dbName = "futSBCDatabase";
+    const storeName = "priceItems";
     const request = indexedDB.open(dbName, 1);
 
     request.onsuccess = function (event) {
       const db = event.target.result;
-      const transaction = db.transaction([storeName], 'readwrite');
+      const transaction = db.transaction([storeName], "readwrite");
       const store = transaction.objectStore(storeName);
 
       // Clear all data from the store
       store.clear().onsuccess = function () {
         cachedPriceItems = {};
-        showNotification('All price data has been cleared', UINotificationType.POSITIVE);
-        console.log('IndexedDB price data cleared successfully');
+        showNotification(
+          "All price data has been cleared",
+          UINotificationType.POSITIVE
+        );
+        console.log("IndexedDB price data cleared successfully");
       };
 
       transaction.onerror = function (error) {
-        console.error('Error clearing IndexedDB:', error);
+        console.error("Error clearing IndexedDB:", error);
       };
     };
 
     request.onerror = function (event) {
-      console.error('Error opening IndexedDB:', event.target.error);
+      console.error("Error opening IndexedDB:", event.target.error);
     };
   });
   panel.appendChild(clearPricesBtn);
   sbcUITile.appendChild(panel);
 
-  let sbcRulesTile = createSettingsTile(f, 'Customise SBC', 'customRules');
+  let sbcRulesTile = createSettingsTile(f, "Customise SBC", "customRules");
   createSBCCustomRulesPanel(sbcRulesTile);
 
   (this.__root = e), (this._generated = !0);
@@ -7778,641 +9412,751 @@ const createSBCCustomRulesPanel = async (parent) => {
     })
     .filter((f) => !f.isComplete())
     .map((e) => new UTDataProviderEntryDTO(e.id, e.id, e.name));
-  SBCList.unshift(new UTDataProviderEntryDTO(0, 0, 'All SBCS'));
-  createDropDown(parent, 'Choose SBC', 'sbcId', SBCList, '1', async (dropdown) => {
-    if (
-      document.contains(document.getElementsByClassName('ut-sbc-challenge-requirements-view')[0])
-    ) {
-      document.getElementsByClassName('ut-sbc-challenge-requirements-view')[0].remove();
-    }
-    let challenge = [];
-    if (dropdown.getValue() != 0) {
-      let allSbcData = await sbcSets();
-      sbcSet = allSbcData.sets.filter((e) => e.id == dropdown.getValue())[0];
+  SBCList.unshift(new UTDataProviderEntryDTO(0, 0, "All SBCS"));
+  createDropDown(
+    parent,
+    "Choose SBC",
+    "sbcId",
+    SBCList,
+    "1",
+    async (dropdown) => {
+      if (
+        document.contains(
+          document.getElementsByClassName(
+            "ut-sbc-challenge-requirements-view"
+          )[0]
+        )
+      ) {
+        document
+          .getElementsByClassName("ut-sbc-challenge-requirements-view")[0]
+          .remove();
+      }
+      let challenge = [];
+      if (dropdown.getValue() != 0) {
+        let allSbcData = await sbcSets();
+        sbcSet = allSbcData.sets.filter((e) => e.id == dropdown.getValue())[0];
 
-      challenges = await getChallenges(sbcSet);
+        challenges = await getChallenges(sbcSet);
 
-      challenge = challenges.challenges.map((e) => new UTDataProviderEntryDTO(e.id, e.id, e.name));
-    }
-    challenge.unshift(new UTDataProviderEntryDTO(0, 0, 'All Challenges'));
-
-    createDropDown(
-      parent,
-      'Choose Challenge',
-      'sbcChallengeId',
-      challenge,
-      null,
-      async (dropdownChallenge) => {
-        if (
-          document.contains(
-            document.getElementsByClassName('ut-sbc-challenge-requirements-view')[0]
-          )
-        ) {
-          document.getElementsByClassName('ut-sbc-challenge-requirements-view')[0].remove();
-        }
-        let sbcParamsTile = createSettingsTile(parent, 'SBC Solver Paramaters', 'submitParams');
-
-        // Create a "Restore to Default" button
-        const resetButton = createButton('resetSettings', 'Restore to Default', () => {
-          // Get the current SBC and challenge IDs
-          const sbcId = dropdown.getValue();
-          const challengeId = dropdownChallenge.getValue();
-
-          // Get the current settings
-          let settings = getSolverSettings();
-
-          // Check if the settings exist and remove them
-          if (
-            settings['sbcSettings'] &&
-            settings['sbcSettings'][sbcId] &&
-            settings['sbcSettings'][sbcId][challengeId]
-          ) {
-            // Delete the specific challenge settings
-            delete settings['sbcSettings'][sbcId][challengeId];
-
-            // If this was the only challenge for this SBC, clean up the SBC entry too
-            if (Object.keys(settings['sbcSettings'][sbcId]).length === 0) {
-              delete settings['sbcSettings'][sbcId];
-            }
-            initDefaultSettings();
-            // Save the updated settings
-            setSolverSettings('sbcSettings', settings['sbcSettings']);
-
-            // Show notification
-            showNotification('Settings restored to default', UINotificationType.POSITIVE);
-
-            // Refresh the view to reflect changes
-            let currentController = getCurrentViewController();
-            if (currentController) {
-              currentController.getNavigationController().popViewController();
-              currentController
-                .getNavigationController()
-                .pushViewController(new sbcSettingsController());
-            }
-          }
-        });
-
-        const resetPanel = createPanel();
-        resetPanel.appendChild(resetButton);
-        sbcParamsTile.appendChild(resetPanel);
-        createDropDown(
-          sbcParamsTile,
-          '1-click Auto Submit',
-          'autoSubmit',
-          [
-            { name: 'Always', id: 1 },
-            { name: 'Optimal', id: 4 },
-            { name: 'Never', id: 0 },
-          ].map((e) => new UTDataProviderEntryDTO(e.id, e.id, e.name)),
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'autoSubmit'),
-          (dropdownAS) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'autoSubmit',
-              parseInt(dropdownAS.getValue())
-            );
-          },
-          'Controls when SBCs are automatically submitted: Always (any solution), Optimal (only best solutions), or Never (manual submission)'
-        );
-        createNumberSpinner(
-          sbcParamsTile,
-          'Repeat Count (-1 repeats infinitely)',
-          'repeatCount',
-          -1,
-          100,
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'repeatCount'),
-          (numberspinnerRC) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'repeatCount',
-              numberspinnerRC.getValue()
-            );
-          },
-          'Number of times to repeat this SBC: -1 repeats indefinitely, 0 performs once, positive numbers repeat that many times'
-        );
-         createToggle(
-          sbcParamsTile,
-          'Automatically try All Sbcs in Group',
-          'sbcAllGroup',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'sbcAllGroup'),
-          (toggleSBC) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'sbcAllGroup',
-              toggleSBC.getToggleState()
-            );
-          },
-          'When enabled, this SBC will automatically try all sbcs in the group'
-        );
-        createToggle(
-          sbcParamsTile,
-          'Automatically try SBC on Login',
-          'sbcOnLogin',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'sbcOnLogin'),
-          (toggleLOG) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'sbcOnLogin',
-              toggleLOG.getToggleState()
-            );
-          },
-          'When enabled, this SBC will automatically run when you log into FUT'
-        );
-        createToggle(
-          sbcParamsTile,
-          'Use Concepts',
-          'useConcepts',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'useConcepts'),
-          (toggleUC) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'useConcepts',
-              toggleUC.getToggleState()
-            );
-          },
-          'When enabled, includes concept players in SBC solutions (requires concept collection to be enabled)'
-        );
-        createToggle(
-          sbcParamsTile,
-          'Automatically Open Reward Packs',
-          'autoOpenPacks',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'autoOpenPacks'),
-          (toggleAO) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'autoOpenPacks',
-              toggleAO.getToggleState()
-            );
-          },
-          'When enabled, automatically opens reward packs after SBC completion'
-        );
-        createNumberSpinner(
-          sbcParamsTile,
-          'Player Max Rating',
-          'maxRating',
-          48,
-          99,
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'maxRating'),
-          (numberspinnerMR) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'maxRating',
-              numberspinnerMR.getValue()
-            );
-          },
-          'Sets maximum player rating to use in SBC solutions (protects high-rated players)'
-        );
-        createToggle(
-          sbcParamsTile,
-          'Ignore Exclusions & Max Ratings for Storage',
-          'useDupes',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'useDupes'),
-          (toggleUD) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'useDupes',
-              toggleUD.getToggleState()
-            );
-          },
-          'When enabled, duplicate players can be used in SBCs regardless of their rating'
-        );
-        createNumberSpinner(
-          sbcParamsTile,
-          'Duplicate Value %',
-          'duplicateDiscount',
-          0,
-          100,
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'duplicateDiscount') ?? 51,
-          (spinnerDD) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'duplicateDiscount',
-              spinnerDD.getValue()
-            );
-          },
-          'Sets how much duplicate players are valued compared to their market price (lower % = more likely to be used)'
-        );
-        createNumberSpinner(
-          sbcParamsTile,
-          'Untradeable Value %',
-          'untradeableDiscount',
-          0,
-          100,
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'untradeableDiscount') ??
-            80,
-          (spinnerUD) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'untradeableDiscount',
-              spinnerUD.getValue()
-            );
-          },
-          'Sets how much untradeable players are valued compared to their market price (lower % = more likely to be used)'
-        );
-        createNumberSpinner(
-          sbcParamsTile,
-          'Concept Premium (e.g. 10 = 10x price)',
-          'conceptPremium',
-          1,
-          100,
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'conceptPremium') ?? 10,
-          (spinnerCP) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'conceptPremium',
-              spinnerCP.getValue()
-            );
-          },
-          'Sets how much concept players are valued compared to their market price (higher = less likely to be used)'
-        );
-        createNumberSpinner(
-          sbcParamsTile,
-          'API Max Solve Time',
-          'maxSolveTime',
-          10,
-          990,
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'maxSolveTime'),
-          (numberspinnerMST) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'maxSolveTime',
-              numberspinnerMST.getValue()
-            );
-          },
-          'Maximum time in seconds to spend searching for an optimal SBC solution'
-        );
-        //  (parentDiv,label,id,options,value,target)
-        createToggle(
-          sbcParamsTile,
-          'Only use Storage Players',
-          'onlyStorage',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'onlyStorage'),
-          (toggleOS) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'onlyStorage',
-              toggleOS.getToggleState()
-            );
-          },
-          'When enabled, only players from your storage will be used in SBC solutions'
-        );
-          createToggle(
-          sbcParamsTile,
-          'Do not include Players from other SBC solutions',
-          'excludeSbcSquads',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'excludeSbcSquads'),
-          (toggleOS) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'excludeSbcSquads',
-              toggleOS.getToggleState()
-            );
-          },
-          'When enabled, players pending from other SBC solutions will not be used in SBC solutions'
-        );
-        
-        createToggle(
-          sbcParamsTile,
-          'Exclude Objective Players',
-          'excludeObjective',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'excludeObjective'),
-          (toggleXO) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'excludeObjective',
-              toggleXO.getToggleState()
-            );
-          },
-          'When enabled, players earned from objectives will not be used in SBC solutions'
-        );
-        createToggle(
-          sbcParamsTile,
-          'Exclude Special Players',
-          'excludeSpecial',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'excludeSpecial'),
-          (toggleSP) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'excludeSpecial',
-              toggleSP.getToggleState()
-            );
-          },
-          'When enabled, special cards (TOTW, TOTS, Heroes, etc.) will not be used in SBC solutions'
-        );
-        createToggle(
-          sbcParamsTile,
-          'Exclude Tradable Players',
-          'excludeTradable',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'excludeTradable'),
-          (toggleSP) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'excludeTradable',
-              toggleSP.getToggleState()
-            );
-          },
-          'When enabled, tradable players will not be used in SBC solutions'
-        );
-        createToggle(
-          sbcParamsTile,
-          'Exclude SBC Players',
-          'excludeSbc',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'excludeSbc'),
-          (toggleXSBC) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'excludeSbc',
-              toggleXSBC.getToggleState()
-            );
-          },
-          'When enabled, players earned from SBCs will not be used in SBC solutions'
-        );
-        createToggle(
-          sbcParamsTile,
-          'Exclude Extinct Players',
-          'excludeExtinct',
-          getSettings(dropdown.getValue(), dropdownChallenge.getValue(), 'excludeExtinct'),
-          (toggleXE) => {
-            saveSettings(
-              dropdown.getValue(),
-              dropdownChallenge.getValue(),
-              'excludeExtinct',
-              toggleXE.getToggleState()
-            );
-          },
-          'When enabled, players that are extinct on the transfer market will not be used in SBC solutions'
-        );
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Players',
-          'excludePlayers',
-          players.map((item) => {
-            return {
-              label: item._staticData.firstName + ' ' + item._staticData.lastName,
-              value: item.definitionId,
-              id: item.definitionId,
-              customProperties: {
-                icon: `<img width="30" src='${getShellUri(
-                  item.rareflag,
-                  item.rareflag < 4 ? item.getTier() : ItemRatingTier.NONE
-                )}'/>`,
-              },
-            };
-          }),
-          dropdown.getValue(),
-          dropdownChallenge.getValue(),
-          'Select specific players to exclude from SBC solutions'
-        );
-        console.log("herer")
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Leagues',
-          'excludeLeagues',
-          factories.DataProvider.getLeagueDP()
-            .filter((f) => f.id > 0)
-            .map((m) => {
-              return {
-                id: m.id,
-                value: m.id,
-                label: m.label,
-                customProperties: {
-                  icon: `<img width="20" src='${AssetLocationUtils.getLeagueImageUri(
-                    m.id,
-                    
-                  )}'/>`,
-                },
-              };
-            }),
- 
-          dropdown.getValue(),
-          dropdownChallenge.getValue(),
-          'Select leagues whose players will be excluded from SBC solutions'
-        );
-        
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Nations',
-          'excludeNations',
-          factories.DataProvider.getNationDP()
-            .map((m) => {
-              return {
-                id: m.id,
-                value: m.id,
-                label: m.label,
-                customProperties: {
-                  icon: `<img width="30" src='${AssetLocationUtils.getFlagImageUri(
-                    m.id,
-                    
-                  )}'/>`,
-                },
-              };
-            })
-            .filter((f) => f.id > 0),
-
-          dropdown.getValue(),
-          dropdownChallenge.getValue(),
-          'Select nations whose players will be excluded from SBC solutions'
-        );
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Teams',
-          'excludeTeams',
-          factories.DataProvider.getTeamDP()
-            .map((m) => {
-              return {
-                id: m.id,
-                value: m.id,
-                label:
-                  m.label +
-                  ' ( ' +
-                  repositories.TeamConfig.leagues._collection[
-                    repositories.TeamConfig.teams._collection[m.id]?.league
-                  ]?.name +
-                  ' )',
-                customProperties: {
-                  icon: `<img width="30" src='${AssetLocationUtils.getBadgeImageUri(
-                    m.id,
-                    
-                  )}'/>`,
-                },
-              };
-            })
-            .filter((f) => f.id > 0 && !f.label.includes('*')),
-          dropdown.getValue(),
-          dropdownChallenge.getValue(),
-          'Select clubs whose players will be excluded from SBC solutions'
-        );
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Rarity',
-          'excludeRarity',
-          factories.DataProvider.getItemRarityDP({
-            itemSubTypes: [ItemSubType.PLAYER],
-            itemTypes: [ItemType.PLAYER],
-            quality: SearchLevel.ANY,
-            tradableOnly: false,
-          })
-            .map((m) => {
-              return {
-                id: m.id,
-                value: m.label,
-                label: m.label,
-                customProperties: {
-                  icon: `<img width="30" src='${getShellUri(
-                    m.id,
-                    m.id < 4 ? ItemRatingTier.GOLD : ItemRatingTier.NONE
-                  )}'/>`,
-                },
-              };
-            })
-            .filter((f) => f.id > 0 && !f.label.includes('*')),
-          dropdown.getValue(),
-          dropdownChallenge.getValue(),
-          'Select card rarities that will be excluded from SBC solutions'
-        );
-
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Players',
-          'excludePlayers',
-          players.map((item) => {
-            return {
-              label: item._staticData.firstName + ' ' + item._staticData.lastName,
-              value: item.definitionId,
-              id: item.definitionId,
-              customProperties: {
-                icon: `<img width="30" src='${getShellUri(
-                  item.rareflag,
-                  item.rareflag < 4 ? item.getTier() : ItemRatingTier.NONE
-                )}'/>`,
-              },
-            };
-          }),
-          dropdown.getValue(),
-          dropdownChallenge.getValue()
-        );
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Leagues',
-          'excludeLeagues',
-          factories.DataProvider.getLeagueDP()
-            .filter((f) => f.id > 0)
-            .map((m) => {
-              return {
-                id: m.id,
-                value: m.id,
-                label: m.label,
-                customProperties: {
-                  icon: `<img width="20" src='${AssetLocationUtils.getLeagueImageUri(
-                    m.id,
-                    
-                  )}'/>`,
-                },
-              };
-            }),
-
-          dropdown.getValue(),
-          dropdownChallenge.getValue()
-        );
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Nations',
-          'excludeNations',
-          factories.DataProvider.getNationDP()
-            .map((m) => {
-              return {
-                id: m.id,
-                value: m.id,
-                label: m.label,
-                customProperties: {
-                  icon: `<img width="30" src='${AssetLocationUtils.getFlagImageUri(
-                    m.id,
-                    
-                  )}'/>`,
-                },
-              };
-            })
-            .filter((f) => f.id > 0),
-
-          dropdown.getValue(),
-          dropdownChallenge.getValue()
-        );
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Teams',
-          'excludeTeams',
-          factories.DataProvider.getTeamDP()
-            .map((m) => {
-              return {
-                id: m.id,
-                value: m.id,
-                label:
-                  m.label +
-                  ' ( ' +
-                  repositories.TeamConfig.leagues._collection[
-                    repositories.TeamConfig.teams._collection[m.id]?.league
-                  ]?.name +
-                  ' )',
-                customProperties: {
-                  icon: `<img width="30" src='${AssetLocationUtils.getBadgeImageUri(
-                    m.id,
-                    
-                  )}'/>`,
-                },
-              };
-            })
-            .filter((f) => f.id > 0 && !f.label.includes('*')),
-          dropdown.getValue(),
-          dropdownChallenge.getValue()
-        );
-        createChoice(
-          sbcParamsTile,
-          'EXCLUDE - Rarity',
-          'excludeRarity',
-          factories.DataProvider.getItemRarityDP({
-            itemSubTypes: [ItemSubType.PLAYER],
-            itemTypes: [ItemType.PLAYER],
-            quality: SearchLevel.ANY,
-            tradableOnly: false,
-          })
-            .map((m) => {
-              return {
-                id: m.id,
-                value: m.label,
-                label: m.label,
-                customProperties: {
-                  icon: `<img width="30" src='${getShellUri(
-                    m.id,
-                    m.id < 4 ? ItemRatingTier.GOLD : ItemRatingTier.NONE
-                  )}'/>`,
-                },
-              };
-            })
-            .filter((f) => f.id > 0 && !f.label.includes('*')),
-          dropdown.getValue(),
-          dropdownChallenge.getValue()
+        challenge = challenges.challenges.map(
+          (e) => new UTDataProviderEntryDTO(e.id, e.id, e.name)
         );
       }
-    );
-  });
+      challenge.unshift(new UTDataProviderEntryDTO(0, 0, "All Challenges"));
+
+      createDropDown(
+        parent,
+        "Choose Challenge",
+        "sbcChallengeId",
+        challenge,
+        null,
+        async (dropdownChallenge) => {
+          console.log(
+            "SBCId:" + dropdown.getValue(),
+            "ChallengeId:" + dropdownChallenge.getValue()
+          );
+          if (
+            document.contains(
+              document.getElementsByClassName(
+                "ut-sbc-challenge-requirements-view"
+              )[0]
+            )
+          ) {
+            document
+              .getElementsByClassName("ut-sbc-challenge-requirements-view")[0]
+              .remove();
+          }
+          let sbcParamsTile = createSettingsTile(
+            parent,
+            "SBC Solver Paramaters",
+            "submitParams"
+          );
+
+          // Create a "Restore to Default" button
+          const resetButton = createButton(
+            "resetSettings",
+            "Restore to Default",
+            () => {
+              // Get the current SBC and challenge IDs
+              const sbcId = dropdown.getValue();
+              const challengeId = dropdownChallenge.getValue();
+
+              // Get the current settings
+              let settings = getSolverSettings();
+
+              // Check if the settings exist and remove them
+              if (
+                settings["sbcSettings"] &&
+                settings["sbcSettings"][sbcId] &&
+                settings["sbcSettings"][sbcId][challengeId]
+              ) {
+                // Delete the specific challenge settings
+                delete settings["sbcSettings"][sbcId][challengeId];
+
+                // If this was the only challenge for this SBC, clean up the SBC entry too
+                if (Object.keys(settings["sbcSettings"][sbcId]).length === 0) {
+                  delete settings["sbcSettings"][sbcId];
+                }
+                initDefaultSettings();
+                // Save the updated settings
+                setSolverSettings("sbcSettings", settings["sbcSettings"]);
+
+                // Show notification
+                showNotification(
+                  "Settings restored to default",
+                  UINotificationType.POSITIVE
+                );
+
+                // Refresh the view to reflect changes
+                let currentController = getCurrentViewController();
+                if (currentController) {
+                  currentController
+                    .getNavigationController()
+                    .popViewController();
+                  currentController
+                    .getNavigationController()
+                    .pushViewController(new sbcSettingsController());
+                }
+              }
+            }
+          );
+
+          const resetPanel = createPanel();
+          resetPanel.appendChild(resetButton);
+          sbcParamsTile.appendChild(resetPanel);
+          createDropDown(
+            sbcParamsTile,
+            "1-click Auto Submit",
+            "autoSubmit",
+            [
+              { name: "Always", id: 1 },
+              { name: "Optimal", id: 4 },
+              { name: "Never", id: 0 },
+            ].map((e) => new UTDataProviderEntryDTO(e.id, e.id, e.name)),
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "autoSubmit"
+            ),
+            (dropdownAS) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "autoSubmit",
+                parseInt(dropdownAS.getValue())
+              );
+            },
+            "Controls when SBCs are automatically submitted: Always (any solution), Optimal (only best solutions), or Never (manual submission)"
+          );
+          createNumberSpinner(
+            sbcParamsTile,
+            "Repeat Count (-1 repeats infinitely)",
+            "repeatCount",
+            -1,
+            100,
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "repeatCount"
+            ),
+            (numberspinnerRC) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "repeatCount",
+                numberspinnerRC.getValue()
+              );
+            },
+            "Number of times to repeat this SBC: -1 repeats indefinitely, 0 performs once, positive numbers repeat that many times"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Automatically try All Sbcs in Group",
+            "sbcAllGroup",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "sbcAllGroup"
+            ),
+            (toggleSBC) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "sbcAllGroup",
+                toggleSBC.getToggleState()
+              );
+            },
+            "When enabled, this SBC will automatically try all sbcs in the group"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Automatically try SBC on Login",
+            "sbcOnLogin",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "sbcOnLogin"
+            ),
+            (toggleLOG) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "sbcOnLogin",
+                toggleLOG.getToggleState()
+              );
+            },
+            "When enabled, this SBC will automatically run when you log into FUT"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Use Concepts",
+            "useConcepts",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "useConcepts"
+            ),
+            (toggleUC) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "useConcepts",
+                toggleUC.getToggleState()
+              );
+            },
+            "When enabled, includes concept players in SBC solutions (requires concept collection to be enabled)"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Automatically Open Reward Packs",
+            "autoOpenPacks",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "autoOpenPacks"
+            ),
+            (toggleAO) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "autoOpenPacks",
+                toggleAO.getToggleState()
+              );
+            },
+            "When enabled, automatically opens reward packs after SBC completion"
+          );
+          createDoubleRangeControl(
+            sbcParamsTile,
+            "Player Rating Range",
+            "ratingRange",
+            40,
+            99,
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "ratingRange"
+            ),
+            (doubleRangeControl) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "ratingRange",
+                [
+                  doubleRangeControl.getMinValue(),
+                  doubleRangeControl.getMaxValue(),
+                ]
+              );
+            },
+            "Sets player rating range to use in SBC solutions (Allows quicker solving when the range is reduced , but could miss optimal solutions)"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Ignore Exclusions & Max Ratings for Storage",
+            "useDupes",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "useDupes"
+            ),
+            (toggleUD) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "useDupes",
+                toggleUD.getToggleState()
+              );
+            },
+            "When enabled, duplicate players can be used in SBCs regardless of their rating"
+          );
+          createNumberSpinner(
+            sbcParamsTile,
+            "Duplicate Value %",
+            "duplicateDiscount",
+            0,
+            100,
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "duplicateDiscount"
+            ) ?? 51,
+            (spinnerDD) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "duplicateDiscount",
+                spinnerDD.getValue()
+              );
+            },
+            "Sets how much duplicate players are valued compared to their market price (lower % = more likely to be used)"
+          );
+          createNumberSpinner(
+            sbcParamsTile,
+            "Untradeable Value %",
+            "untradeableDiscount",
+            0,
+            100,
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "untradeableDiscount"
+            ) ?? 80,
+            (spinnerUD) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "untradeableDiscount",
+                spinnerUD.getValue()
+              );
+            },
+            "Sets how much untradeable players are valued compared to their market price (lower % = more likely to be used)"
+          );
+          createNumberSpinner(
+            sbcParamsTile,
+            "Concept Premium (e.g. 10 = 10x price)",
+            "conceptPremium",
+            1,
+            100,
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "conceptPremium"
+            ) ?? 10,
+            (spinnerCP) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "conceptPremium",
+                spinnerCP.getValue()
+              );
+            },
+            "Sets how much concept players are valued compared to their market price (higher = less likely to be used)"
+          );
+          createNumberSpinner(
+            sbcParamsTile,
+            "API Max Solve Time",
+            "maxSolveTime",
+            10,
+            990,
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "maxSolveTime"
+            ),
+            (numberspinnerMST) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "maxSolveTime",
+                numberspinnerMST.getValue()
+              );
+            },
+            "Maximum time in seconds to spend searching for an optimal SBC solution"
+          );
+          //  (parentDiv,label,id,options,value,target)
+          createToggle(
+            sbcParamsTile,
+            "Only use Storage Players",
+            "onlyStorage",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "onlyStorage"
+            ),
+            (toggleOS) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "onlyStorage",
+                toggleOS.getToggleState()
+              );
+            },
+            "When enabled, only players from your storage will be used in SBC solutions"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Do not include Players from other SBC solutions",
+            "excludeSbcSquads",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "excludeSbcSquads"
+            ),
+            (toggleOS) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeSbcSquads",
+                toggleOS.getToggleState()
+              );
+            },
+            "When enabled, players pending from other SBC solutions will not be used in SBC solutions"
+          );
+
+          createToggle(
+            sbcParamsTile,
+            "Exclude Objective Players",
+            "excludeObjective",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "excludeObjective"
+            ),
+            (toggleXO) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeObjective",
+                toggleXO.getToggleState()
+              );
+            },
+            "When enabled, players earned from objectives will not be used in SBC solutions"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Exclude Special Players",
+            "excludeSpecial",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "excludeSpecial"
+            ),
+            (toggleSP) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeSpecial",
+                toggleSP.getToggleState()
+              );
+            },
+            "When enabled, special cards (TOTW, TOTS, Heroes, etc.) will not be used in SBC solutions"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Exclude Tradable Players",
+            "excludeTradable",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "excludeTradable"
+            ),
+            (toggleSP) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeTradable",
+                toggleSP.getToggleState()
+              );
+            },
+            "When enabled, tradable players will not be used in SBC solutions"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Exclude SBC Players",
+            "excludeSbc",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "excludeSbc"
+            ),
+            (toggleXSBC) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeSbc",
+                toggleXSBC.getToggleState()
+              );
+            },
+            "When enabled, players earned from SBCs will not be used in SBC solutions"
+          );
+          createToggle(
+            sbcParamsTile,
+            "Exclude Extinct Players",
+            "excludeExtinct",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "excludeExtinct"
+            ),
+            (toggleXE) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeExtinct",
+                toggleXE.getToggleState()
+              );
+            },
+            "When enabled, players that are extinct on the transfer market will not be used in SBC solutions"
+          );
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Players",
+            "excludePlayers",
+            players.map((item) => {
+              return {
+                label:
+                  item._staticData.firstName + " " + item._staticData.lastName,
+                value: item.definitionId,
+                id: item.definitionId,
+                customProperties: {
+                  icon: `<img width="30" src='${getShellUri(
+                    item.rareflag,
+                    item.rareflag < 4 ? item.getTier() : ItemRatingTier.NONE
+                  )}'/>`,
+                },
+              };
+            }),
+            dropdown.getValue(),
+            dropdownChallenge.getValue(),
+            "Select specific players to exclude from SBC solutions"
+          );
+          console.log("herer");
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Leagues",
+            "excludeLeagues",
+            factories.DataProvider.getLeagueDP()
+              .filter((f) => f.id > 0)
+              .map((m) => {
+                return {
+                  id: m.id,
+                  value: m.id,
+                  label: m.label,
+                  customProperties: {
+                    icon: `<img width="20" src='${AssetLocationUtils.getLeagueImageUri(
+                      m.id
+                    )}'/>`,
+                  },
+                };
+              }),
+
+            dropdown.getValue(),
+            dropdownChallenge.getValue(),
+            "Select leagues whose players will be excluded from SBC solutions"
+          );
+
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Nations",
+            "excludeNations",
+            factories.DataProvider.getNationDP()
+              .map((m) => {
+                return {
+                  id: m.id,
+                  value: m.id,
+                  label: m.label,
+                  customProperties: {
+                    icon: `<img width="30" src='${AssetLocationUtils.getFlagImageUri(
+                      m.id
+                    )}'/>`,
+                  },
+                };
+              })
+              .filter((f) => f.id > 0),
+
+            dropdown.getValue(),
+            dropdownChallenge.getValue(),
+            "Select nations whose players will be excluded from SBC solutions"
+          );
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Teams",
+            "excludeTeams",
+            factories.DataProvider.getTeamDP()
+              .map((m) => {
+                return {
+                  id: m.id,
+                  value: m.id,
+                  label:
+                    m.label +
+                    " ( " +
+                    repositories.TeamConfig.leagues._collection[
+                      repositories.TeamConfig.teams._collection[m.id]?.league
+                    ]?.name +
+                    " )",
+                  customProperties: {
+                    icon: `<img width="30" src='${AssetLocationUtils.getBadgeImageUri(
+                      m.id
+                    )}'/>`,
+                  },
+                };
+              })
+              .filter((f) => f.id > 0 && !f.label.includes("*")),
+            dropdown.getValue(),
+            dropdownChallenge.getValue(),
+            "Select clubs whose players will be excluded from SBC solutions"
+          );
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Rarity",
+            "excludeRarity",
+            factories.DataProvider.getItemRarityDP({
+              itemSubTypes: [ItemSubType.PLAYER],
+              itemTypes: [ItemType.PLAYER],
+              quality: SearchLevel.ANY,
+              tradableOnly: false,
+            })
+              .map((m) => {
+                return {
+                  id: m.id,
+                  value: m.label,
+                  label: m.label,
+                  customProperties: {
+                    icon: `<img width="30" src='${getShellUri(
+                      m.id,
+                      m.id < 4 ? ItemRatingTier.GOLD : ItemRatingTier.NONE
+                    )}'/>`,
+                  },
+                };
+              })
+              .filter((f) => f.id > 0 && !f.label.includes("*")),
+            dropdown.getValue(),
+            dropdownChallenge.getValue(),
+            "Select card rarities that will be excluded from SBC solutions"
+          );
+
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Players",
+            "excludePlayers",
+            players.map((item) => {
+              return {
+                label:
+                  item._staticData.firstName + " " + item._staticData.lastName,
+                value: item.definitionId,
+                id: item.definitionId,
+                customProperties: {
+                  icon: `<img width="30" src='${getShellUri(
+                    item.rareflag,
+                    item.rareflag < 4 ? item.getTier() : ItemRatingTier.NONE
+                  )}'/>`,
+                },
+              };
+            }),
+            dropdown.getValue(),
+            dropdownChallenge.getValue()
+          );
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Leagues",
+            "excludeLeagues",
+            factories.DataProvider.getLeagueDP()
+              .filter((f) => f.id > 0)
+              .map((m) => {
+                return {
+                  id: m.id,
+                  value: m.id,
+                  label: m.label,
+                  customProperties: {
+                    icon: `<img width="20" src='${AssetLocationUtils.getLeagueImageUri(
+                      m.id
+                    )}'/>`,
+                  },
+                };
+              }),
+
+            dropdown.getValue(),
+            dropdownChallenge.getValue()
+          );
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Nations",
+            "excludeNations",
+            factories.DataProvider.getNationDP()
+              .map((m) => {
+                return {
+                  id: m.id,
+                  value: m.id,
+                  label: m.label,
+                  customProperties: {
+                    icon: `<img width="30" src='${AssetLocationUtils.getFlagImageUri(
+                      m.id
+                    )}'/>`,
+                  },
+                };
+              })
+              .filter((f) => f.id > 0),
+
+            dropdown.getValue(),
+            dropdownChallenge.getValue()
+          );
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Teams",
+            "excludeTeams",
+            factories.DataProvider.getTeamDP()
+              .map((m) => {
+                return {
+                  id: m.id,
+                  value: m.id,
+                  label:
+                    m.label +
+                    " ( " +
+                    repositories.TeamConfig.leagues._collection[
+                      repositories.TeamConfig.teams._collection[m.id]?.league
+                    ]?.name +
+                    " )",
+                  customProperties: {
+                    icon: `<img width="30" src='${AssetLocationUtils.getBadgeImageUri(
+                      m.id
+                    )}'/>`,
+                  },
+                };
+              })
+              .filter((f) => f.id > 0 && !f.label.includes("*")),
+            dropdown.getValue(),
+            dropdownChallenge.getValue()
+          );
+          createChoice(
+            sbcParamsTile,
+            "EXCLUDE - Rarity",
+            "excludeRarity",
+            factories.DataProvider.getItemRarityDP({
+              itemSubTypes: [ItemSubType.PLAYER],
+              itemTypes: [ItemType.PLAYER],
+              quality: SearchLevel.ANY,
+              tradableOnly: false,
+            })
+              .map((m) => {
+                return {
+                  id: m.id,
+                  value: m.label,
+                  label: m.label,
+                  customProperties: {
+                    icon: `<img width="30" src='${getShellUri(
+                      m.id,
+                      m.id < 4 ? ItemRatingTier.GOLD : ItemRatingTier.NONE
+                    )}'/>`,
+                  },
+                };
+              })
+              .filter((f) => f.id > 0 && !f.label.includes("*")),
+            dropdown.getValue(),
+            dropdownChallenge.getValue()
+          );
+        }
+      );
+    }
+  );
 };
 
 const getShellUri = (id, ratingTier) => {
@@ -8427,23 +10171,23 @@ const getShellUri = (id, ratingTier) => {
 
 const saveSettings = (sbc, challenge, id, value) => {
   let settings = getSolverSettings();
-  settings['sbcSettings'] ??= {};
-  let sbcSettings = settings['sbcSettings'];
+  settings["sbcSettings"] ??= {};
+  let sbcSettings = settings["sbcSettings"];
   sbcSettings[sbc] ??= {};
   sbcSettings[sbc][challenge] ??= {};
   sbcSettings[sbc][challenge][id] = value;
-  setSolverSettings('sbcSettings', sbcSettings);
+  setSolverSettings("sbcSettings", sbcSettings);
 };
 const getSettings = (sbc, challenge, id) => {
   let settings = getSolverSettings();
   let returnValue =
-    settings['sbcSettings']?.[sbc]?.[challenge]?.[id] ??
-    settings['sbcSettings']?.[sbc]?.[0]?.[id] ??
-    settings['sbcSettings']?.[0]?.[0]?.[id];
+    settings["sbcSettings"]?.[sbc]?.[challenge]?.[id] ??
+    settings["sbcSettings"]?.[sbc]?.[0]?.[id] ??
+    settings["sbcSettings"]?.[0]?.[0]?.[id];
   return returnValue;
 };
 const defaultSBCSolverSettings = {
-  apiUrl: 'http://127.0.0.1:8000',
+  apiUrl: "http://127.0.0.1:8000",
   excludeTeams: [],
   excludeRarity: [],
   excludeNations: [],
@@ -8462,47 +10206,47 @@ const defaultSBCSolverSettings = {
   autoSubmit: 0,
   maxSolveTime: 60,
   priceCacheMinutes: 1440,
-  maxRating: 99,
+  ratingRange: [0, 99],
   repeatCount: 0,
   showPrices: true,
   showSbcTab: true,
   useDupes: true,
   autoOpenPacks: false,
   saveTotw: false,
-  sbcType: 'Favourites',
+  sbcType: "Favourites",
   showLogOverlay: false,
   duplicateDiscount: 50,
   untradeableDiscount: 80,
   conceptPremium: 10,
   evoPremium: 2,
-  ratingUI: false
+  ratingUI: false,
 };
 
 const createStopOverlayButton = () => {
-  const stopButtonContainer = document.createElement('div');
-  stopButtonContainer.id = 'sbc-stop-overlay';
-  stopButtonContainer.style.position = 'fixed';
-  stopButtonContainer.style.bottom = '45px';
-  stopButtonContainer.style.right = '130px';
-  stopButtonContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-  stopButtonContainer.style.color = '#fff';
-  stopButtonContainer.style.padding = '10px';
-  stopButtonContainer.style.borderRadius = '5px';
-  stopButtonContainer.style.zIndex = '9999';
-  stopButtonContainer.style.fontSize = '12px';
-  stopButtonContainer.style.fontFamily = 'Arial, sans-serif';
+  const stopButtonContainer = document.createElement("div");
+  stopButtonContainer.id = "sbc-stop-overlay";
+  stopButtonContainer.style.position = "fixed";
+  stopButtonContainer.style.bottom = "45px";
+  stopButtonContainer.style.right = "130px";
+  stopButtonContainer.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+  stopButtonContainer.style.color = "#fff";
+  stopButtonContainer.style.padding = "10px";
+  stopButtonContainer.style.borderRadius = "5px";
+  stopButtonContainer.style.zIndex = "9999";
+  stopButtonContainer.style.fontSize = "12px";
+  stopButtonContainer.style.fontFamily = "Arial, sans-serif";
 
-  const stopButton = document.createElement('button');
-  stopButton.textContent = 'STOP';
-  stopButton.style.marginLeft = '5px';
-  stopButton.style.padding = '5px 10px';
-  stopButton.style.border = 'none';
-  stopButton.style.borderRadius = '3px';
-  stopButton.style.cursor = 'pointer';
-  stopButton.style.backgroundColor = '#ff0000';
-  stopButton.style.color = '#000';
+  const stopButton = document.createElement("button");
+  stopButton.textContent = "STOP";
+  stopButton.style.marginLeft = "5px";
+  stopButton.style.padding = "5px 10px";
+  stopButton.style.border = "none";
+  stopButton.style.borderRadius = "3px";
+  stopButton.style.cursor = "pointer";
+  stopButton.style.backgroundColor = "#ff0000";
+  stopButton.style.color = "#000";
 
-  stopButton.addEventListener('click', () => {
+  stopButton.addEventListener("click", () => {
     createSbc = false;
     createSbcGrind = false;
     hideLoader();
@@ -8521,83 +10265,85 @@ const createStopOverlayButton = () => {
   });
 
   stopButtonContainer.appendChild(stopButton);
-  let shield = getElement('.ut-click-shield');
+  let shield = getElement(".ut-click-shield");
   shield.appendChild(stopButtonContainer);
 };
 
 const createLogOverlayToggle = () => {
-  const toggleContainers = document.querySelectorAll('#sbc-log-toggle');
+  const toggleContainers = document.querySelectorAll("#sbc-log-toggle");
   toggleContainers.forEach((toggleContainer) => {
     toggleContainer.remove();
   });
 
-  const toggleContainer = document.createElement('div');
-  toggleContainer.id = 'sbc-log-toggle';
-  toggleContainer.style.position = 'fixed';
-  toggleContainer.style.bottom = '10px';
-  toggleContainer.style.left = '10px';
-  toggleContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-  toggleContainer.style.color = '#fff';
-  toggleContainer.style.padding = '10px';
-  toggleContainer.style.borderRadius = '5px';
-  toggleContainer.style.zIndex = '9999';
-  toggleContainer.style.fontSize = '12px';
-  toggleContainer.style.fontFamily = 'Arial, sans-serif';
+  const toggleContainer = document.createElement("div");
+  toggleContainer.id = "sbc-log-toggle";
+  toggleContainer.style.position = "fixed";
+  toggleContainer.style.bottom = "10px";
+  toggleContainer.style.left = "10px";
+  toggleContainer.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+  toggleContainer.style.color = "#fff";
+  toggleContainer.style.padding = "10px";
+  toggleContainer.style.borderRadius = "5px";
+  toggleContainer.style.zIndex = "9999";
+  toggleContainer.style.fontSize = "12px";
+  toggleContainer.style.fontFamily = "Arial, sans-serif";
 
-  const toggleLabel = document.createElement('span');
-  toggleLabel.textContent = 'Show Solver Logs';
+  const toggleLabel = document.createElement("span");
+  toggleLabel.textContent = "Show Solver Logs";
   toggleContainer.appendChild(toggleLabel);
 
-  const toggleButton = document.createElement('button');
-  toggleButton.textContent = getSettings(0, 0, 'showLogOverlay') ? 'ON' : 'OFF';
-  toggleButton.style.marginLeft = '5px';
-  toggleButton.style.padding = '5px 10px';
-  toggleButton.style.border = 'none';
-  toggleButton.style.borderRadius = '3px';
-  toggleButton.style.cursor = 'pointer';
-  toggleButton.style.backgroundColor = getSettings(0, 0, 'showLogOverlay') ? '#00ff00' : '#ff0000';
-  toggleButton.style.color = '#000';
+  const toggleButton = document.createElement("button");
+  toggleButton.textContent = getSettings(0, 0, "showLogOverlay") ? "ON" : "OFF";
+  toggleButton.style.marginLeft = "5px";
+  toggleButton.style.padding = "5px 10px";
+  toggleButton.style.border = "none";
+  toggleButton.style.borderRadius = "3px";
+  toggleButton.style.cursor = "pointer";
+  toggleButton.style.backgroundColor = getSettings(0, 0, "showLogOverlay")
+    ? "#00ff00"
+    : "#ff0000";
+  toggleButton.style.color = "#000";
 
-  toggleButton.addEventListener('click', () => {
-    const currentState = getSettings(0, 0, 'showLogOverlay');
-    saveSettings(0, 0, 'showLogOverlay', !currentState);
-    toggleButton.textContent = !currentState ? 'ON' : 'OFF';
-    toggleButton.style.backgroundColor = !currentState ? '#00ff00' : '#ff0000';
+  toggleButton.addEventListener("click", () => {
+    const currentState = getSettings(0, 0, "showLogOverlay");
+    saveSettings(0, 0, "showLogOverlay", !currentState);
+    toggleButton.textContent = !currentState ? "ON" : "OFF";
+    toggleButton.style.backgroundColor = !currentState ? "#00ff00" : "#ff0000";
     updateLogOverlay();
   });
 
   toggleContainer.appendChild(toggleButton);
-  let shield = getElement('.ut-click-shield');
+  let shield = getElement(".ut-click-shield");
   shield.appendChild(toggleContainer);
 };
 
 // Create or update the log overlay
 const updateLogOverlay = () => {
-  let shield = getElement('.ut-click-shield');
-  let logOverlay = document.getElementById('sbc-log-overlay');
+  let shield = getElement(".ut-click-shield");
+  let logOverlay = document.getElementById("sbc-log-overlay");
 
-  if (getSettings(0, 0, 'showLogOverlay')) {
+  if (getSettings(0, 0, "showLogOverlay")) {
     if (!logOverlay) {
-      logOverlay = document.createElement('div');
-      logOverlay.id = 'sbc-log-overlay';
-      logOverlay.style.position = 'fixed';
-      logOverlay.style.bottom = '75px';
-      logOverlay.style.left = '10px';
-      logOverlay.style.maxHeight = '15vh';
-      logOverlay.style.width = '40vw';
-      logOverlay.style.overflowY = 'auto';
-      logOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-      logOverlay.style.color = '#00ff00';
-      logOverlay.style.padding = '10px';
-      logOverlay.style.fontSize = '12px';
-      logOverlay.style.fontFamily = 'monospace';
-      logOverlay.style.zIndex = '9999';
-      logOverlay.style.borderRadius = '5px';
+      logOverlay = document.createElement("div");
+      logOverlay.id = "sbc-log-overlay";
+      logOverlay.style.position = "fixed";
+      logOverlay.style.bottom = "75px";
+      logOverlay.style.left = "10px";
+      logOverlay.style.maxHeight = "15vh";
+      logOverlay.style.width = "40vw";
+      logOverlay.style.overflowY = "auto";
+      logOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+      logOverlay.style.color = "#00ff00";
+      logOverlay.style.padding = "10px";
+      logOverlay.style.fontSize = "12px";
+      logOverlay.style.fontFamily = "monospace";
+      logOverlay.style.zIndex = "9999";
+      logOverlay.style.borderRadius = "5px";
       shield.appendChild(logOverlay);
     }
-    logOverlay.style.display = 'block';
+    logOverlay.style.display = "block";
   } else if (logOverlay) {
-    logOverlay.style.display = 'none';
+    logOverlay.style.display = "none";
   }
 };
 
@@ -8606,16 +10352,16 @@ let lastLogIndex = 0;
 
 // Function to poll for solver logs
 const pollSolverLogs = async () => {
-  if (!getSettings(0, 0, 'showLogOverlay')) {
+  if (!getSettings(0, 0, "showLogOverlay")) {
     return; // Don't poll if log overlay is disabled
   }
 
   try {
-    const response = await makeGetRequest(apiUrl + '/solver-logs');
+    const response = await makeGetRequest(apiUrl + "/solver-logs");
     const data = JSON.parse(response);
 
     // We have new logs
-    const logOverlay = document.getElementById('sbc-log-overlay');
+    const logOverlay = document.getElementById("sbc-log-overlay");
     if (lastLogIndex === 0 && logOverlay) {
       while (logOverlay.firstChild) {
         logOverlay.removeChild(logOverlay.firstChild);
@@ -8626,10 +10372,13 @@ const pollSolverLogs = async () => {
         // Add new logs to the overlay
         for (let i = lastLogIndex; i < data.logs.length; i++) {
           const log = data.logs[i];
-          const timestamp = new Date(log.time * 1000).toISOString().split('T')[1].slice(0, -1);
+          const timestamp = new Date(log.time * 1000)
+            .toISOString()
+            .split("T")[1]
+            .slice(0, -1);
 
-          const logEntry = document.createElement('div');
-          logEntry.className = 'solver-log';
+          const logEntry = document.createElement("div");
+          logEntry.className = "solver-log";
 
           if (log.message) {
             logEntry.textContent = `${timestamp}: ${log.message}`;
@@ -8642,21 +10391,150 @@ const pollSolverLogs = async () => {
       }
     }
   } catch (error) {
-    console.error('Error polling solver logs:', error);
+    console.error("Error polling solver logs:", error);
+  }
+};
+
+const migrateMaxRatingSettings = () => {
+  
+  
+  const settings = getSolverSettings();
+  const sbcSettings = settings?.sbcSettings;
+
+  if (!sbcSettings) {
+  
+    return;
+  }
+
+  let needsSave = false;
+
+  Object.entries(sbcSettings).forEach(([sbcId, challenges]) => {
+    if (!challenges || typeof challenges !== "object") {
+  
+      return;
+    }
+
+    Object.entries(challenges).forEach(([challengeId, config]) => {
+      if (!config || typeof config !== "object" || !("maxRating" in config)) {
+        return;
+      }
+
+      console.log(`[SBC] migrateMaxRatingSettings: migrating sbcId=${sbcId}, challengeId=${challengeId}`);
+      const maxRating = Number(config.maxRating);
+      if (Number.isFinite(maxRating)) {
+        const currentRange = Array.isArray(config.ratingRange)
+          ? [...config.ratingRange]
+          : [0, 99];
+
+        currentRange[1] = maxRating;
+        config.ratingRange = currentRange;
+        needsSave = true;
+        console.log(`[SBC] migrateMaxRatingSettings: updated ratingRange=${currentRange}`);
+      }
+
+      
+        delete config.maxRating;
+        needsSave = true;
+        console.log("[SBC] migrateMaxRatingSettings: removed legacy maxRating");
+      
+    });
+  });
+
+  if (needsSave) {
+    console.log("[SBC] migrateMaxRatingSettings: saving updated settings");
+    setSolverSettings("sbcSettings", sbcSettings);
   }
 };
 
 let initDefaultSettings = () => {
-  Object.keys(defaultSBCSolverSettings).forEach((id) =>
-    saveSettings(0, 0, id, getSettings(0, 0, id) ?? defaultSBCSolverSettings[id])
+  migrateMaxRatingSettings();
+  Object.keys(defaultSBCSolverSettings). forEach((id) =>
+    saveSettings(
+      0,
+      0,
+      id,
+      getSettings(0, 0, id) ?? defaultSBCSolverSettings[id]
+    )
   );
 };
-const createPanel = () => {
-  var panel = document.createElement('div');
-  panel.classList.add('sbc-settings-field');
+const createPanel = (long = false) => {
+  var panel = document.createElement("div");
+  if (long) {
+    panel.classList.add("sbc-settings-longField");
+  } else {
+    panel.classList.add("sbc-settings-field");
+  }
 
   return panel;
 };
+const createTooltip = (tooltip, labelSpan, labelContainer) => {
+  const tooltipIcon = document.createElement("span");
+  const labelWrapper = document.createElement("div");
+  labelWrapper.style.position = "relative";
+  labelWrapper.style.display = "inline-block";
+  labelWrapper.style.paddingRight = "25px";
+  labelWrapper.appendChild(labelSpan);
+
+  // Add a data attribute for the tooltip text
+  labelWrapper.dataset.tooltip = tooltip;
+  labelWrapper.classList.add("tooltip-container");
+
+  // Replace the labelContainer with our wrapper
+  labelContainer.appendChild(labelWrapper);
+  labelContainer.appendChild(tooltipIcon);
+};
+const createDoubleRangeControl = (
+  parentDiv,
+  label,
+  id,
+  absoluteMin = 0,
+  absoluteMax = 99,
+  value = [0, 99],
+  target = () => {},
+  tooltip = "",
+  step = UTDoubleRangeControl.DEFAULT_STEP,
+  valueLabel = ["Min Ovr", " Max Ovr"]
+) => {
+  const panelRow = document.createElement("div");
+  panelRow.classList.add("panelActionRow");
+  const infoLabel = document.createElement("div");
+  infoLabel.classList.add("buttonInfoLabel");
+  const rangeLabel = document.createElement("span");
+  rangeLabel.classList.add("spinnerLabel");
+  rangeLabel.innerHTML = label;
+  infoLabel.appendChild(rangeLabel);
+
+  // Add tooltip icon if tooltip text is provided
+  if (tooltip) {
+    createTooltip(tooltip, rangeLabel, infoLabel);
+  }
+
+  panelRow.appendChild(infoLabel);
+
+  const rangeControl = new UTDoubleRangeControl();
+  rangeControl._generate();
+  rangeControl.init(),
+    rangeControl.setStep(step),
+    (rangeControl.latestSetMin = value[0]),
+    (rangeControl.latestSetMax = value[1]),
+    rangeControl.setAbsoluteMin(absoluteMin),
+    rangeControl.setAbsoluteMax(absoluteMax),
+    rangeControl._setValue(value[0], rangeControl.__rangeSliderMinInput),
+    rangeControl._setValue(value[1], rangeControl.__rangeSliderMaxInput),
+    rangeControl.setMinTitle(valueLabel[0]),
+    rangeControl.setMaxTitle(valueLabel[1]),
+    rangeControl._refresh();
+  rangeControl.addTarget(rangeControl, target, EventType.INPUT);
+
+  const panel = createPanel(true);
+  panel.setAttribute("id", id);
+  panel.appendChild(panelRow);
+  panel.appendChild(rangeControl.getRootElement());
+  parentDiv.appendChild(panel);
+
+  return panel;
+};
+
 const createNumberSpinner = (
   parentDiv,
   label,
@@ -8665,25 +10543,20 @@ const createNumberSpinner = (
   max = 100,
   value = 1,
   target = () => {},
-  tooltip = ''
+  tooltip = ""
 ) => {
-  var i = document.createElement('div');
-  i.classList.add('panelActionRow');
-  var o = document.createElement('div');
-  o.classList.add('buttonInfoLabel');
-  var spinnerLabel = document.createElement('span');
-  spinnerLabel.classList.add('spinnerLabel');
+  var i = document.createElement("div");
+  i.classList.add("panelActionRow");
+  var o = document.createElement("div");
+  o.classList.add("buttonInfoLabel");
+  var spinnerLabel = document.createElement("span");
+  spinnerLabel.classList.add("spinnerLabel");
   spinnerLabel.innerHTML = label;
   o.appendChild(spinnerLabel);
 
   // Add tooltip icon if tooltip text is provided
   if (tooltip) {
-    const tooltipIcon = document.createElement('span');
-    tooltipIcon.innerHTML = '&#9432;'; // info icon
-    tooltipIcon.style.marginLeft = '6px';
-    tooltipIcon.style.cursor = 'pointer';
-    tooltipIcon.title = tooltip;
-    o.appendChild(tooltipIcon);
+    createTooltip(tooltip, spinnerLabel, o);
   }
 
   i.appendChild(o);
@@ -8700,37 +10573,41 @@ const createNumberSpinner = (
   parentDiv.appendChild(panel);
   return panel;
 };
-const createChoice = (parentDiv, label, id, options, sbc, challenge, tooltip = '') => {
+const createChoice = (
+  parentDiv,
+  label,
+  id,
+  options,
+  sbc,
+  challenge,
+  tooltip = ""
+) => {
   if (document.contains(document.getElementById(id))) {
     document.getElementById(id).remove();
   }
-  const i = document.createElement('div');
-  i.classList.add('panelActionRow');
-  const o = document.createElement('div');
-  o.classList.add('buttonInfoLabel');
-  const choicesLabel = document.createElement('span');
-  choicesLabel.classList.add('choicesLabel');
+  const i = document.createElement("div");
+  i.classList.add("panelActionRow");
+  const o = document.createElement("div");
+  o.classList.add("buttonInfoLabel");
+  const choicesLabel = document.createElement("span");
+  choicesLabel.classList.add("choicesLabel");
   choicesLabel.innerHTML = label;
   o.appendChild(choicesLabel);
 
   // Add tooltip icon if tooltip text is provided
+  // Add tooltip icon if tooltip text is provided
   if (tooltip) {
-    const tooltipIcon = document.createElement('span');
-    tooltipIcon.innerHTML = '&#9432;'; // info icon
-    tooltipIcon.style.marginLeft = '6px';
-    tooltipIcon.style.cursor = 'pointer';
-    tooltipIcon.title = tooltip;
-    o.appendChild(tooltipIcon);
+    createTooltip(tooltip, choicesLabel, o);
   }
 
   i.appendChild(o);
 
   let panel = createPanel();
   panel.appendChild(i);
-  panel.setAttribute('id', id);
-  let select = document.createElement('select');
-  select.multiple = 'multiple';
-  select.setAttribute('id', 'choice' + id);
+  panel.setAttribute("id", id);
+  let select = document.createElement("select");
+  select.multiple = "multiple";
+  select.setAttribute("id", "choice" + id);
 
   panel.appendChild(select);
   parentDiv.appendChild(panel);
@@ -8745,16 +10622,18 @@ const createChoice = (parentDiv, label, id, options, sbc, challenge, tooltip = '
     callbackOnCreateTemplates: function (template) {
       return {
         item: (classNames, data) => {
-          const customProps = data.customProperties ? data.customProperties : {};
+          const customProps = data.customProperties
+            ? data.customProperties
+            : {};
           return template(`
               <div class="choices__item choices__item--selectable ${
-                data.highlighted ? 'choices__item--highlighted' : ''
+                data.highlighted ? "choices__item--highlighted" : ""
               }" data-item data-deletable data-id="${data.id}" data-value="${
             data.value
           }" data-custom-properties='${data.customProperties}' ${
-            data.active ? 'aria-selected="true"' : ''
+            data.active ? 'aria-selected="true"' : ""
           }>
-                ${customProps.icon || ''} ${data.label}
+                ${customProps.icon || ""} ${data.label}
                 <button type="button" class="choices__button" aria-label="Remove item: ${
                   data.value
                 }" data-button>Remove item</button>
@@ -8762,16 +10641,22 @@ const createChoice = (parentDiv, label, id, options, sbc, challenge, tooltip = '
             `);
         },
         choice: (classNames, data) => {
-          const customProps = data.customProperties ? data.customProperties : {};
+          const customProps = data.customProperties
+            ? data.customProperties
+            : {};
           return template(`
               <div class=" choices__item choices__item--choice ${
-                data.disabled ? 'choices__item--disabled' : 'choices__item--selectable'
-              }" data-select-text="${this.config.itemSelectText}" data-choice data-id="${
-            data.id
-          }" data-value="${data.value}" ${
-            data.disabled ? 'data-choice-disabled aria-disabled="true"' : 'data-choice-selectable'
+                data.disabled
+                  ? "choices__item--disabled"
+                  : "choices__item--selectable"
+              }" data-select-text="${
+            this.config.itemSelectText
+          }" data-choice data-id="${data.id}" data-value="${data.value}" ${
+            data.disabled
+              ? 'data-choice-disabled aria-disabled="true"'
+              : "data-choice-selectable"
           }>
-                ${customProps.icon || ''} ${data.label}
+                ${customProps.icon || ""} ${data.label}
                </div>
             `);
         },
@@ -8781,44 +10666,41 @@ const createChoice = (parentDiv, label, id, options, sbc, challenge, tooltip = '
 
   choices.setChoiceByValue(currentSettings);
   select.addEventListener(
-    'change',
+    "change",
     function (event) {
       saveSettings(sbc, challenge, id, choices.getValue(true));
     },
     false
   );
 };
-const createDropDown = (parentDiv, label, id, options, value, target, tooltip = '') => {
+const createDropDown = (
+  parentDiv,
+  label,
+  id,
+  options,
+  value,
+  target,
+  tooltip = ""
+) => {
   if (document.contains(document.getElementById(id))) {
     document.getElementById(id).remove();
   }
 
-  const i = document.createElement('div');
-  i.classList.add('panelActionRow');
+  const i = document.createElement("div");
+  i.classList.add("panelActionRow");
 
-  const o = document.createElement('div');
-  o.classList.add('buttonInfoLabel');
+  const o = document.createElement("div");
+  o.classList.add("buttonInfoLabel");
 
   // Add label
-  const spinnerLabel = document.createElement('span');
-  spinnerLabel.classList.add('spinnerLabel');
+  const spinnerLabel = document.createElement("span");
+  spinnerLabel.classList.add("spinnerLabel");
   spinnerLabel.innerHTML = label;
   o.appendChild(spinnerLabel);
 
   // Add tooltip icon if tooltip text is provided
   if (tooltip) {
-    const tooltipIcon = document.createElement('span');
-    tooltipIcon.textContent = '\uE0AC';
-    tooltipIcon.style.fontFamily = 'UltimateTeam-Icons, sans-serif';
-    tooltipIcon.style.marginLeft = '.5rem';
-    tooltipIcon.style.fontSize = '0.8rem';
-    tooltipIcon.style.right = '0';
-    tooltipIcon.style.bottom = '5px';
-    tooltipIcon.style.position = 'absolute';
-    tooltipIcon.style.marginLeft = '6px';
-    tooltipIcon.style.cursor = 'pointer';
-    tooltipIcon.title = tooltip;
-    o.appendChild(tooltipIcon);
+    createTooltip(tooltip, spinnerLabel, o);
   }
 
   i.appendChild(o);
@@ -8827,7 +10709,7 @@ const createDropDown = (parentDiv, label, id, options, value, target, tooltip = 
   let panel = createPanel();
   panel.appendChild(i);
   panel.appendChild(dropdown.getRootElement());
-  panel.setAttribute('id', id);
+  panel.setAttribute("id", id);
   dropdown.init();
 
   dropdown.setOptions(options);
@@ -8838,80 +10720,27 @@ const createDropDown = (parentDiv, label, id, options, value, target, tooltip = 
   dropdown._triggerActions(EventType.CHANGE);
   return dropdown;
 };
-const createToggle = (parentDiv, label, id, value, target, tooltip = '') => {
+const createToggle = (parentDiv, label, id, value, target, tooltip = "") => {
   let toggle = new UTToggleCellView();
   let panel = createPanel();
 
   // Create label container
-  const labelContainer = document.createElement('div');
-  labelContainer.style.display = 'flex';
-  labelContainer.style.alignItems = 'center';
+  const labelContainer = document.createElement("div");
+  labelContainer.style.display = "flex";
+  labelContainer.style.alignItems = "center";
 
   // Add label text
-  const labelSpan = document.createElement('span');
+  const labelSpan = document.createElement("span");
   labelSpan.textContent = label;
   labelContainer.appendChild(labelSpan);
 
   // Add tooltip icon if tooltip text is provided
   if (tooltip) {
-    const tooltipIcon = document.createElement('span');
-    // Create tooltip element using proper CSS styling
-    const labelWrapper = document.createElement('div');
-    labelWrapper.style.position = 'relative';
-    labelWrapper.style.display = 'inline-block';
-    labelWrapper.style.paddingRight = '25px';
-    labelWrapper.appendChild(labelSpan);
-
-    // Add a data attribute for the tooltip text
-    labelWrapper.dataset.tooltip = tooltip;
-
-    // Add a class that we'll style with CSS ::after
-    if (tooltip) {
-      labelWrapper.classList.add('tooltip-container');
-    }
-
-    // Replace the labelContainer with our wrapper
-    labelContainer.appendChild(labelWrapper);
-
-    // Add the required CSS for the tooltip
-    const tooltipStyle = document.createElement('style');
-    tooltipStyle.textContent = `
-        .tooltip-container {
-          position: relative;
-        }
-        .tooltip-container::after {
-          content: "\\E0AC";
-          font-family: UltimateTeam-Icons, sans-serif;
-          position: absolute;
-          right: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #07f468;
-          font-size: 0.8rem;
-          text-shadow: 0 0 3px rgba(7, 244, 104, 0.5);
-          cursor: help;
-        }
-        .tooltip-container:hover::before {
-          content: attr(data-tooltip);
-          position: absolute;
-          bottom: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          padding: 5px 10px;
-          background-color: rgba(0, 0, 0, 0.8);
-          color: white;
-          border-radius: 5px;
-          font-size: 12px;
-          white-space: nowrap;
-          z-index: 1000;
-        }
-      `;
-    document.head.appendChild(tooltipStyle);
-    labelContainer.appendChild(tooltipIcon);
+    createTooltip(tooltip, labelSpan, labelContainer);
   }
 
   // Set label container as toggle label
-  toggle.setLabel('');
+  toggle.setLabel("");
   toggle.getRootElement().prepend(labelContainer);
 
   panel.appendChild(toggle.getRootElement());
@@ -8931,32 +10760,32 @@ const createSettingsTile = (parentDiv, label, id) => {
     document.getElementById(id).remove();
   }
 
-  var tile = document.createElement('div');
-  tile.setAttribute('id', id);
-  tile.classList.add('tile');
-  tile.classList.add('col-1-1');
-  tile.classList.add('sbc-settings-wrapper');
-  tile.classList.add('main-header');
+  var tile = document.createElement("div");
+  tile.setAttribute("id", id);
+  tile.classList.add("tile");
+  tile.classList.add("col-1-1");
+  tile.classList.add("sbc-settings-wrapper");
+  tile.classList.add("main-header");
 
-  var tileheader = document.createElement('div');
-  tileheader.classList.add('sbc-settings-header');
-  var h1 = document.createElement('H1');
+  var tileheader = document.createElement("div");
+  tileheader.classList.add("sbc-settings-header");
+  var h1 = document.createElement("H1");
   h1.innerHTML = label;
   tileheader.appendChild(h1);
   tile.appendChild(tileheader);
-  var tileContent = document.createElement('div');
-  tileContent.classList.add('sbc-settings-section');
+  var tileContent = document.createElement("div");
+  tileContent.classList.add("sbc-settings-section");
   tile.appendChild(tileContent);
   parentDiv.appendChild(tile);
   return tileContent;
 };
 
 function Counter(selector, settings) {
-  let shield = getElement('.ut-click-shield');
-  if (!document.contains(document.getElementsByClassName('numCounter')[0])) {
-    var counterContent = document.createElement('div');
-    counterContent.classList.add('numCounter');
-    counterContent.addEventListener('click', () => {
+  let shield = getElement(".ut-click-shield");
+  if (!document.contains(document.getElementsByClassName("numCounter")[0])) {
+    var counterContent = document.createElement("div");
+    counterContent.classList.add("numCounter");
+    counterContent.addEventListener("click", () => {
       createSbc = false;
       hideLoader();
     });
@@ -8966,7 +10795,7 @@ function Counter(selector, settings) {
     {
       digits: 5,
       delay: 250, // ms
-      direction: '', // ltr is default
+      direction: "", // ltr is default
     },
     settings || {}
   );
@@ -8974,17 +10803,19 @@ function Counter(selector, settings) {
   var scopeElm = document.querySelector(selector);
 
   // generate digits markup
-  var digitsHTML = Array(this.settings.digits + 1).join('<div><b data-value="0"></b></div>');
+  var digitsHTML = Array(this.settings.digits + 1).join(
+    '<div><b data-value="0"></b></div>'
+  );
   scopeElm.innerHTML = digitsHTML;
 
   this.DOM = {
     scope: scopeElm,
-    digits: scopeElm.querySelectorAll('b'),
+    digits: scopeElm.querySelectorAll("b"),
   };
 
-  this.DOM.scope.addEventListener('transitionend', (e) => {
-    if (e.pseudoElement === '::before' && e.propertyName == 'margin-top') {
-      e.target.classList.remove('blur');
+  this.DOM.scope.addEventListener("transitionend", (e) => {
+    if (e.pseudoElement === "::before" && e.propertyName == "margin-top") {
+      e.target.classList.remove("blur");
     }
   });
 
@@ -9003,9 +10834,9 @@ Counter.prototype.count = function (newVal) {
   if (!this.value) return;
 
   // convert value into an array of numbers
-  countTo = (this.value + '').split('');
+  countTo = (this.value + "").split("");
 
-  if (settings.direction == 'rtl') {
+  if (settings.direction == "rtl") {
     countTo = countTo.reverse();
     digitsElms = [].slice.call(digitsElms).reverse();
   }
@@ -9017,7 +10848,7 @@ Counter.prototype.count = function (newVal) {
         function (j) {
           var diff = Math.abs(countTo[j] - +item.dataset.value);
           item.dataset.value = countTo[j];
-          if (diff > 3) item.className = 'blur';
+          if (diff > 3) item.className = "blur";
         },
         i * settings.delay,
         i
@@ -9029,7 +10860,7 @@ function findSBCLogin(obj, keyToFind) {
   let results = [];
 
   function recursiveSearch(obj, parents = []) {
-    if (typeof obj === 'object' && obj !== null) {
+    if (typeof obj === "object" && obj !== null) {
       for (let key in obj) {
         if (key === keyToFind && obj[key] === true) {
           results.push({
@@ -9048,20 +10879,20 @@ function findSBCLogin(obj, keyToFind) {
 
 const popupOverride = () => {};
 
-document.addEventListener('keydown', async function onKeyR(e) {
-  if (e.key === 'z' && !e.repeat) {
+document.addEventListener("keydown", async function onKeyR(e) {
+  if (e.key === "z" && !e.repeat) {
     let storage = await getStorage();
-    console.log('Pressed “z”: fetching storage items…');
+    console.log("Pressed “z”: fetching storage items…");
 
     let counts = {};
     for (const item of storage.map((m) => m.rating)) {
       counts[item] = (counts[item] || 0) + 1;
       counts.total = (counts.total || 0) + 1;
     }
-    console.log('Storage item counts:', counts);
+    console.log("Storage item counts:", counts);
   }
-  if (e.key === 'q' && !e.repeat) {
-    console.log('Pressed “q”: quickselling unassigned items…');
+  if (e.key === "q" && !e.repeat) {
+    console.log("Pressed “q”: quickselling unassigned items…");
     dealWithUnassigned();
 
     goToUnassignedView();
@@ -9070,9 +10901,17 @@ document.addEventListener('keydown', async function onKeyR(e) {
     if (nextPack) {
       let pp = await fetchUnassigned();
       // analyze unassigned player ratings
-      const playerRatings = pp.filter((item) => item.isPlayer()).map((item) => item.rating);
-      const avgRating = playerRatings.reduce((sum, r) => sum + r, 0) / playerRatings.length;
-      console.log('Unassigned ratings:', playerRatings, 'Average rating:', avgRating);
+      const playerRatings = pp
+        .filter((item) => item.isPlayer())
+        .map((item) => item.rating);
+      const avgRating =
+        playerRatings.reduce((sum, r) => sum + r, 0) / playerRatings.length;
+      console.log(
+        "Unassigned ratings:",
+        playerRatings,
+        "Average rating:",
+        avgRating
+      );
 
       // pick next SBC set based on count rating
       const tierCounts = {
@@ -9081,7 +10920,7 @@ document.addEventListener('keydown', async function onKeyR(e) {
         between89and91: playerRatings.filter((r) => r > 88 && r < 92).length,
         above92: playerRatings.filter((r) => r >= 92).length,
       };
-      console.log('Unassigned rating tiers count:', tierCounts);
+      console.log("Unassigned rating tiers count:", tierCounts);
 
       let nextSetId;
 
@@ -9090,21 +10929,28 @@ document.addEventListener('keydown', async function onKeyR(e) {
     }
   }
   // ignore repeats, only respond to lower‐case r
-  if (e.key === 'r' && !e.repeat) {
-    console.log('Pressed “r”: fetching unassigned items…');
+  if (e.key === "r" && !e.repeat) {
+    console.log("Pressed “r”: fetching unassigned items…");
     try {
       let pp = await fetchUnassigned();
       let playerPicks = pp.filter((m) => m.isPlayerPickItem());
       services.Item.redeem(playerPicks[0]);
       let n = new UTItemDetailsViewController();
-      services.Item.requestPendingPlayerPickItemSelection().observe(n, function (e, t) {
-        e.unobserve(n),
-          t.success && JSUtils.isObject(t.response)
-            ? n.showPlayerPicks(t.response.items, t.response.availablePicks, !0)
-            : NetworkErrorManager.handleStatus(t.status);
-      });
+      services.Item.requestPendingPlayerPickItemSelection().observe(
+        n,
+        function (e, t) {
+          e.unobserve(n),
+            t.success && JSUtils.isObject(t.response)
+              ? n.showPlayerPicks(
+                  t.response.items,
+                  t.response.availablePicks,
+                  !0
+                )
+              : NetworkErrorManager.handleStatus(t.status);
+        }
+      );
     } catch (err) {
-      console.error('Error fetching or filtering:', err);
+      console.error("Error fetching or filtering:", err);
     }
   }
 });
@@ -9122,6 +10968,7 @@ const init = () => {
   }
   if (isAllLoaded) {
     // Mark as initialized
+    syncBadgeContent();
     sbcSolverInitialized = true;
     sbcViewOverride();
     sbcButtonOverride();
@@ -9136,8 +10983,11 @@ const init = () => {
     futHomeOverride();
   } else {
     setTimeout(init, 4000);
-    console.log('SBC Solver: Waiting for all services to load before initializing.');
+    console.log(
+      "SBC Solver: Waiting for all services to load before initializing."
+    );
   }
 };
 init();
+
 })();
