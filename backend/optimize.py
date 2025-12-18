@@ -227,7 +227,7 @@ def create_basic_constraints(
 
 @runtime
 def create_nationId_constraint(
-    df, model, player, map_idx, players_grouped, num_cnts, NUM_nationId, NATIONS
+    df, model, player, map_idx, players_grouped, num_cnts, NUM_nationId, NATIONS, SCOPE
 ):
     """Create nationId constraint (>=)"""
     for i, nation_list in enumerate(NATIONS):
@@ -237,13 +237,19 @@ def create_nationId_constraint(
                 expr += players_grouped["nationId"].get(map_idx["nationId"][nation], [])
             except Exception as error:
                 print("An exception occurred:", error)
-        model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_nationId[i])
+        if SCOPE == "GREATER":
+            model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_nationId[i])
+        elif SCOPE == "LOWER":
+            model.Add(cp_model.LinearExpr.Sum(expr) <= NUM_nationId[i])
+        elif SCOPE == "EXACT":
+            model.Add(cp_model.LinearExpr.Sum(expr) == NUM_nationId[i])
+       
     return model
 
 
 @runtime
 def create_leagueId_constraint(
-    df, model, player, map_idx, players_grouped, num_cnts, NUM_leagueId, LEAGUES
+    df, model, player, map_idx, players_grouped, num_cnts, NUM_leagueId, LEAGUES, SCOPE
 ):
     """Create leagueId constraint (>=)"""
     for i, leagueId_list in enumerate(LEAGUES):
@@ -255,13 +261,18 @@ def create_leagueId_constraint(
                 )
             except Exception as error:
                 print("An exception occurred:", error)
-        model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_leagueId[i])
+        if SCOPE == "GREATER":
+            model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_leagueId[i])
+        elif SCOPE == "LOWER":
+            model.Add(cp_model.LinearExpr.Sum(expr) <= NUM_leagueId[i])
+        elif SCOPE == "EXACT":
+            model.Add(cp_model.LinearExpr.Sum(expr) == NUM_leagueId[i])
     return model
 
 
 @runtime
 def create_teamId_constraint(
-    df, model, player, map_idx, players_grouped, num_cnts, NUM_teamId, TEAMS
+    df, model, player, map_idx, players_grouped, num_cnts, NUM_teamId, TEAMS, SCOPE
 ):
     """Create teamId constraint (>=)"""
     for i, teamId_list in enumerate(TEAMS):
@@ -271,7 +282,12 @@ def create_teamId_constraint(
                 expr += players_grouped["teamId"].get(map_idx["teamId"][teamId], [])
             except Exception as error:
                 print("An exception occurred:", error)
-        model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_teamId[i])
+        if SCOPE == "GREATER":
+            model.Add(cp_model.LinearExpr.Sum(expr) >= NUM_teamId[i])
+        elif SCOPE == "LOWER":
+            model.Add(cp_model.LinearExpr.Sum(expr) <= NUM_teamId[i])
+        elif SCOPE == "EXACT":
+            model.Add(cp_model.LinearExpr.Sum(expr) == NUM_teamId[i])
     return model
 
 
@@ -741,7 +757,6 @@ def _setup_nation_chemistry(
 
     return model
 
-
 @runtime
 def create_chemistry_constraint(
     df,
@@ -1047,7 +1062,6 @@ def create_unique_leagueId_constraint(
     df, model, player, leagueId, map_idx, players_grouped, num_cnts, NUM_UNIQUE_leagueId
 ):
     """leagueIds: Max / Min / Exactly X"""
-
     num_leagueId = num_cnts[2]
 
     for i in range(num_leagueId):
@@ -1177,12 +1191,12 @@ def SBC(df, sbc, maxSolveTime):
     NUM_PLAYERS = 11 - len(sbc["brickIndices"])
     model = create_basic_constraints(
         df, model, player, map_idx, players_grouped, num_cnts, NUM_PLAYERS
-    )
+    )  
 
     """Comment out the constraints not required"""
     CHEMISTRY = 0
     CHEM_PER_PLAYER = 0
-
+   
     for req in sbc["constraints"]:
         print("Adding Constraint for ", req)
         if req["requirementKey"] == "CHEMISTRY_POINTS":
@@ -1301,6 +1315,7 @@ def SBC(df, sbc, maxSolveTime):
                 num_cnts,
                 [req["count"]],
                 [req["eligibilityValues"]],
+                req["scope"],
             )
         if req["requirementKey"] == "LEAGUE_ID":
             model = create_leagueId_constraint(
@@ -1312,6 +1327,7 @@ def SBC(df, sbc, maxSolveTime):
                 num_cnts,
                 [req["count"]],
                 [req["eligibilityValues"]],
+                req["scope"],
             )
 
         if req["requirementKey"] == "NATION_ID":
@@ -1324,6 +1340,7 @@ def SBC(df, sbc, maxSolveTime):
                 num_cnts,
                 [req["count"]],
                 [req["eligibilityValues"]],
+                req["scope"],
             )
 
         if req["requirementKey"] == "PLAYER_RARITY_GROUP":
@@ -1512,3 +1529,4 @@ status_dict = {
     3: "INFEASIBLE: The problem has been proven infeasible.",
     4: "OPTIMAL: An optimal feasible solution has been found.",
 }
+
