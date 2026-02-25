@@ -6,6 +6,7 @@
 // @author       TitiroMonkey
 // @match        https://www.easports.com/*/ea-sports-fc/ultimate-team/web-app/*
 // @match        https://www.ea.com/ea-sports-fc/ultimate-team/web-app/*
+// @match        https://www.ea.com/*/ea-sports-fc/ultimate-team/web-app/*
 // @require      https://code.jquery.com/jquery-3.6.0.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js
 // @require      https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js
@@ -6005,6 +6006,8 @@ let solveSBC = async (
       getSettings(sbcId, sbcData.challengeId, "excludeTradable") || false;
     let excludeExtinct =
       getSettings(sbcId, sbcData.challengeId, "excludeExtinct") || false;
+    let excludeEvolutions =
+      getSettings(sbcId, sbcData.challengeId, "excludeEvolutions") || false;
     let onlyStorage =
       getSettings(sbcId, sbcData.challengeId, "onlyStorage") || false;
     let excludeSbcSquads =
@@ -6028,6 +6031,7 @@ let solveSBC = async (
             !item.isTimeLimited() &&
             !(PriceItems[item.definitionId]?.isSbc && excludeSbc) &&
             !(PriceItems[item.definitionId]?.isObjective && excludeObjective) &&
+            !(item.upgrades && excludeEvolutions) &&
             !(item?.isSpecial() && excludeSpecial) &&
             !(item?.isTradeable() && excludeTradable) &&
             !(PriceItems[item.definitionId]?.isExtinct && excludeExtinct) &&
@@ -9814,6 +9818,25 @@ const createSBCCustomRulesPanel = async (parent) => {
 
           createToggle(
             sbcParamsTile,
+            "Exclude Evolved Players",
+            "excludeEvolutions",
+            getSettings(
+              dropdown.getValue(),
+              dropdownChallenge.getValue(),
+              "excludeEvolutions"
+            ),
+            (toggleXO) => {
+              saveSettings(
+                dropdown.getValue(),
+                dropdownChallenge.getValue(),
+                "excludeEvolutions",
+                toggleXO.getToggleState()
+              );
+            },
+            "When enabled, evolved will not be used in SBC solutions"
+          );
+          createToggle(
+            sbcParamsTile,
             "Exclude Objective Players",
             "excludeObjective",
             getSettings(
@@ -10197,6 +10220,7 @@ const defaultSBCSolverSettings = {
   excludeTradable: false,
   excludeSpecial: false,
   excludeObjective: false,
+  excludeEvolutions: true,
   excludeExtinct: false,
   onlyStorage: false,
   useConcepts: false,
