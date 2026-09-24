@@ -1,8 +1,43 @@
 import time
-from threading import Timer
+import os
+from threading import Timer, Lock
 
 from logger import add_log  # Import the add_log function from globals
 from ortools.sat.python import cp_model
+import pandas as pd
+
+
+_active_solver_lock = Lock()
+_active_solver = None
+
+
+def register_active_solver(solver):
+    global _active_solver
+    with _active_solver_lock:
+        _active_solver = solver
+
+
+def clear_active_solver(solver=None):
+    global _active_solver
+    with _active_solver_lock:
+        if solver is None or _active_solver is solver:
+            _active_solver = None
+
+
+def request_cancel_active_solve() -> bool:
+    with _active_solver_lock:
+        solver = _active_solver
+
+    if solver is None:
+        return False
+
+    try:
+        solver.StopSearch()
+        add_log("Received newer solve request: stopping active solve")
+        return True
+    except Exception as exc:
+        add_log(f"Failed to stop active solve: {exc}")
+        return False
 
 
 def runtime(func):
@@ -22,11 +57,28 @@ def runtime(func):
 class SolutionCallback(cp_model.CpSolverSolutionCallback):
     """Stop the search if the objective remains the same for X seconds"""
 
-    def __init__(self, timer_limit: int, player):
+    def __init__(
+        self,
+        timer_limit: int,
+        player,
+        player_ids,
+        player_definition_ids,
+        df,
+        emit_interval_seconds: float = 2.0,
+        include_interim_results: bool = False,
+        formation=None,
+    ):
         super().__init__()
         self._timer_limit = timer_limit
         self._timer = None
         self._player = player
+        self._player_ids = player_ids
+        self._player_definition_ids = player_definition_ids
+        self._df = df
+        self._emit_interval_seconds = max(0.0, float(emit_interval_seconds))
+        self._include_interim_results = bool(include_interim_results)
+        self._formation_set = set(formation or [])
+        self._last_emit_ts = 0.0
         self.solutions = []  # Add this to store solutions
         self.solution_count = 0
 
@@ -34,6 +86,12 @@ class SolutionCallback(cp_model.CpSolverSolutionCallback):
         """This is called everytime a solution with better objective is found."""
         self.solution_count += 1
         objective_value = self.ObjectiveValue()
+        now_ts = time.time()
+        should_emit = (
+            self.solution_count == 1
+            or self._emit_interval_seconds == 0
+            or (now_ts - self._last_emit_ts) >= self._emit_interval_seconds
+        )
 
         # Store solution details
         solution_info = {
@@ -47,14 +105,50 @@ class SolutionCallback(cp_model.CpSolverSolutionCallback):
         for i in range(len(self._player)):
             if self.Value(self._player[i]) == 1:
                 selected_players.append(i)
+        selected_player_ids = [self._player_ids[i] for i in selected_players]
+        selected_definition_ids = [
+            self._player_definition_ids[i] for i in selected_players
+        ]
+
+        interim_results = None
+        if should_emit and self._include_interim_results:
+            interim_df = self._df.iloc[selected_players].copy()
+            # Compute Is_Pos the same way the final solution does so the
+            # frontend can place position-matched players into their correct
+            # formation slots (Is_Pos=1) instead of first-available fill-ins.
+            if "possiblePositions" in interim_df.columns and self._formation_set:
+                interim_df["Is_Pos"] = interim_df["possiblePositions"].apply(
+                    lambda pos: 1 if pos in self._formation_set else 0
+                )
+            elif "Is_Pos" not in interim_df.columns:
+                interim_df["Is_Pos"] = 0
+            interim_results = interim_df.to_json(orient="records")
+
         solution_info["selected_players"] = selected_players
-        print("selected_players", selected_players)
-        # Use the shared logging function
-        add_log(
-            f"Solution {self.solution_count} found with objective value: {objective_value}",
-            selected_players,
-        )
-        self.solutions.append(solution_info)
+        solution_info["selected_player_ids"] = selected_player_ids
+        solution_info["selected_definition_ids"] = selected_definition_ids
+        if interim_results is not None:
+            solution_info["results"] = interim_results
+
+        if should_emit:
+            self._last_emit_ts = now_ts
+            result_payload = {
+                "event": "interim_solution",
+                "solution_number": self.solution_count,
+                "objective_value": objective_value,
+                "selected_player_ids": selected_player_ids,
+                "selected_definition_ids": selected_definition_ids,
+                "status": "FEASIBLE: Interim solution found",
+                "status_code": 2,
+            }
+            if interim_results is not None:
+                result_payload["results"] = interim_results
+            add_log(
+                f"Solution {self.solution_count} found with objective value: {objective_value}",
+                result_payload,
+            )
+            self.solutions.append(solution_info)
+
         self._reset_timer()
 
     def _reset_timer(self):
@@ -96,26 +190,107 @@ def create_var(model, df, map_idx, num_cnts, sbc):
         "name": {},
     }
     # Try adding hints to solver to enable rerun of solver multiple times and start where you left off
-    playerHints = []
+    playerHintsAsset = set()
+    playerHintsDefinition = set()
+    current_solution = [
+        value for value in (sbc.get("currentSolution") or []) if value not in (None, "", 0)
+    ]
+    formation = sbc.get("formation") or []
+
+    hinted_assets_from_solution = {}
+    hinted_definitions_from_solution = {}
+    asset_ids = set(pd.to_numeric(df.get("assetId", []), errors="coerce").dropna().astype(int)) if "assetId" in df.columns else set()
+    definition_ids = set(pd.to_numeric(df.get("definitionId", []), errors="coerce").dropna().astype(int)) if "definitionId" in df.columns else set()
+
+    for idx, raw_value in enumerate(current_solution):
+        try:
+            normalized_value = int(raw_value)
+        except Exception:
+            continue
+
+        solution_position = formation[idx] if idx < len(formation) else None
+        if normalized_value in asset_ids:
+            hinted_assets_from_solution.setdefault(normalized_value, solution_position)
+        if normalized_value in definition_ids:
+            hinted_definitions_from_solution.setdefault(normalized_value, solution_position)
+
+    force_hint_col = "__currentSolutionHint"
+    force_hint_present = force_hint_col in df.columns
+    hinted_rows = 0
     for i in range(num_players):
         boolVar = model.NewBoolVar(f"player{i}")
         player.append(boolVar)
-        if sum(1 for _ in filter(None.__ne__, sbc["currentSolution"])) > 0:
-            if df.at[i, "assetId"] in sbc["currentSolution"]:
-                solutionPosition = sbc["formation"][
-                    sbc["currentSolution"].index(df.at[i, "assetId"])
-                ]
-                key_names = ["assetId", "possiblePositions"]
-                keys = [df.at[i, "assetId"], solutionPosition]
 
-                if (
-                    df.at[i, "possiblePositions"] == solutionPosition
-                    or df[(df[key_names] == keys).all(1)]["name"].count() == 0
-                ) and df.at[i, "assetId"] not in playerHints:
-                    playerHints.append(df.at[i, "assetId"])
-                    model.AddHint(boolVar, 1)
+        has_current_solution = bool(hinted_assets_from_solution or hinted_definitions_from_solution)
+        player_asset_id = df.at[i, "assetId"] if "assetId" in df.columns else None
+        player_definition_id = (
+            df.at[i, "definitionId"] if "definitionId" in df.columns else None
+        )
+        player_position = df.at[i, "possiblePositions"]
+
+        hinted_solution_position = None
+        if player_asset_id in hinted_assets_from_solution:
+            hinted_solution_position = hinted_assets_from_solution[player_asset_id]
+        elif player_definition_id in hinted_definitions_from_solution:
+            hinted_solution_position = hinted_definitions_from_solution[player_definition_id]
+
+        is_force_hinted = False
+        if force_hint_present:
+            try:
+                is_force_hinted = bool(df.at[i, force_hint_col])
+            except Exception:
+                is_force_hinted = False
+
+        # Check if player's position is compatible with the hinted solution position
+        # More flexible check: if hinted position is in player's possible positions
+        position_compatible = True
+        if hinted_solution_position is not None:
+            if isinstance(player_position, list):
+                position_compatible = hinted_solution_position in player_position
+            else:
+                position_compatible = player_position == hinted_solution_position
+
+        should_hint_on = False
+        if (
+            player_asset_id in hinted_assets_from_solution
+            and player_asset_id not in playerHintsAsset
+            and position_compatible
+        ):
+            should_hint_on = True
+            playerHintsAsset.add(player_asset_id)
+        elif (
+            player_definition_id in hinted_definitions_from_solution
+            and player_definition_id not in playerHintsDefinition
+            and position_compatible
+        ):
+            should_hint_on = True
+            playerHintsDefinition.add(player_definition_id)
+        elif (
+            is_force_hinted
+            and player_asset_id not in playerHintsAsset
+            and player_definition_id not in playerHintsDefinition
+        ):
+            should_hint_on = True
+            if player_asset_id is not None:
+                playerHintsAsset.add(player_asset_id)
+            if player_definition_id is not None:
+                playerHintsDefinition.add(player_definition_id)
+
+        # If currentSolution exists, only hint matching players to avoid infeasible
+        # complete hints; otherwise provide a full 0/1 hint set.
+        if has_current_solution:
+            if should_hint_on:
+                model.AddHint(boolVar, 1)
+                hinted_rows += 1
+        else:
+            # Provide complete hints: hint matching players to 1, non-matching to 0
+            if should_hint_on:
+                model.AddHint(boolVar, 1)
+                hinted_rows += 1
             else:
                 model.AddHint(boolVar, 0)
+                hinted_rows += 1
+
         chem.append(model.NewIntVar(0, 3, f"chem{i}"))
         players_grouped["teamId"][map_idx["teamId"][df.at[i, "teamId"]]] = (
             players_grouped["teamId"].get(map_idx["teamId"][df.at[i, "teamId"]], [])
@@ -161,6 +336,10 @@ def create_var(model, df, map_idx, num_cnts, sbc):
         players_grouped["name"][map_idx["name"][df.at[i, "name"]]] = players_grouped[
             "name"
         ].get(map_idx["name"][df.at[i, "name"]], []) + [player[i]]
+
+    if hinted_rows > 0:
+        add_log(f"Applied current-solution hints to {hinted_rows} player rows")
+
     # These variables are basically chemistry of each teamId, leagueId and nation
     z_teamId = [model.NewIntVar(0, 3, f"z_teamId{i}") for i in range(num_teamIds)]
     z_leagueId = [model.NewIntVar(0, 3, f"z_leagueId{i}") for i in range(num_leagueId)]
@@ -196,6 +375,7 @@ def create_var(model, df, map_idx, num_cnts, sbc):
         nationId,
         leagueId,
         players_grouped,
+        hinted_rows,
     )
 
 
@@ -394,58 +574,107 @@ def create_squad_rating_constraint_3(
     squad_rating,
     scope,
 ):
-    """Squad rating: Min XX (>=)."""
-    precision = 10000
-    round_expr = int(precision / 2)
-    squad_rating = int(squad_rating * precision)
+    """Squad rating: Min/Max XX using the exact EA squad-rating formula.
 
-    df["int_rating"] = (df["rating"] * precision).astype(int)
-    df["avg_rating"] = ((df["rating"] / 11) * precision).astype(int)
-    total_var = model.NewIntVar(0, 99 * precision, "total_rating")
-    total_rating = cp_model.LinearExpr.WeightedSum(player, df["int_rating"].tolist())
-    # model.Add(total_rating == total_var)
-    avg_var = model.NewIntVar(0, 99 * precision, "average_rating")
-    average_rating = cp_model.LinearExpr.WeightedSum(player, df["avg_rating"].tolist())
-    model.Add(average_rating == avg_var)
+    EA rating = floor((S + E) / 11) where
+        S = sum of the 11 selected ratings
+        E = sum_i max(0, rating_i - S/11)   (per-player excess above the mean)
 
-    rating_list = df["rating"].unique().tolist()
-    rating_expr = []
+    The previous implementation scaled everything by precision=10000 to model
+    the /11 average, which blew every variable domain up to ~10^6 and produced
+    multiplication products near 10^10 -- very slow for CP-SAT.
+
+    Multiplying through by 11 removes the fractional average entirely and keeps
+    every domain in the low thousands:
+
+        11 * E  = sum_r R_r * max(0, 11*r - S)
+        11*(S + E) = 11*S + 11*E   ->   final
+
+    where R_r is the number of selected players at rating r.
+
+    Rating-band pruning
+    -------------------
+    The excess term is the expensive part (a variable*variable product per
+    rating).  Bounding the raw sum S near the target squeezes every excess/R
+    domain, so presolve fixes most of them and the search collapses.  This is
+    why removing the band made high-rated squads slow.
+
+    The band pins the raw average to  target +/- band_points  and is applied
+    only for high targets, where the achievable excess boost is small so the
+    band cannot cut the optimum.  For low targets the excess boost can be large
+    (a few high cards carrying many low ones), so the band is skipped to stay
+    correct -- those solves are already fast because the pool is unconstrained.
+
+    Tunables (env):
+      AUTO_SBC_RATING_BAND            band half-width in rating points (default 1)
+      AUTO_SBC_RATING_BAND_THRESHOLD  only band when target > this (default 84)
+    """
+    target = int(round(squad_rating))
+    max_rating = 99
+    band_points = int(os.getenv("AUTO_SBC_RATING_BAND", "1"))
+    band_threshold = int(os.getenv("AUTO_SBC_RATING_BAND_THRESHOLD", "82"))
+
+    # S = sum of selected ratings (no scaling).
+    total_var = model.NewIntVar(0, max_rating * num_players, "total_rating")
+    model.AddHint(total_var, 0)
+    model.Add(
+        total_var
+        == cp_model.LinearExpr.WeightedSum(
+            player, df["rating"].astype(int).tolist()
+        )
+    )
+
+    # 11 * E, accumulated only over rating groups that actually have players.
     excess = []
-
-    for rating in rating_list:
-        precision_rating = int(rating * precision)
+    for rating in df["rating"].unique().tolist():
         rating_idx = map_idx["rating"][rating]
         expr = players_grouped["rating"].get(rating_idx, [])
+        if not expr:
+            continue
 
+        r11 = int(round(rating * 11))
+
+        # R_r = count of selected players at this rating (<= squad size).
         R = model.NewIntVar(0, num_players, f"R{rating_idx}")
-        rating_expr.append(R)
+        model.AddHint(R, 0)
         model.Add(R == cp_model.LinearExpr.Sum(expr))
 
-        diff_var = model.NewIntVar(-99 * precision, 99 * precision, f"diff_{rating}")
-        model.Add(diff_var == precision_rating - avg_var)
+        # excess_r = max(0, 11*r - S)  -- integer, small domain.
+        excess_var = model.NewIntVar(0, max_rating * 11, f"excess_{rating}")
+        model.AddHint(excess_var, 0)
+        model.AddMaxEquality(excess_var, [r11 - total_var, 0])
 
-        excess_var = model.NewIntVar(0, 99 * precision, f"excess_{rating}")
-        model.AddMaxEquality(excess_var, [diff_var, 0])
-
-        total_rating_excess = model.NewIntVar(0, 99 * precision, f"tre{rating}")
+        # tre_r = R_r * excess_r  (small * small -> fast multiplication).
+        total_rating_excess = model.NewIntVar(
+            0, num_players * max_rating * 11, f"tre{rating}"
+        )
+        model.AddHint(total_rating_excess, 0)
         model.AddMultiplicationEquality(total_rating_excess, [R, excess_var])
         excess.append(total_rating_excess)
 
-    sum_excess = cp_model.LinearExpr.Sum(excess)
-    final_rating = cp_model.LinearExpr.Sum([total_rating, sum_excess])
+    sum_excess = cp_model.LinearExpr.Sum(excess)  # == 11 * E
+    final_rating = 11 * total_var + sum_excess     # == 11 * (S + E)
+
+    # squad = floor((S + E) / 11) >= target  <=>  11*(S + E) >= 121*target - 5
+    # (the -5/-6 reproduces the previous half-point rounding tolerance).
     if scope == "LOWER":
-        model.Add(final_rating <= squad_rating * num_players - round_expr)
+        model.Add(final_rating <= 121 * target - 6)
     else:
-        model.Add(final_rating >= squad_rating * num_players - round_expr)
-        model.Add(
-            total_rating
-            >= (squad_rating - int(10 * precision)) * num_players - round_expr
-        )
-        model.Add(
-            total_rating
-            <= (squad_rating + int(10 * precision)) * num_players - round_expr
-        )
-    return model, final_rating, average_rating, sum_excess
+        model.Add(final_rating >= 121 * target - 5)
+
+        # Rating-band prune: pin the raw sum S near the target so the excess
+        # domains collapse.  Only for high targets, where it cannot cut the
+        # optimum.  This is what keeps min-rating solves fast.
+        if band_points > 0 and target > band_threshold:
+            model.Add(total_var >= (target - band_points) * num_players)
+            model.Add(total_var <= (target + band_points) * num_players)
+            add_log(
+                f"Applied rating band S in "
+                f"[{(target - band_points) * num_players}, "
+                f"{(target + band_points) * num_players}] "
+                f"(target {target}, band +/-{band_points})"
+            )
+    return model, final_rating, total_var, sum_excess
 
 
 @runtime
@@ -462,6 +691,8 @@ def create_squad_rating_constraint(
     # excess  (each player's rating - total avg rating)
 
     excess = [model.NewIntVar(0, 99, f"excess{i}") for i in range(len(ratings))]
+    for var in excess:
+        model.AddHint(var, 0)
     [
         model.AddMaxEquality(
             excess[i], [(player[i] * (ratings[i] - average_rating)), 0]
@@ -496,7 +727,11 @@ def create_min_overall_constraint(
       LOWER / LESS               : Sum <= NUM_MIN_OVERALL[i]
       EXACT                      : Sum == NUM_MIN_OVERALL[i]
     """
-    max_rating = int(df["rating"].max())
+    ratings = df["rating"].dropna()
+    if ratings.empty:
+        return model
+
+    max_rating = int(ratings.max())
     for i, threshold in enumerate(MIN_OVERALL):
         expr = []
         for rat in range(threshold, max_rating + 1):
@@ -563,200 +798,6 @@ def create_player_exact_overall_constraint(
     return model
 
 
-def _setup_player_chemistry(
-    model,
-    df,
-    i,
-    chem,
-    player,
-    pos,
-    formation_list,
-    teamId_dict,
-    leagueId_dict,
-    nationId_dict,
-    z_teamId,
-    z_leagueId,
-    z_nation,
-    CHEM_PER_PLAYER,
-):
-    """Setup chemistry for a single player"""
-    p_teamId, p_leagueId, p_nation, p_pos = (
-        df.at[i, "teamId"],
-        df.at[i, "leagueId"],
-        df.at[i, "nationId"],
-        df.at[i, "possiblePositions"],
-    )
-
-    pos.append(model.NewBoolVar(f"_pos{i}"))
-    if p_pos in formation_list:
-        if df.at[i, "teamId"] in ["ICON", "HERO"]:
-            model.Add(chem[i] == 3)
-        else:
-            sum_expr = (
-                z_teamId[teamId_dict[p_teamId]]
-                + z_leagueId[leagueId_dict[p_leagueId]]
-                + z_nation[nationId_dict[p_nation]]
-            )
-            b = model.NewBoolVar(f"b{i}")
-            model.Add(sum_expr <= 3).OnlyEnforceIf(b)
-            model.Add(sum_expr > 3).OnlyEnforceIf(b.Not())
-            model.Add(chem[i] == sum_expr).OnlyEnforceIf(b)
-            model.Add(chem[i] == 3).OnlyEnforceIf(b.Not())
-    else:
-        model.Add(chem[i] == 0)
-        model.Add(pos[i] == 0)
-
-    model.Add(chem[i] >= CHEM_PER_PLAYER).OnlyEnforceIf(player[i])
-    return model
-
-
-def _setup_position_constraints(
-    model, df, player, pos, players_grouped, pos_dict, formation_list
-):
-    """Setup constraints for player positions"""
-    pos_expr = []  # Players whose possiblePositions is there in the input formation.
-    pos_players_by_pos = {}  # Track players by position for easier lookup
-
-    # Build position mapping
-    for Pos in set(formation_list):
-        if Pos not in pos_dict:
-            continue
-        t_expr = players_grouped["possiblePositions"].get(pos_dict[Pos], [])
-        pos_expr.extend(t_expr)
-        pos_players_by_pos[Pos] = t_expr
-
-        play_pos_list = []
-        for i, p in enumerate(t_expr):
-            play_pos = model.NewBoolVar(f"play_pos{Pos}{i}")
-            idx = player.index(p)  # Get index of player variable
-            model.AddMultiplicationEquality(play_pos, p, pos[idx])
-            play_pos_list.append(play_pos)
-
-        model.Add(cp_model.LinearExpr.Sum(play_pos_list) <= formation_list.count(Pos))
-
-    return model, pos_expr
-
-
-def _setup_team_chemistry(
-    model,
-    df,
-    player,
-    pos,
-    players_grouped,
-    pos_expr,
-    b_c,
-    z_teamId,
-    num_teamIds,
-    NUM_PLAYERS,
-):
-    """Setup team chemistry constraints"""
-    teamId_bucket = [[0, 1], [2, 3], [4, 6], [7, NUM_PLAYERS]]
-
-    for j in range(num_teamIds):
-        t_expr = players_grouped["teamId"].get(j, [])
-        # Filter players that have a position in formation
-        t_expr_1 = [p for p in t_expr if p in pos_expr]
-        expr = []
-        for i, p in enumerate(t_expr_1):
-            # Heroes or Icons don't contribute to teamId chem.
-            idx = player.index(p)
-            if df.at[idx, "teamId"] in ["ICON", "HERO"]:
-                continue
-            t_var = model.NewBoolVar(f"t_var_c{i}")
-            model.AddMultiplicationEquality(t_var, p, pos[idx])
-            expr.append(t_var)
-        sum_expr = cp_model.LinearExpr.Sum(expr)
-        for idx in range(4):
-            lb, ub = teamId_bucket[idx][0], teamId_bucket[idx][1]
-            model.AddLinearConstraint(sum_expr, lb, ub).OnlyEnforceIf(b_c[j][idx])
-            model.Add(z_teamId[j] == idx).OnlyEnforceIf(b_c[j][idx])
-        model.AddExactlyOne(b_c[j])
-
-    return model
-
-
-def _setup_league_chemistry(
-    model,
-    df,
-    player,
-    pos,
-    players_grouped,
-    pos_expr,
-    b_l,
-    z_leagueId,
-    num_leagueId,
-    teamId_dict,
-    NUM_PLAYERS,
-):
-    """Setup league chemistry constraints"""
-    leagueId_bucket = [[0, 2], [3, 4], [5, 7], [8, NUM_PLAYERS]]
-    icons_expr = players_grouped["teamId"].get(teamId_dict.get("ICON", -1), [])
-
-    for j in range(num_leagueId):
-        t_expr = players_grouped["leagueId"].get(j, [])
-        # In EA FC 24, Icons add 1 chem to every leagueId in the squad.
-        if icons_expr:
-            t_expr.extend(icons_expr)
-        # Filter players that have a position in formation
-        t_expr_1 = [p for p in t_expr if p in pos_expr]
-        expr = []
-        for i, p in enumerate(t_expr_1):
-            idx = player.index(p)
-            t_var = model.NewBoolVar(f"t_var_l{i}")
-            model.AddMultiplicationEquality(t_var, p, pos[idx])
-            # Heroes contribute 2x to leagueId chem.
-            if df.at[idx, "teamId"] == "HERO":
-                expr.append(2 * t_var)
-            else:
-                expr.append(t_var)
-        sum_expr = cp_model.LinearExpr.Sum(expr)
-        for idx in range(4):
-            lb, ub = leagueId_bucket[idx][0], leagueId_bucket[idx][1]
-            model.AddLinearConstraint(sum_expr, lb, ub).OnlyEnforceIf(b_l[j][idx])
-            model.Add(z_leagueId[j] == idx).OnlyEnforceIf(b_l[j][idx])
-        model.AddExactlyOne(b_l[j])
-
-    return model
-
-
-def _setup_nation_chemistry(
-    model,
-    df,
-    player,
-    pos,
-    players_grouped,
-    pos_expr,
-    b_n,
-    z_nation,
-    num_nationId,
-    NUM_PLAYERS,
-):
-    """Setup nation chemistry constraints"""
-    nationId_bucket = [[0, 1], [2, 4], [5, 7], [8, NUM_PLAYERS]]
-
-    for j in range(num_nationId):
-        t_expr = players_grouped["nationId"].get(j, [])
-        # Filter players that have a position in formation
-        t_expr_1 = [p for p in t_expr if p in pos_expr]
-        expr = []
-        for i, p in enumerate(t_expr_1):
-            idx = player.index(p)
-            t_var = model.NewBoolVar(f"t_var_n{i}")
-            model.AddMultiplicationEquality(t_var, p, pos[idx])
-            # Icons contribute 2x to nationId chem.
-            if df.at[idx, "teamId"] == "ICON":
-                expr.append(2 * t_var)
-            else:
-                expr.append(t_var)
-        sum_expr = cp_model.LinearExpr.Sum(expr)
-        for idx in range(4):
-            lb, ub = nationId_bucket[idx][0], nationId_bucket[idx][1]
-            model.AddLinearConstraint(sum_expr, lb, ub).OnlyEnforceIf(b_n[j][idx])
-            model.Add(z_nation[j] == idx).OnlyEnforceIf(b_n[j][idx])
-        model.AddExactlyOne(b_n[j])
-
-    return model
-
 @runtime
 def create_chemistry_constraint(
     df,
@@ -777,172 +818,171 @@ def create_chemistry_constraint(
     CHEM_PER_PLAYER,
     NUM_PLAYERS,
 ):
-    """Optimize Chemistry (>=) - Position-based constraint creation"""
-    # Log function start
+    """Formation-level chemistry constraint.
+
+    After possiblePositions explode in setup.py, each row is a single
+    player x position pair.  player[i]=1 already means "this player fills
+    this formation slot", so no separate pos[] variables are needed.
+
+    Algorithm:
+    1. Partition rows into in-formation vs out-of-formation (static).
+    2. Formation slot limits: sum(player[i]) per position <= slot count.
+    3. Group tier variables: weighted sum of player[i] -> bucket -> tier
+       (only for groups with in-formation rows).
+    4. Per in-formation player: chem[i] = min(club_tier + league_tier +
+       nation_tier, 3) when selected, 0 otherwise.  maxChem players
+       always get 3 when selected.
+    5. sum(chem) >= CHEMISTRY.
+    """
     add_log(
-        f"Creating chemistry constraint with target: {CHEMISTRY}, min per player: {CHEM_PER_PLAYER}"
+        f"Creating chemistry constraint with target: {CHEMISTRY}, "
+        f"min per player: {CHEM_PER_PLAYER}"
     )
 
     num_players = num_cnts[0]
+    formation_set = set(formation)
+    position_counts = {}
+    for p in formation:
+        position_counts[p] = position_counts.get(p, 0) + 1
 
-    # Get mapping dictionaries
-    teamId_dict = map_idx["teamId"]
-    leagueId_dict = map_idx["leagueId"]
-    nationId_dict = map_idx["nationId"]
-    pos_dict = map_idx["possiblePositions"]
-
-    # Chemistry bucket definitions
-    teamId_bucket = [[0, 1], [2, 3], [4, 6], [7, NUM_PLAYERS]]
-    leagueId_bucket = [[0, 2], [3, 4], [5, 7], [8, NUM_PLAYERS]]
-    nationId_bucket = [[0, 1], [2, 4], [5, 7], [8, NUM_PLAYERS]]
-
-    # Pre-compute formation data
-    formation_list = formation
-    formation_positions = set(formation_list)
-    position_counts = {pos: formation_list.count(pos) for pos in formation_positions}
-
-    add_log(f"Formation: {formation_list}")
+    add_log(f"Formation: {formation}")
     add_log(f"Positions in formation: {position_counts}")
 
-    # Initialize variables for tracking
-    pos = []
-    chem_expr = []
+    # --- Pre-read columns as arrays (avoids repeated .at[] lookups) ---
+    pos_col = df["possiblePositions"].values
+    league_col = df["leagueId"].values
+    nation_col = df["nationId"].values
+    club_col = (
+        df["normalizeClubId"].fillna(df["teamId"]).values
+        if "normalizeClubId" in df.columns
+        else df["teamId"].values
+    )
+    maxchem_col = (
+        df["maxChem"].values if "maxChem" in df.columns else [False] * num_players
+    )
+    tc_col = (
+        df["teamChem.contribution"].fillna(1).astype(int).values
+        if "teamChem.contribution" in df.columns
+        else [1] * num_players
+    )
+    lc_col = (
+        df["leagueChem.contribution"].fillna(1).astype(int).values
+        if "leagueChem.contribution" in df.columns
+        else [1] * num_players
+    )
+    nc_col = (
+        df["nationChem.contribution"].fillna(1).astype(int).values
+        if "nationChem.contribution" in df.columns
+        else [1] * num_players
+    )
 
-    # Setup position variables and chemistry calculations only for selected players
-    add_log("Setting up position variables and chemistry calculations")
+    # --- Partition rows ---
+    by_slot = {}          # position -> [row indices]
+    club_grp = {}         # club_id  -> [(player_var, weight)]
+    league_grp = {}       # league_id -> [(player_var, weight)]
+    nation_grp = {}       # nation_id -> [(player_var, weight)]
+    in_pos_rows = []      # (index, club, league, nation, maxChem)
 
-    # Track selected players by team, league, and nation
-    team_players = {
-        i: [] for i in range(num_cnts[1])
-    }  # team_players[team_idx] = list of selected players
-    league_players = {i: [] for i in range(num_cnts[2])}
-    nation_players = {i: [] for i in range(num_cnts[3])}
-
-    # For each player, create variables
     for i in range(num_players):
-        pos_var = model.NewBoolVar(f"pos_{i}")
-        pos.append(pos_var)
-        chem_expr.append(model.NewIntVar(0, 3, f"chem_expr_{i}"))
-
-        p_pos = df.at[i, "possiblePositions"]
-
-        # Player can only have position if they are in the correct position in formation
-        if p_pos in formation_positions:
-            # Create a variable that is 1 if player is selected AND in position
-            player_in_pos = model.NewBoolVar(f"player_in_pos_{i}")
-            model.AddMultiplicationEquality(player_in_pos, player[i], pos[i])
-
-            # Calculate chemistry for this player if selected
-            p_teamId = df.at[i, "teamId"]
-            p_leagueId = df.at[i, "leagueId"]
-            p_nation = df.at[i, "nationId"]
-
-            team_idx = teamId_dict[p_teamId]
-            league_idx = leagueId_dict[p_leagueId]
-            nation_idx = nationId_dict[p_nation]
-
-            # Track this player for team, league, and nation counts
-            team_players[team_idx].append(player_in_pos)
-            league_players[league_idx].append(player_in_pos)
-            nation_players[nation_idx].append(player_in_pos)
-
-            # Chemistry calculation for selected players in position
-            sum_expr = (
-                z_teamId[team_idx] + z_leagueId[league_idx] + z_nation[nation_idx]
-            )
-
-            # Cap chemistry at 3
-            b = model.NewBoolVar(f"b_chem_{i}")
-            model.Add(sum_expr <= 3).OnlyEnforceIf([b, player_in_pos])
-            model.Add(sum_expr > 3).OnlyEnforceIf([b.Not(), player_in_pos])
-            model.Add(chem[i] == sum_expr).OnlyEnforceIf([b, player_in_pos])
-            model.Add(chem[i] == 3).OnlyEnforceIf([b.Not(), player_in_pos])
-
-            # If player not selected or not in position, chemistry is 0
-            model.Add(chem[i] == 0).OnlyEnforceIf(player_in_pos.Not())
-        else:
-            # Player not in formation position, cannot contribute chemistry
-            model.Add(pos[i] == 0)
+        p = pos_col[i]
+        if p not in formation_set:
             model.Add(chem[i] == 0)
-
-    # Enforce position counts from the formation
-    for position in formation_positions:
-        if position not in pos_dict:
             continue
 
-        position_idx = pos_dict[position]
-        count_needed = position_counts[position]
-        position_expr = []
+        c, l, n = club_col[i], league_col[i], nation_col[i]
+        in_pos_rows.append((i, c, l, n, bool(maxchem_col[i])))
+        by_slot.setdefault(p, []).append(i)
 
-        # Get all players eligible for this position who are selected
-        for i in range(num_players):
-            if df.at[i, "possiblePositions"] == position:
-                # Create a variable that is 1 if player is selected AND in position
-                player_in_pos = model.NewBoolVar(f"player_in_pos_{position}_{i}")
-                model.AddMultiplicationEquality(player_in_pos, player[i], pos[i])
-                position_expr.append(player_in_pos)
+        tc, lc, nc = int(tc_col[i]), int(lc_col[i]), int(nc_col[i])
+        if tc > 0:
+            club_grp.setdefault(c, []).append((player[i], tc))
+        if lc > 0:
+            league_grp.setdefault(l, []).append((player[i], lc))
+        if nc > 0:
+            nation_grp.setdefault(n, []).append((player[i], nc))
 
-        # Enforce the count constraint
-        model.Add(sum(position_expr) <= count_needed)
+    add_log(
+        f"In-formation rows: {len(in_pos_rows)}, "
+        f"out-of-formation: {num_players - len(in_pos_rows)}"
+    )
 
-    add_log("Setting up team chemistry tiers")
-    # Apply team chemistry tiers
-    for team_idx, team_players_list in team_players.items():
-        if team_players_list:
-            team_sum = sum(team_players_list)
-            for idx, (lb, ub) in enumerate(teamId_bucket):
-                model.AddLinearConstraint(team_sum, lb, ub).OnlyEnforceIf(
-                    b_c[team_idx][idx]
+    # --- Formation slot limits ---
+    for p, indices in by_slot.items():
+        model.Add(
+            cp_model.LinearExpr.Sum([player[i] for i in indices])
+            <= position_counts[p]
+        )
+
+    # --- Tier variables (only for populated groups) ---
+    buckets = {
+        "club":   [[0, 1], [2, 3], [4, 6], [7, NUM_PLAYERS]],
+        "league": [[0, 2], [3, 4], [5, 7], [8, NUM_PLAYERS]],
+        "nation": [[0, 1], [2, 4], [5, 7], [8, NUM_PLAYERS]],
+    }
+
+    def _build_tiers(grp, bkts, tag):
+        tiers = {}
+        for gid, members in grp.items():
+            z = model.NewIntVar(0, 3, f"z_{tag}_{gid}")
+            tiers[gid] = z
+            if all(w == 1 for _, w in members):
+                total = cp_model.LinearExpr.Sum([v for v, _ in members])
+            else:
+                total = cp_model.LinearExpr.WeightedSum(
+                    [v for v, _ in members], [w for _, w in members]
                 )
-                model.Add(z_teamId[team_idx] == idx).OnlyEnforceIf(b_c[team_idx][idx])
-            model.AddExactlyOne(b_c[team_idx])
+            bs = [model.NewBoolVar(f"b_{tag}_{gid}_{k}") for k in range(4)]
+            for k, (lo, hi) in enumerate(bkts):
+                model.AddLinearConstraint(total, lo, hi).OnlyEnforceIf(bs[k])
+                model.Add(z == k).OnlyEnforceIf(bs[k])
+            model.AddExactlyOne(bs)
+        return tiers
 
-    add_log("Setting up league chemistry tiers")
-    # Apply league chemistry tiers
-    for league_idx, league_players_list in league_players.items():
-        if league_players_list:
-            league_sum = sum(league_players_list)
-            for idx, (lb, ub) in enumerate(leagueId_bucket):
-                model.AddLinearConstraint(league_sum, lb, ub).OnlyEnforceIf(
-                    b_l[league_idx][idx]
-                )
-                model.Add(z_leagueId[league_idx] == idx).OnlyEnforceIf(
-                    b_l[league_idx][idx]
-                )
-            model.AddExactlyOne(b_l[league_idx])
+    ct = _build_tiers(club_grp, buckets["club"], "c")
+    lt = _build_tiers(league_grp, buckets["league"], "l")
+    nt = _build_tiers(nation_grp, buckets["nation"], "n")
 
-    add_log("Setting up nation chemistry tiers")
-    # Apply nation chemistry tiers
-    for nation_idx, nation_players_list in nation_players.items():
-        if nation_players_list:
-            nation_sum = sum(nation_players_list)
-            for idx, (lb, ub) in enumerate(nationId_bucket):
-                model.AddLinearConstraint(nation_sum, lb, ub).OnlyEnforceIf(
-                    b_n[nation_idx][idx]
-                )
-                model.Add(z_nation[nation_idx] == idx).OnlyEnforceIf(
-                    b_n[nation_idx][idx]
-                )
-            model.AddExactlyOne(b_n[nation_idx])
+    add_log(
+        f"Chemistry groups: {len(ct)} clubs, {len(lt)} leagues, {len(nt)} nations"
+    )
 
-    # Total chemistry requirement
+    # --- Per-player chemistry (in-formation rows only) ---
+    for i, c, l, n, is_max in in_pos_rows:
+        if is_max:
+            model.Add(chem[i] == 3).OnlyEnforceIf(player[i])
+            model.Add(chem[i] == 0).OnlyEnforceIf(player[i].Not())
+        else:
+            parts = []
+            if c in ct:
+                parts.append(ct[c])
+            if l in lt:
+                parts.append(lt[l])
+            if n in nt:
+                parts.append(nt[n])
+
+            if not parts:
+                model.Add(chem[i] == 0)
+            else:
+                s = cp_model.LinearExpr.Sum(parts)
+                b = model.NewBoolVar(f"cap_{i}")
+                model.Add(s <= 3).OnlyEnforceIf([b, player[i]])
+                model.Add(s > 3).OnlyEnforceIf([b.Not(), player[i]])
+                model.Add(chem[i] == s).OnlyEnforceIf([b, player[i]])
+                model.Add(chem[i] == 3).OnlyEnforceIf([b.Not(), player[i]])
+                model.Add(chem[i] == 0).OnlyEnforceIf(player[i].Not())
+
+    # --- Total chemistry ---
     if CHEMISTRY > 0:
-        total_chemistry = []
-        for i in range(num_players):
-            player_chem = model.NewIntVar(0, 3, f"player_chem_{i}")
-            model.AddMultiplicationEquality(player_chem, player[i], chem[i])
-            total_chemistry.append(player_chem)
-
-        model.Add(cp_model.LinearExpr.Sum(total_chemistry) >= CHEMISTRY)
+        model.Add(cp_model.LinearExpr.Sum(chem) >= CHEMISTRY)
         add_log(f"Added constraint for total chemistry >= {CHEMISTRY}")
 
-    # Per-player chemistry requirement
+    # --- Per-player minimum chemistry ---
     if CHEM_PER_PLAYER > 0:
         for i in range(num_players):
             model.Add(chem[i] >= CHEM_PER_PLAYER).OnlyEnforceIf(player[i])
-            add_log(f"Each selected player must have chemistry >= {CHEM_PER_PLAYER}")
+        add_log(f"Each selected player must have chemistry >= {CHEM_PER_PLAYER}")
 
-    return model, pos, chem_expr
+    return model, None, chem
 
 
 @runtime
@@ -988,6 +1028,8 @@ def create_min_teamId_constraint(
     """Same teamId Count: Min X / Min X Players from the Same teamId (>=)"""
     num_teamIds = num_cnts[1]
     B_C = [model.NewBoolVar(f"B_C{i}") for i in range(num_teamIds)]
+    for var in B_C:
+        model.AddHint(var, 0)
     for i in range(num_teamIds):
         expr = players_grouped["teamId"].get(i, [])
         model.Add(cp_model.LinearExpr.Sum(expr) >= MIN_NUM_teamId).OnlyEnforceIf(B_C[i])
@@ -1005,6 +1047,8 @@ def create_min_leagueId_constraint(
     """Same leagueId Count: Min X / Min X Players from the Same leagueId (>=)"""
     num_leagueId = num_cnts[2]
     B_L = [model.NewBoolVar(f"B_L{i}") for i in range(num_leagueId)]
+    for var in B_L:
+        model.AddHint(var, 0)
     for i in range(num_leagueId):
         expr = players_grouped["leagueId"].get(i, [])
         model.Add(cp_model.LinearExpr.Sum(expr) >= MIN_NUM_leagueId).OnlyEnforceIf(
@@ -1024,6 +1068,8 @@ def create_min_nationId_constraint(
     """Same Nation Count: Min X / Min X Players from the Same Nation (>=)"""
     num_nationId = num_cnts[3]
     B_N = [model.NewBoolVar(f"B_N{i}") for i in range(num_nationId)]
+    for var in B_N:
+        model.AddHint(var, 0)
     for i in range(num_nationId):
         expr = players_grouped["nationId"].get(i, [])
         model.Add(cp_model.LinearExpr.Sum(expr) >= MIN_NUM_nationId).OnlyEnforceIf(
@@ -1113,6 +1159,7 @@ def set_objective(df, model, player):
     if MINIMIZE_MAX_COST:
         print("**MINIMIZE_MAX_COST**")
         max_cost = model.NewIntVar(0, df["price"].max(), "max_cost")
+        model.AddHint(max_cost, 0)
         play_cost = [player[i] * cost[i] for i in range(len(cost))]
         model.AddMaxEquality(max_cost, play_cost)
         model.Minimize(max_cost)
@@ -1132,6 +1179,124 @@ def get_dict(df, col):
     for i, val in enumerate(unique_col):
         d[val] = i
     return d
+
+
+@runtime
+def add_comprehensive_hints(
+    model,
+    player,
+    chem,
+    z_teamId,
+    z_leagueId,
+    z_nation,
+    b_c,
+    b_l,
+    b_n,
+    teamId,
+    nationId,
+    leagueId,
+    df,
+    num_cnts,
+):
+    """
+    Add comprehensive warm-start hints for ALL decision variables.
+    This maximizes hint coverage to improve solver performance.
+    Note: Player selection hints are already handled in create_var() based on currentSolution.
+    """
+    hint_count = 0
+    num_players = num_cnts[0]
+    num_teamIds = num_cnts[1]
+    num_leagueId = num_cnts[2]
+    num_nationId = num_cnts[3]
+
+    # Skip player selection hints - already handled in create_var() from currentSolution
+    # This avoids overwriting the current solution hints with generic fallback hints
+
+    # Hint chemistry variables (default to 0, will be updated by solver)
+    for i in range(num_players):
+        try:
+            model.AddHint(chem[i], 0)
+            hint_count += 1
+        except Exception:
+            pass
+
+    # Hint team chemistry tier variables (default to 0)
+    for j in range(num_teamIds):
+        try:
+            model.AddHint(z_teamId[j], 0)
+            hint_count += 1
+        except Exception:
+            pass
+
+    # Hint league chemistry tier variables (default to 0)
+    for j in range(num_leagueId):
+        try:
+            model.AddHint(z_leagueId[j], 0)
+            hint_count += 1
+        except Exception:
+            pass
+
+    # Hint nation chemistry tier variables (default to 0)
+    for j in range(num_nationId):
+        try:
+            model.AddHint(z_nation[j], 0)
+            hint_count += 1
+        except Exception:
+            pass
+
+    # Hint chemistry tier selection booleans for teams (all false initially)
+    for j in range(num_teamIds):
+        try:
+            for idx in range(4):
+                model.AddHint(b_c[j][idx], 0 if idx > 0 else 1)
+                hint_count += 1
+        except Exception:
+            pass
+
+    # Hint chemistry tier selection booleans for leagues (all false initially)
+    for j in range(num_leagueId):
+        try:
+            for idx in range(4):
+                model.AddHint(b_l[j][idx], 0 if idx > 0 else 1)
+                hint_count += 1
+        except Exception:
+            pass
+
+    # Hint chemistry tier selection booleans for nations (all false initially)
+    for j in range(num_nationId):
+        try:
+            for idx in range(4):
+                model.AddHint(b_n[j][idx], 0 if idx > 0 else 1)
+                hint_count += 1
+        except Exception:
+            pass
+
+    # Hint unique count variables (default to 0/False)
+    for i in range(num_teamIds):
+        try:
+            model.AddHint(teamId[i], 0)
+            hint_count += 1
+        except Exception:
+            pass
+
+    for i in range(num_leagueId):
+        try:
+            model.AddHint(leagueId[i], 0)
+            hint_count += 1
+        except Exception:
+            pass
+
+    for i in range(num_nationId):
+        try:
+            model.AddHint(nationId[i], 0)
+            hint_count += 1
+        except Exception:
+            pass
+
+    if hint_count > 0:
+        add_log(f"Added {hint_count} auxiliary variable hints (chemistry tiers, position vars, unique counts)")
+    
+    return model
 
 
 @runtime
@@ -1185,6 +1350,7 @@ def SBC(df, sbc, maxSolveTime):
         nationId,
         leagueId,
         players_grouped,
+        hinted_rows,
     ) = create_var(model, df, map_idx, num_cnts, sbc)
 
     """Essential constraints"""
@@ -1442,7 +1608,7 @@ def SBC(df, sbc, maxSolveTime):
 
     """If there is no constraint on total chemistry, simply set CHEMISTRY = 0"""
     if CHEMISTRY + CHEM_PER_PLAYER > 0:
-        model, pos, chem_expr = create_chemistry_constraint(
+        model, _, chem_expr = create_chemistry_constraint(
             df,
             model,
             chem,
@@ -1471,21 +1637,44 @@ def SBC(df, sbc, maxSolveTime):
     """Export Model to file"""
     # model.ExportToFile('model.txt')
 
+    """Add comprehensive hints for all variables before solving"""
+    model = add_comprehensive_hints(
+        model,
+        player,
+        chem,
+        z_teamId,
+        z_leagueId,
+        z_nation,
+        b_c,
+        b_l,
+        b_n,
+        teamId,
+        nationId,
+        leagueId,
+        df,
+        num_cnts,
+    )
+
     """Solve"""
     print("Solve Started")
     solver_logs.append({"time": time.time(), "message": "Solve Started"})
 
     solver = cp_model.CpSolver()
+    include_interim_results = os.getenv("AUTO_SBC_INTERIM_INCLUDE_RESULTS", "1") == "1"
+    interim_emit_interval = float(os.getenv("AUTO_SBC_INTERIM_EMIT_INTERVAL_SECONDS", "2"))
+    log_search_progress = os.getenv("AUTO_SBC_LOG_SEARCH_PROGRESS", "0") == "1"
+    default_workers = max(1, min(12, (os.cpu_count() or 8)))
+    num_search_workers = int(os.getenv("AUTO_SBC_NUM_SEARCH_WORKERS", str(default_workers)))
 
     """Solver Parameters"""
     # solver.parameters.random_seed = 42
     # Whether the solver should log the search progress.
     solver.parameters.max_time_in_seconds = maxSolveTime
-    solver.parameters.log_search_progress = True
+    solver.parameters.log_search_progress = log_search_progress
     # Specify the number of parallel workers (i.e. threads) to use during search.
     # This should usually be lower than your number of available cpus + hyperthread in your machine.
     # Setting this to 16 or 24 can help if the solver is slow in improving the bound.
-    solver.parameters.num_search_workers = 24
+    solver.parameters.num_search_workers = max(1, num_search_workers)
     # Stop the search when the gap between the best feasible objective (O) and
     # our best objective bound (B) is smaller than a limit.
     # Relative: abs(O - B) / max(1, abs(O)).
@@ -1495,36 +1684,67 @@ def SBC(df, sbc, maxSolveTime):
     # solver.parameters.cp_model_presolve = False
     # solver.parameters.stop_after_first_solution = True
     """Solver Parameters"""
+    # Ensure all variables have hints to avoid "incomplete hint" warnings.
+    # Variables already hinted in create_var keep their values; any remaining
+    # variables (created by constraint helpers) get a default hint of 0.
+    hinted_var_indices = set(model.Proto().solution_hint.vars)
+    for var_idx in range(len(model.Proto().variables)):
+        if var_idx not in hinted_var_indices:
+            model.Proto().solution_hint.vars.append(var_idx)
+            model.Proto().solution_hint.values.append(0)
+
     # Create callback instance
-    callback = SolutionCallback(timer_limit=30, player=player)
-    raw_status = solver.Solve(model, callback)
+    callback = SolutionCallback(
+        timer_limit=30,
+        player=player,
+        player_ids=df["id"].tolist(),
+        player_definition_ids=df["definitionId"].tolist(),
+        df=df,
+        emit_interval_seconds=interim_emit_interval,
+        include_interim_results=include_interim_results,
+        formation=sbc.get("formation", []),
+    )
+    register_active_solver(solver)
+    try:
+        raw_status = solver.Solve(model, callback)
+    finally:
+        clear_active_solver(solver)
     # OR-Tools may return a CpSolverStatus wrapper object; convert to a JSON-safe int.
     try:
-        status = int(raw_status)
+        status_code = int(raw_status)
     except Exception:
         # Fallback: keep a string representation to avoid FastAPI json encoding errors.
-        status = str(raw_status)
+        status_code = str(raw_status)
+
     print("\n")
     final_players = []
 
-    if status == 2 or status == 4:  # Feasible or Optimal
+    if status_code == 2 or status_code == 4:  # Feasible or Optimal
         for req in sbc["constraints"]:
             if req["requirementKey"] == "TEAM_RATING":
                 print("Total Rating: ", solver.Value(total_rating))
                 print("Average Rating: ", solver.Value(average_rating))
                 print("Excess: ", solver.Value(sum_excess))
         df["Chemistry"] = 0
-        # Is_Pos = 1 => Player should be placed in their respective possiblePositions.
+        # Is_Pos = 1 when the player's possiblePositions is in the formation.
+        # After possiblePositions explode, this is a static property of each row.
+        formation_set = set(sbc.get("formation", []))
         df["Is_Pos"] = 0
         for i in range(num_cnts[0]):
             if solver.Value(player[i]) == 1 and df.loc[i, "cardType"] != "BRICK":
                 final_players.append(i)
                 try:
-                    df.loc[i, "Chemistry"] = solver.Value(chem_expr[i])
-                    df.loc[i, "Is_Pos"] = solver.Value(pos[i])
+                    df.loc[i, "Chemistry"] = solver.Value(chem[i])
+                    df.loc[i, "Is_Pos"] = (
+                        1 if df.loc[i, "possiblePositions"] in formation_set else 0
+                    )
                 except:
                     pass
-    return final_players, status_dict[status], status
+    status_text = status_dict.get(
+        status_code,
+        f"UNKNOWN: Unrecognized solver status {status_code}",
+    )
+    return final_players, status_text, status_code
 
 
 status_dict = {
