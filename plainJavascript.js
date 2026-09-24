@@ -12959,6 +12959,14 @@ let fetchTransferList = () => {
     );
   });
 };
+
+let clearSoldItems = () => {
+  return new Promise((resolve) => {
+    services.Item.clearSoldItems().observe(undefined, (sender, response) => {
+      resolve(response);
+    });
+  });
+};
 let fetchDuplicateIds = () => {
   return new Promise((resolve) => {
     const result = [];
@@ -24280,6 +24288,8 @@ const playerItemOverride = () => {
     if (this.__root && item) {
       const priceElement = await getPriceDiv(item);
       if (priceElement) {
+        const existing = this.__root.querySelector(":scope > .item-price");
+        if (existing) existing.remove();
         this.__root.prepend(priceElement);
       }
     }
@@ -24299,6 +24309,8 @@ const playerItemOverride = () => {
     let priceElement = await getPriceDiv(item);
     // Add the price element to the player item
     if (this.__root && priceElement) {
+      const existing = this.__root.querySelector(":scope > .item-price");
+      if (existing) existing.remove();
       this.__root.prepend(priceElement);
     }
 
@@ -27674,6 +27686,8 @@ const appendSquadTotal = (total) => {
 const appendPriceToSlot = async (rootElement, item) => {
   let priceElement = await getPriceDiv(item);
   if (priceElement) {
+    const existing = rootElement.querySelector(":scope > .item-price");
+    if (existing) existing.remove();
     rootElement.prepend(priceElement);
   }
 };
