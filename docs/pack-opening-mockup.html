@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EA FC Pack Opening - Million Coin Card</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a0f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Segoe UI', sans-serif;
+  perspective: 1200px;
+}
+
+.scene {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Background vignette */
+.scene::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, #000 80%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Ambient glow behind pack */
+.ambient-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 180, 255, 0.15) 0%, transparent 70%);
+  animation: ambient-pulse 3s ease-in-out infinite;
+  z-index: 0;
+}
+
+@keyframes ambient-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+/* Pack container */
+.pack {
+  position: relative;
+  width: 280px;
+  height: 400px;
+  cursor: pointer;
+  z-index: 10;
+  transform-style: preserve-3d;
+  animation: pack-float 2.5s ease-in-out infinite;
+}
+
+@keyframes pack-float {
+  0%, 100% { transform: translateY(0) rotateY(0deg); }
+  50% { transform: translateY(-8px) rotateY(2deg); }
+}
+
+.pack-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  backface-visibility: hidden;
+}
+
+.pack-front {
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 40%, #16213e 100%);
+  border: 2px solid rgba(0, 180, 255, 0.4);
+  box-shadow: 
+    0 0 30px rgba(0, 180, 255, 0.2),
+    inset 0 0 60px rgba(0, 100, 200, 0.1);
+  overflow: hidden;
+}
+
+.pack-front::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent, rgba(0, 180, 255, 0.1), transparent, rgba(255, 215, 0, 0.1), transparent);
+  animation: pack-shimmer 4s linear infinite;
+}
+
+@keyframes pack-shimmer {
+  to { transform: rotate(360deg); }
+}
+
+.pack-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  z-index: 1;
+  text-shadow: 0 0 10px rgba(0, 180, 255, 0.8);
+}
+
+.pack-sublabel {
+  font-size: 11px;
+  color: rgba(255, 215, 0, 0.9);
+  letter-spacing: 2px;
+  margin-top: 8px;
+  z-index: 1;
+}
+
+.pack-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  z-index: 1;
+  filter: drop-shadow(0 0 15px rgba(0, 180, 255, 0.6));
+}
+
+/* Click prompt */
+.click-prompt {
+  position: absolute;
+  bottom: 60px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  letter-spacing: 1px;
+  animation: prompt-fade 2s ease-in-out infinite;
+  z-index: 10;
+}
+
+@keyframes prompt-fade {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ===== OPENING SEQUENCE ===== */
+
+/* Phase 1: Shake & build anticipation */
+.scene.opening .pack {
+  animation: pack-shake 0.6s ease-in-out infinite;
+}
+
+@keyframes pack-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  10% { transform: translateX(-3px) rotate(-0.5deg); }
+  20% { transform: translateX(3px) rotate(0.5deg); }
+  30% { transform: translateX(-4px) rotate(-1deg); }
+  40% { transform: translateX(4px) rotate(1deg); }
+  50% { transform: translateX(-5px) rotate(-1.5deg); }
+  60% { transform: translateX(5px) rotate(1.5deg); }
+  70% { transform: translateX(-3px) rotate(-0.5deg); }
+  80% { transform: translateX(3px) rotate(0.5deg); }
+  90% { transform: translateX(-2px) rotate(0); }
+}
+
+/* Phase 2: Explosion */
+.scene.exploding .pack {
+  animation: pack-explode 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes pack-explode {
+  0% { transform: scale(1); opacity: 1; }
+  30% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+/* Light burst */
+.light-burst {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.light-burst.active {
+  animation: burst-flash 1.5s ease-out forwards;
+}
+
+@keyframes burst-flash {
+  0% { opacity: 0; background: white; }
+  10% { opacity: 1; background: white; }
+  30% { opacity: 0.8; background: radial-gradient(circle, rgba(255, 215, 0, 0.8) 0%, transparent 60%); }
+  100% { opacity: 0; }
+}
+
+/* Rays */
+.rays-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.rays-container.active {
+  animation: rays-in 2s ease-out forwards;
+}
+
+@keyframes rays-in {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.ray {
+  position: absolute;
+  width: 3px;
+  height: 400px;
+  background: linear-gradient(to top, transparent, rgba(255, 215, 0, 0.6), transparent);
+  transform-origin: bottom center;
+  animation: ray-rotate 8s linear infinite;
+}
+
+@keyframes ray-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* Card reveal */
+.card-container {
+  position: absolute;
+  width: 240px;
+  height: 340px;
+  z-index: 20;
+  opacity: 0;
+  transform: scale(0) rotateY(180deg);
+  transform-style: preserve-3d;
+}
+
+.card-container.revealing {
+  animation: card-reveal 1.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes card-reveal {
+  0% { opacity: 0; transform: scale(0) rotateY(180deg) translateY(100px); }
+  40% { opacity: 1; transform: scale(1.15) rotateY(90deg) translateY(-20px); }
+  60% { transform: scale(1.05) rotateY(0deg) translateY(-10px); }
+  80% { transform: scale(0.98) rotateY(0deg) translateY(0); }
+  100% { opacity: 1; transform: scale(1) rotateY(0deg) translateY(0); }
+}
+
+.card {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #1b0a3c 0%, #2d1b69 20%, #1a0f44 40%, #3d1f8f 60%, #1b0a3c 100%);
+  border: 2px solid rgba(180, 130, 255, 0.6);
+  box-shadow:
+    0 0 40px rgba(150, 100, 255, 0.5),
+    0 0 80px rgba(150, 100, 255, 0.2),
+    inset 0 0 30px rgba(200, 150, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.05) 50%, transparent 60%);
+  animation: card-shine 3s ease-in-out infinite;
+}
+
+@keyframes card-shine {
+  0%, 100% { transform: translateX(-100%) rotate(25deg); }
+  50% { transform: translateX(100%) rotate(25deg); }
+}
+
+.card-rating {
+  position: absolute;
+  top: 15px;
+  left: 20px;
+  font-size: 42px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 2px 10px rgba(255, 215, 0, 0.5);
+  line-height: 1;
+}
+
+.card-position {
+  position: absolute;
+  top: 60px;
+  left: 22px;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 215, 0, 0.8);
+  letter-spacing: 1px;
+}
+
+.card-player-img {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(150, 100, 255, 0.3), rgba(255, 215, 0, 0.2));
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  border: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+.card-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  margin-top: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(150, 100, 255, 0.5);
+}
+
+.card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.card-stat {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.card-stat-label {
+  color: rgba(255, 215, 0, 0.7);
+  font-weight: 600;
+}
+
+.card-stat-value {
+  font-weight: 800;
+  color: #fff;
+}
+
+.card-price {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+/* Particles */
+.particles {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.particle.active {
+  animation: particle-fly 2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes particle-fly {
+  0% { 
+    opacity: 1; 
+    transform: translate(0, 0) scale(1);
+  }
+  100% { 
+    opacity: 0; 
+    transform: translate(var(--tx), var(--ty)) scale(0);
+  }
+}
+
+/* Confetti */
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  opacity: 0;
+  z-index: 25;
+}
+
+.confetti-piece.active {
+  animation: confetti-fall 3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes confetti-fall {
+  0% { 
+    opacity: 1;
+    transform: translateY(-100px) rotate(0deg) scale(1);
+  }
+  100% { 
+    opacity: 0;
+    transform: translateY(calc(100vh)) rotate(720deg) scale(0.5);
+  }
+}
+
+/* Lightning */
+.lightning {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.lightning.active {
+  animation: lightning-flash 0.15s ease-out 3;
+}
+
+@keyframes lightning-flash {
+  0% { opacity: 0; }
+  50% { opacity: 0.8; background: rgba(180, 130, 255, 0.3); }
+  100% { opacity: 0; }
+}
+
+/* Screen shake */
+.scene.shaking {
+  animation: screen-shake 0.5s ease-out;
+}
+
+@keyframes screen-shake {
+  0% { transform: translate(0); }
+  10% { transform: translate(-8px, -5px); }
+  20% { transform: translate(8px, 5px); }
+  30% { transform: translate(-6px, 3px); }
+  40% { transform: translate(6px, -3px); }
+  50% { transform: translate(-4px, 2px); }
+  60% { transform: translate(4px, -2px); }
+  70% { transform: translate(-2px, 1px); }
+  80% { transform: translate(2px, -1px); }
+  90% { transform: translate(-1px, 0); }
+  100% { transform: translate(0); }
+}
+
+/* Walkout banner */
+.walkout-banner {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  opacity: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.walkout-banner.active {
+  animation: banner-slide 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  animation-delay: 1.5s;
+}
+
+@keyframes banner-slide {
+  0% { opacity: 0; transform: translateX(-50%) translateY(30px); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.walkout-club {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 1px;
+}
+
+.walkout-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+/* Reset button */
+.reset-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  backdrop-filter: blur(5px);
+  transition: background 0.2s;
+}
+.reset-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+</style>
+</head>
+<body>
+
+<div class="scene" id="scene">
+  <div class="ambient-glow"></div>
+  
+  <div class="pack" id="pack" onclick="startOpening()">
+    <div class="pack-face pack-front">
+      <div class="pack-icon">⚡</div>
+      <div class="pack-label">TOTY Ultimate</div>
+      <div class="pack-sublabel">✦ 1,000,000+ ✦</div>
+    </div>
+  </div>
+
+  <div class="click-prompt" id="prompt">CLICK TO OPEN</div>
+
+  <div class="light-burst" id="lightBurst"></div>
+  <div class="lightning" id="lightning"></div>
+
+  <div class="rays-container" id="rays">
+    <div class="ray" style="transform: rotate(0deg);"></div>
+    <div class="ray" style="transform: rotate(30deg);"></div>
+    <div class="ray" style="transform: rotate(60deg);"></div>
+    <div class="ray" style="transform: rotate(90deg);"></div>
+    <div class="ray" style="transform: rotate(120deg);"></div>
+    <div class="ray" style="transform: rotate(150deg);"></div>
+    <div class="ray" style="transform: rotate(180deg);"></div>
+    <div class="ray" style="transform: rotate(210deg);"></div>
+    <div class="ray" style="transform: rotate(240deg);"></div>
+    <div class="ray" style="transform: rotate(270deg);"></div>
+    <div class="ray" style="transform: rotate(300deg);"></div>
+    <div class="ray" style="transform: rotate(330deg);"></div>
+  </div>
+
+  <div class="particles" id="particles"></div>
+
+  <div class="card-container" id="cardContainer">
+    <div class="card">
+      <div class="card-rating">99</div>
+      <div class="card-position">ST</div>
+      <div class="card-player-img">🌟</div>
+      <div class="card-name">Mbappé</div>
+      <div class="card-stats">
+        <div class="card-stat"><span class="card-stat-label">PAC</span><span class="card-stat-value">99</span></div>
+        <div class="card-stat"><span class="card-stat-label">SHO</span><span class="card-stat-value">98</span></div>
+        <div class="card-stat"><span class="card-stat-label">PAS</span><span class="card-stat-value">94</span></div>
+        <div class="card-stat"><span class="card-stat-label">DRI</span><span class="card-stat-value">99</span></div>
+        <div class="card-stat"><span class="card-stat-label">DEF</span><span class="card-stat-value">55</span></div>
+        <div class="card-stat"><span class="card-stat-label">PHY</span><span class="card-stat-value">89</span></div>
+      </div>
+      <div class="card-price">1,250,000</div>
+    </div>
+  </div>
+
+  <div class="walkout-banner" id="walkoutBanner">
+    <div class="walkout-club">REAL MADRID • LA LIGA</div>
+    <div class="walkout-value">TEAM OF THE YEAR</div>
+  </div>
+</div>
+
+<button class="reset-btn" onclick="resetScene()">↺ Replay</button>
+
+<script>
+let isOpening = false;
+
+function startOpening() {
+  if (isOpening) return;
+  isOpening = true;
+
+  const scene = document.getElementById('scene');
+  const prompt = document.getElementById('prompt');
+  
+  prompt.style.display = 'none';
+
+  // Phase 1: Shake (1.5s)
+  scene.classList.add('opening');
+  
+  // Phase 2: Lightning flashes
+  setTimeout(() => {
+    document.getElementById('lightning').classList.add('active');
+  }, 800);
+
+  // Phase 3: Explode pack
+  setTimeout(() => {
+    scene.classList.remove('opening');
+    scene.classList.add('exploding', 'shaking');
+    document.getElementById('lightBurst').classList.add('active');
+    spawnParticles();
+  }, 1500);
+
+  // Phase 4: Show rays
+  setTimeout(() => {
+    document.getElementById('rays').classList.add('active');
+  }, 1800);
+
+  // Phase 5: Reveal card
+  setTimeout(() => {
+    scene.classList.remove('shaking');
+    document.getElementById('cardContainer').classList.add('revealing');
+    spawnConfetti();
+  }, 2200);
+
+  // Phase 6: Walkout banner
+  setTimeout(() => {
+    document.getElementById('walkoutBanner').classList.add('active');
+  }, 2500);
+}
+
+function spawnParticles() {
+  const container = document.getElementById('particles');
+  const colors = ['#ffd700', '#b482ff', '#00b4ff', '#ff6b9d', '#fff'];
+  
+  for (let i = 0; i < 60; i++) {
+    const particle = document.createElement('div');
+    particle.classList.add('particle');
+    
+    const angle = (Math.PI * 2 * i) / 60;
+    const distance = 200 + Math.random() * 300;
+    const tx = Math.cos(angle) * distance;
+    const ty = Math.sin(angle) * distance;
+    
+    particle.style.left = '50%';
+    particle.style.top = '50%';
+    particle.style.setProperty('--tx', tx + 'px');
+    particle.style.setProperty('--ty', ty + 'px');
+    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+    particle.style.width = (3 + Math.random() * 5) + 'px';
+    particle.style.height = particle.style.width;
+    particle.style.animationDelay = (Math.random() * 0.3) + 's';
+    particle.style.animationDuration = (1.5 + Math.random() * 1) + 's';
+    
+    container.appendChild(particle);
+    
+    requestAnimationFrame(() => particle.classList.add('active'));
+  }
+}
+
+function spawnConfetti() {
+  const container = document.getElementById('particles');
+  const colors = ['#ffd700', '#b482ff', '#00b4ff', '#ff6b9d', '#50ff50', '#fff', '#ff4444'];
+  
+  for (let i = 0; i < 40; i++) {
+    const piece = document.createElement('div');
+    piece.classList.add('confetti-piece');
+    piece.style.left = (10 + Math.random() * 80) + '%';
+    piece.style.top = '-20px';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.width = (5 + Math.random() * 8) + 'px';
+    piece.style.height = (8 + Math.random() * 12) + 'px';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    piece.style.animationDelay = (Math.random() * 1.5) + 's';
+    piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+    
+    container.appendChild(piece);
+    requestAnimationFrame(() => piece.classList.add('active'));
+  }
+}
+
+function resetScene() {
+  isOpening = false;
+  const scene = document.getElementById('scene');
+  scene.classList.remove('opening', 'exploding', 'shaking');
+  
+  document.getElementById('lightBurst').classList.remove('active');
+  document.getElementById('lightning').classList.remove('active');
+  document.getElementById('rays').classList.remove('active');
+  document.getElementById('cardContainer').classList.remove('revealing');
+  document.getElementById('walkoutBanner').classList.remove('active');
+  document.getElementById('prompt').style.display = '';
+  
+  // Clear particles
+  document.getElementById('particles').innerHTML = '';
+  
+  // Reset pack
+  const pack = document.getElementById('pack');
+  pack.style.display = '';
+  pack.classList.remove('exploding');
+  
+  // Force reflow to restart animations
+  void scene.offsetWidth;
+}
+</script>
+</body>
+</html>

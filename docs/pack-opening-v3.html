@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EA FC Pack Opening</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;500;700;900&display=swap');
+
+:root {
+  --gold: #ffd700;
+  --gold-dark: #b8860b;
+  --toty-purple: #7c3aed;
+  --toty-light: #a78bfa;
+  --toty-deep: #3b0764;
+  --neon-green: #22c55e;
+  --accent-blue: #3b82f6;
+  --glow-pink: #ec4899;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #030305;
+  font-family: 'Exo 2', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+}
+
+/* ===== CANVAS BACKGROUND ===== */
+canvas#bgCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== SCENE ===== */
+.scene {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Stadium ambient glow */
+.ambient-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+  animation: orb-drift 8s ease-in-out infinite alternate;
+}
+
+.ambient-orb:nth-child(1) { width: 500px; height: 500px; background: var(--toty-purple); top: -15%; left: -10%; animation-delay: 0s; }
+.ambient-orb:nth-child(2) { width: 400px; height: 400px; background: var(--accent-blue); bottom: -20%; right: -10%; animation-delay: 2s; }
+.ambient-orb:nth-child(3) { width: 300px; height: 300px; background: var(--glow-pink); top: 50%; left: 60%; animation-delay: 4s; }
+
+@keyframes orb-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, -20px) scale(1.15); }
+}
+
+/* Stadium lights - fancy */
+.flood-lights {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 45%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.flood-beam {
+  position: absolute;
+  top: 0;
+  width: 100px;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 80%);
+  clip-path: polygon(40% 0%, 60% 0%, 100% 100%, 0% 100%);
+  opacity: 0;
+  animation: beam-pulse 4s ease-in-out infinite;
+}
+
+@keyframes beam-pulse {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Pitch faint */
+.pitch-overlay {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.04;
+  background:
+    linear-gradient(0deg, rgba(34, 197, 94, 0.3) 0%, transparent 40%),
+    repeating-linear-gradient(90deg, transparent 0px, transparent 80px, rgba(34, 197, 94, 0.1) 80px, rgba(34, 197, 94, 0.1) 82px);
+}
+
+/* Vignette */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 70% at center, transparent 20%, rgba(0,0,0,0.85) 100%);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ===== PACK ===== */
+.pack-container {
+  position: relative;
+  z-index: 10;
+  cursor: pointer;
+  transition: filter 0.3s;
+}
+
+.pack-container:hover { filter: brightness(1.1); }
+
+.pack-3d {
+  width: 240px;
+  height: 340px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: pack-float 4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pack-container:hover .pack-3d {
+  transform: rotateX(-5deg) rotateY(8deg) scale(1.04);
+}
+
+@keyframes pack-float {
+  0%, 100% { transform: translateY(0) rotateX(3deg) rotateY(-2deg); }
+  25% { transform: translateY(-10px) rotateX(1deg) rotateY(2deg); }
+  50% { transform: translateY(-14px) rotateX(-3deg) rotateY(1deg); }
+  75% { transform: translateY(-6px) rotateX(-1deg) rotateY(-3deg); }
+}
+
+.pack-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.pack-face-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, #0f2f0f 0%, #1a4a1a 25%, #0d3d0d 50%, #1a5a1a 75%, #0a2a0a 100%);
+  border: 2px solid rgba(34, 197, 94, 0.35);
+  border-radius: 18px;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.9),
+    0 0 60px rgba(34, 197, 94, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+
+.pack-holo {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(34, 197, 94, 0.08) 40%,
+    transparent 50%,
+    rgba(255, 215, 0, 0.04) 70%,
+    transparent 100%
+  );
+  animation: holo-rotate 6s linear infinite;
+}
+
+@keyframes holo-rotate {
+  0% { filter: hue-rotate(0deg); transform: rotate(0deg); }
+  100% { filter: hue-rotate(360deg); transform: rotate(360deg); }
+}
+
+.pack-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+}
+
+.pack-emblem {
+  width: 90px;
+  height: 90px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pack-emblem-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(34, 197, 94, 0.3);
+  border-radius: 50%;
+  animation: ring-spin 12s linear infinite;
+}
+
+.pack-emblem-ring::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: var(--neon-green);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--neon-green);
+}
+
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+.pack-emblem-inner {
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  filter: drop-shadow(0 0 10px rgba(34, 197, 94, 0.4));
+}
+
+.pack-label {
+  text-align: center;
+}
+
+.pack-title-main {
+  font-family: 'Russo One', sans-serif;
+  font-size: 26px;
+  background: linear-gradient(180deg, #ffffff 0%, #a8e6cf 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 4px;
+}
+
+.pack-title-sub {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  letter-spacing: 5px;
+  color: rgba(34, 197, 94, 0.5);
+  margin-top: 4px;
+}
+
+.pack-divider {
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.4), transparent);
+  position: relative;
+}
+
+.pack-divider::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background: var(--neon-green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--neon-green);
+}
+
+.pack-rarity-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.pack-star {
+  width: 8px;
+  height: 8px;
+  background: var(--gold);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  opacity: 0.7;
+  animation: star-glow 2s ease-in-out infinite;
+}
+
+.pack-star:nth-child(2) { animation-delay: 0.3s; }
+.pack-star:nth-child(3) { animation-delay: 0.6s; }
+.pack-star:nth-child(4) { animation-delay: 0.9s; }
+.pack-star:nth-child(5) { animation-delay: 1.2s; }
+
+@keyframes star-glow {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* Pack glow pulse underneath */
+.pack-ground-glow {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 60px;
+  background: radial-gradient(ellipse, rgba(34, 197, 94, 0.2) 0%, transparent 70%);
+  filter: blur(10px);
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%) scaleX(1); }
+  50% { opacity: 0.9; transform: translateX(-50%) scaleX(1.2); }
+}
+
+/* Floating particles around pack */
+.pack-particles {
+  position: absolute;
+  inset: -40px;
+  pointer-events: none;
+}
+
+.pack-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--neon-green);
+  border-radius: 50%;
+  opacity: 0;
+  animation: particle-float 4s ease-in-out infinite;
+}
+
+@keyframes particle-float {
+  0% { opacity: 0; transform: translateY(20px) scale(0); }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  80% { opacity: 0.6; transform: translateY(-40px) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0); }
+}
+
+/* Prompt */
+.open-prompt {
+  position: absolute;
+  bottom: 12%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: prompt-float 3s ease-in-out infinite;
+  transition: opacity 0.4s, transform 0.4s;
+}
+
+@keyframes prompt-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.open-prompt-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  letter-spacing: 6px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.open-prompt-bar {
+  width: 50px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.open-prompt-bar-fill {
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(90deg, var(--neon-green), var(--gold));
+  border-radius: 2px;
+  animation: bar-sweep 2s ease-in-out infinite;
+}
+
+@keyframes bar-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* ===== OPENING PHASES ===== */
+
+/* Phase 1: Anticipation */
+.scene.phase-anticipation .pack-container {
+  animation: anticipation-squeeze 1.8s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+}
+
+@keyframes anticipation-squeeze {
+  0% { transform: scale(1) translateY(0); }
+  40% { transform: scale(0.92, 1.04) translateY(10px); }
+  70% { transform: scale(0.88, 1.06) translateY(14px); filter: brightness(1.4) saturate(1.3); }
+  100% { transform: scale(0.85, 1.08) translateY(16px); filter: brightness(1.6) saturate(1.5); }
+}
+
+.scene.phase-anticipation .pack-3d { animation: none; }
+
+/* Phase 2: Crack */
+.scene.phase-crack .pack-container {
+  animation: crack-rumble 0.08s linear infinite alternate;
+}
+
+@keyframes crack-rumble {
+  0% { transform: scale(0.85, 1.08) translate(-3px, 16px) rotate(-0.5deg); }
+  100% { transform: scale(0.85, 1.08) translate(3px, 16px) rotate(0.5deg); }
+}
+
+.energy-build {
+  position: absolute;
+  z-index: 11;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.3) 0%, transparent 60%);
+  animation: energy-grow 0.8s ease-out forwards;
+}
+
+@keyframes energy-grow {
+  0% { opacity: 0; transform: scale(0.3); }
+  100% { opacity: 1; transform: scale(1.5); }
+}
+
+.crack-lightning {
+  position: absolute;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.crack-lightning path {
+  fill: none;
+  stroke: rgba(255, 255, 200, 0.9);
+  stroke-width: 2;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 200, 0.8));
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: lightning-draw 0.3s ease-out forwards;
+}
+
+@keyframes lightning-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Phase 3: Burst */
+.scene.phase-burst .pack-container {
+  animation: burst-explode 0.6s cubic-bezier(0.55, 0.09, 0.68, 0.53) forwards;
+}
+
+@keyframes burst-explode {
+  0% { transform: scale(0.85, 1.08) translateY(16px); opacity: 1; filter: brightness(3); }
+  30% { transform: scale(2.5) translateY(0); opacity: 0.7; filter: brightness(5); }
+  100% { transform: scale(4) translateY(0); opacity: 0; filter: brightness(8); }
+}
+
+/* Flash */
+.burst-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  background: white;
+}
+
+.burst-flash.active {
+  animation: flash-bang 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes flash-bang {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Color reveal */
+.color-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 13;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.color-wash.active {
+  animation: wash-expand 1.5s ease-out forwards;
+}
+
+.color-wash-inner {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, #daa520 0%, rgba(218, 165, 32, 0.4) 30%, transparent 65%);
+}
+
+@keyframes wash-expand {
+  0% { opacity: 0; transform: scale(0.2); }
+  15% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+
+/* Speed lines */
+.speed-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 14;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.speed-lines.active { animation: lines-flash 0.8s ease-out forwards; }
+
+@keyframes lines-flash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.speed-line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 200px;
+  transform-origin: center bottom;
+  background: linear-gradient(0deg, rgba(255,255,255,0.8) 0%, transparent 100%);
+}
+
+/* Ring shockwave */
+.shockwave-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  border: 3px solid rgba(124, 58, 237, 0.7);
+  box-shadow: 0 0 30px rgba(124, 58, 237, 0.4);
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.shockwave-ring.active {
+  animation: shockwave 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes shockwave {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(0); }
+  60% { opacity: 0.6; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+
+/* Spotlight cone */
+.spotlight-cone {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 350px;
+  height: 140%;
+  z-index: 16;
+  pointer-events: none;
+  opacity: 0;
+  clip-path: polygon(45% 0%, 55% 0%, 85% 100%, 15% 100%);
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.2) 0%, rgba(124, 58, 237, 0.05) 50%, transparent 100%);
+}
+
+.spotlight-cone.active {
+  animation: cone-reveal 1.5s ease-out forwards;
+}
+
+@keyframes cone-reveal {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+/* Mist / fog */
+.low-mist {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 30%;
+  z-index: 17;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse 80% 100% at 30% 100%, rgba(124, 58, 237, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 100% at 70% 100%, rgba(167, 139, 250, 0.08) 0%, transparent 60%);
+}
+
+.low-mist.active {
+  animation: mist-in 4s ease-out forwards;
+}
+
+@keyframes mist-in {
+  0% { opacity: 0; transform: translateY(40px) scaleY(0.5); }
+  40% { opacity: 0.9; }
+  100% { opacity: 0.5; transform: translateY(-10px) scaleY(1.2); }
+}
+
+/* ===== CARD / WALKOUT ===== */
+.walkout-stage {
+  position: absolute;
+  z-index: 25;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.walkout-stage.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --- Reveal Bar (nation, league, pos, rating) --- */
+.reveal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 30px;
+  height: 60px;
+  position: relative;
+}
+
+.reveal-item {
+  opacity: 0;
+  transform: scale(0) translateY(20px);
+  transition: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.reveal-item.revealed {
+  animation: reveal-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes reveal-pop {
+  0% { opacity: 0; transform: scale(0) translateY(20px); filter: brightness(3); }
+  50% { opacity: 1; transform: scale(1.3) translateY(-5px); filter: brightness(2); }
+  100% { opacity: 1; transform: scale(1) translateY(0); filter: brightness(1); }
+}
+
+.reveal-item img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(218, 165, 32, 0.8));
+}
+
+.reveal-item .reveal-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: rgba(218, 165, 32, 0.7);
+  text-transform: uppercase;
+}
+
+.reveal-item.reveal-position,
+.reveal-item.reveal-rating {
+  font-family: 'Russo One', sans-serif;
+  font-size: 36px;
+  background: linear-gradient(180deg, #ffffff 0%, #daa520 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(218, 165, 32, 0.6));
+}
+
+.reveal-item.reveal-rating {
+  font-size: 48px;
+}
+
+/* Flash effect on each reveal */
+.reveal-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(218, 165, 32, 0.4) 0%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reveal-flash.pop {
+  animation: reveal-flash-pop 0.4s ease-out forwards;
+}
+
+@keyframes reveal-flash-pop {
+  0% { opacity: 1; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(2); }
+}
+
+/* --- Card entrance (after all reveals) --- */
+.card-wrapper {
+  opacity: 0;
+  transform: scale(0.3) rotateY(90deg);
+}
+
+.card-wrapper.revealed {
+  animation: card-final-reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes card-final-reveal {
+  0% { opacity: 0; transform: scale(0.3) rotateY(90deg); }
+  30% { opacity: 1; transform: scale(1.1) rotateY(-10deg); }
+  50% { transform: scale(0.95) rotateY(5deg); }
+  70% { transform: scale(1.02) rotateY(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotateY(0deg); }
+}
+
+.card-frame {
+  width: 280px;
+  height: 400px;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.card-image {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 0 80px rgba(218, 165, 32, 0.5),
+    0 0 160px rgba(218, 165, 32, 0.2),
+    0 30px 80px rgba(0, 0, 0, 0.8);
+}
+
+.card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+}
+
+.card-wrapper.revealed .card-image img {
+  animation: card-img-reveal 0.6s ease-out forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes card-img-reveal {
+  0% { opacity: 0; filter: brightness(3) saturate(0); }
+  50% { opacity: 1; filter: brightness(1.5) saturate(0.7); }
+  100% { opacity: 1; filter: brightness(1) saturate(1); }
+}
+
+.card-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%);
+  background-size: 300% 300%;
+  animation: card-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes card-shimmer {
+  0%, 100% { background-position: -100% -100%; }
+  50% { background-position: 200% 200%; }
+}
+
+.card-image::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,255,255,0.03) 30deg, transparent 60deg, rgba(218,165,32,0.04) 90deg, transparent 120deg);
+  animation: card-prismatic 8s linear infinite;
+  z-index: 2;
+  pointer-events: none;
+}
+
+@keyframes card-prismatic {
+  to { transform: rotate(360deg); }
+}
+
+/* Player name banner below card */
+.card-player-name {
+  position: absolute;
+  bottom: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  opacity: 0;
+  white-space: nowrap;
+}
+
+.card-wrapper.revealed .card-player-name {
+  animation: name-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: 0.8s;
+}
+
+@keyframes name-reveal {
+  0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.8); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.card-player-name-text {
+  font-family: 'Russo One', sans-serif;
+  font-size: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #daa520 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 3px;
+  filter: drop-shadow(0 2px 8px rgba(218, 165, 32, 0.5));
+}
+
+.card-player-subtitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: rgba(218, 165, 32, 0.6);
+  margin-top: 4px;
+}
+
+/* Card info row (flag, badge) - now inside card-wrapper */
+.card-info-row {
+  position: absolute;
+  bottom: -90px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.card-info-badge {
+  width: 32px;
+  height: 32px;
+  opacity: 0;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.card-info-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.card-wrapper.revealed .card-info-badge {
+  animation: badge-pop 0.3s ease-out forwards;
+}
+
+.card-wrapper.revealed .card-info-badge:nth-child(1) { animation-delay: 1.1s; }
+.card-wrapper.revealed .card-info-badge:nth-child(2) { animation-delay: 1.25s; }
+
+@keyframes badge-pop {
+  0% { opacity: 0; transform: scale(0); }
+  60% { transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fade-in {
+  to { opacity: 1; }
+}
+
+/* ===== PARTICLES: Burst ===== */
+.burst-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.bp.active {
+  animation: bp-fly var(--bp-dur) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bp-fly {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--bp-x), var(--bp-y)) scale(var(--bp-s-end)); }
+}
+
+/* Confetti */
+.confetti-container {
+  position: absolute;
+  inset: 0;
+  z-index: 22;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  opacity: 0;
+}
+
+.confetti-piece.active {
+  animation: confetti-drop var(--c-dur) linear forwards;
+}
+
+@keyframes confetti-drop {
+  0% { opacity: 1; transform: translateY(-60px) rotateX(0deg) rotateZ(0deg) scale(1); }
+  100% { opacity: 0; transform: translateY(calc(100vh + 60px)) rotateX(var(--c-rx)) rotateZ(var(--c-rz)) scale(0.6); }
+}
+
+/* Screen shake */
+.scene.shaking {
+  animation: heavy-shake 0.7s ease-out;
+}
+
+@keyframes heavy-shake {
+  0% { transform: translate(0) rotate(0); }
+  10% { transform: translate(-12px, -8px) rotate(-1deg); }
+  20% { transform: translate(12px, 8px) rotate(1deg); }
+  30% { transform: translate(-10px, 5px) rotate(-0.7deg); }
+  40% { transform: translate(10px, -5px) rotate(0.7deg); }
+  50% { transform: translate(-6px, 4px) rotate(-0.4deg); }
+  60% { transform: translate(6px, -3px) rotate(0.4deg); }
+  70% { transform: translate(-3px, 2px) rotate(-0.2deg); }
+  80% { transform: translate(3px, -1px) rotate(0.2deg); }
+  90% { transform: translate(-1px, 1px); }
+  100% { transform: translate(0) rotate(0); }
+}
+
+/* Impact frame */
+.impact-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  border: 8px solid transparent;
+  opacity: 0;
+}
+
+.impact-frame.active {
+  animation: impact-pop 0.2s ease-out forwards;
+}
+
+@keyframes impact-pop {
+  0% { opacity: 1; border-color: white; transform: scale(0.95); }
+  100% { opacity: 0; border-color: transparent; transform: scale(1); }
+}
+
+/* ===== REPLAY BUTTON ===== */
+.replay-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  padding: 12px 22px;
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  color: rgba(167, 139, 250, 0.8);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.replay-btn:hover {
+  background: rgba(124, 58, 237, 0.3);
+  color: #fff;
+  border-color: rgba(167, 139, 250, 0.6);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 600px) {
+  .pack-3d { width: 180px; height: 260px; }
+  .card-frame { width: 180px; height: 260px; }
+  .card-rating-number { font-size: 40px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<div class="scene" id="scene">
+  <div class="ambient-layer">
+    <div class="ambient-orb"></div>
+    <div class="ambient-orb"></div>
+    <div class="ambient-orb"></div>
+  </div>
+
+  <div class="flood-lights" id="floodLights"></div>
+  <div class="pitch-overlay"></div>
+  <div class="vignette"></div>
+
+  <div class="pack-container" id="packContainer" onclick="startOpening()">
+    <div class="pack-3d" id="pack3d">
+      <div class="pack-face">
+        <div class="pack-face-bg"></div>
+        <div class="pack-holo"></div>
+        <div class="pack-content">
+          <div class="pack-emblem">
+            <div class="pack-emblem-ring"></div>
+            <div class="pack-emblem-inner">⚽</div>
+          </div>
+          <div class="pack-label">
+            <div class="pack-title-main">ULTIMATE</div>
+            <div class="pack-title-sub">SEASON REWARD</div>
+          </div>
+          <div class="pack-divider"></div>
+          <div class="pack-rarity-stars">
+            <div class="pack-star"></div>
+            <div class="pack-star"></div>
+            <div class="pack-star"></div>
+            <div class="pack-star"></div>
+            <div class="pack-star"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pack-ground-glow"></div>
+    <div class="pack-particles" id="packParticles"></div>
+  </div>
+
+  <div class="open-prompt" id="openPrompt">
+    <div class="open-prompt-text">TAP TO OPEN</div>
+    <div class="open-prompt-bar"><div class="open-prompt-bar-fill"></div></div>
+  </div>
+
+  <!-- Effects layers -->
+  <div class="burst-flash" id="burstFlash"></div>
+  <div class="impact-frame" id="impactFrame"></div>
+  <div class="color-wash" id="colorWash"><div class="color-wash-inner"></div></div>
+  <div class="speed-lines" id="speedLines"></div>
+  <div class="shockwave-ring" id="shockwaveRing"></div>
+  <div class="spotlight-cone" id="spotlightCone"></div>
+  <div class="low-mist" id="lowMist"></div>
+  <div class="burst-particles" id="burstParticles"></div>
+  <div class="confetti-container" id="confettiContainer"></div>
+
+  <!-- Card: Ronaldinho Trophy Titans ICON 95 LW -->
+  <div class="walkout-stage" id="walkoutStage">
+    <!-- Staged reveal bar -->
+    <div class="reveal-bar" id="revealBar">
+      <div class="reveal-flash" id="revealFlash"></div>
+      <div class="reveal-item reveal-nation" id="revealNation">
+        <img src="assets/flag_brazil.png" alt="Brazil">
+        <span class="reveal-label">NATION</span>
+      </div>
+      <div class="reveal-item reveal-league" id="revealLeague">
+        <img src="assets/league_icons.png" alt="Icons">
+        <span class="reveal-label">LEAGUE</span>
+      </div>
+      <div class="reveal-item reveal-position" id="revealPosition">LW</div>
+      <div class="reveal-item reveal-rating" id="revealRating">95</div>
+    </div>
+    <!-- Full card (revealed last) -->
+    <div class="card-wrapper" id="cardWrapper">
+      <div class="card-frame">
+        <div class="card-image">
+          <img src="assets/ronaldinho_card_full.webp"
+               alt="Card Shell"
+               style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;">
+        </div>
+        <div class="card-player-name">
+          <div class="card-player-name-text">RONALDINHO</div>
+          <div class="card-player-subtitle">TROPHY TITANS ICON · 95 · LW</div>
+        </div>
+        <div class="card-info-row">
+          <div class="card-info-badge"><img src="assets/flag_brazil.png" alt="Brazil"></div>
+          <div class="card-info-badge"><img src="assets/league_icons.png" alt="Icons"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="replay-btn" onclick="resetScene()">&#10227; REPLAY</button>
+
+<script>
+// ===== ANIMATED BACKGROUND CANVAS =====
+(function() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  let w, h, stars = [];
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 80; i++) {
+    stars.push({
+      x: Math.random() * 2000,
+      y: Math.random() * 2000,
+      r: 0.3 + Math.random() * 1.2,
+      a: Math.random(),
+      da: 0.005 + Math.random() * 0.01,
+      dir: Math.random() > 0.5 ? 1 : -1,
+    });
+  }
+
+  function drawStars() {
+    ctx.clearRect(0, 0, w, h);
+    for (const s of stars) {
+      s.a += s.da * s.dir;
+      if (s.a >= 1 || s.a <= 0) s.dir *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x % w, s.y % h, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180, 160, 255, ${s.a * 0.4})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+})();
+
+// ===== FLOOD LIGHTS =====
+(function() {
+  const container = document.getElementById('floodLights');
+  for (let i = 0; i < 8; i++) {
+    const beam = document.createElement('div');
+    beam.classList.add('flood-beam');
+    beam.style.left = (8 + i * 12) + '%';
+    beam.style.animationDelay = (i * 0.7) + 's';
+    beam.style.animationDuration = (3 + Math.random() * 2) + 's';
+    container.appendChild(beam);
+  }
+})();
+
+// ===== PACK PARTICLES =====
+(function() {
+  const container = document.getElementById('packParticles');
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.classList.add('pack-particle');
+    p.style.left = (20 + Math.random() * 60) + '%';
+    p.style.top = (30 + Math.random() * 50) + '%';
+    p.style.animationDelay = (Math.random() * 4) + 's';
+    p.style.animationDuration = (3 + Math.random() * 2) + 's';
+    container.appendChild(p);
+  }
+})();
+
+// ===== INTERACTIVE TILT ON HOVER =====
+(function() {
+  const pack = document.getElementById('pack3d');
+  const container = document.getElementById('packContainer');
+  let tiltActive = true;
+
+  container.addEventListener('mousemove', (e) => {
+    if (!tiltActive) return;
+    const rect = container.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    pack.style.transform = `rotateX(${-y * 12}deg) rotateY(${x * 12}deg)`;
+  });
+  container.addEventListener('mouseleave', () => {
+    if (!tiltActive) return;
+    pack.style.transform = '';
+  });
+
+  window.disableTilt = () => { tiltActive = false; };
+  window.enableTilt = () => { tiltActive = true; };
+})();
+
+// ===== OPENING SEQUENCE =====
+let isOpening = false;
+
+function startOpening() {
+  if (isOpening) return;
+  isOpening = true;
+  window.disableTilt();
+
+  const scene = document.getElementById('scene');
+  const prompt = document.getElementById('openPrompt');
+  prompt.style.opacity = '0';
+  prompt.style.transform = 'translateY(20px) scale(0.8)';
+
+  // Phase 1: Anticipation
+  scene.classList.add('phase-anticipation');
+
+  // Phase 2: Crack + Energy
+  setTimeout(() => {
+    scene.classList.remove('phase-anticipation');
+    scene.classList.add('phase-crack');
+    spawnEnergyBuild();
+    spawnLightning();
+  }, 1800);
+
+  // Phase 3: Burst
+  setTimeout(() => {
+    scene.classList.remove('phase-crack');
+    scene.classList.add('phase-burst', 'shaking');
+    document.getElementById('burstFlash').classList.add('active');
+    document.getElementById('impactFrame').classList.add('active');
+    document.getElementById('colorWash').classList.add('active');
+    document.getElementById('speedLines').classList.add('active');
+    document.getElementById('shockwaveRing').classList.add('active');
+    spawnBurstParticles();
+  }, 2800);
+
+  // Spotlight + mist
+  setTimeout(() => {
+    scene.classList.remove('shaking');
+    document.getElementById('spotlightCone').classList.add('active');
+    document.getElementById('lowMist').classList.add('active');
+  }, 3500);
+
+  // Card walkout - staged reveal sequence
+  setTimeout(() => {
+    document.getElementById('walkoutStage').classList.add('active');
+    startStagedReveal();
+  }, 4000);
+}
+
+function startStagedReveal() {
+  const flash = document.getElementById('revealFlash');
+  const reveals = [
+    { el: document.getElementById('revealNation'), delay: 400 },
+    { el: document.getElementById('revealLeague'), delay: 1200 },
+    { el: document.getElementById('revealPosition'), delay: 2000 },
+    { el: document.getElementById('revealRating'), delay: 2800 },
+  ];
+
+  reveals.forEach(({ el, delay }) => {
+    setTimeout(() => {
+      el.classList.add('revealed');
+      // Trigger flash
+      flash.classList.remove('pop');
+      void flash.offsetWidth;
+      flash.classList.add('pop');
+    }, delay);
+  });
+
+  // After all reveals, bring in the full card
+  setTimeout(() => {
+    document.getElementById('cardWrapper').classList.add('revealed');
+    spawnConfetti();
+  }, 3800);
+}
+
+function spawnEnergyBuild() {
+  const scene = document.getElementById('scene');
+  const orb = document.createElement('div');
+  orb.classList.add('energy-build');
+  orb.style.left = '50%';
+  orb.style.top = '50%';
+  orb.style.marginLeft = '-150px';
+  orb.style.marginTop = '-150px';
+  scene.appendChild(orb);
+  setTimeout(() => orb.remove(), 2000);
+}
+
+function spawnLightning() {
+  const container = document.getElementById('scene');
+  const bolts = [
+    'M 0,0 L -15,-40 L -5,-38 L -20,-80',
+    'M 0,0 L 12,-35 L 5,-33 L 18,-75',
+    'M 0,0 L -8,-50 L -2,-48 L -12,-90',
+    'M 0,0 L 10,-45 L 3,-42 L 15,-85',
+  ];
+  bolts.forEach((d, i) => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.classList.add('crack-lightning');
+    svg.setAttribute('width', '100');
+    svg.setAttribute('height', '100');
+    svg.style.left = 'calc(50% - 50px)';
+    svg.style.top = 'calc(50% - 50px)';
+    svg.style.transform = `rotate(${i * 90}deg)`;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.style.animationDelay = (i * 0.1) + 's';
+    svg.appendChild(path);
+    container.appendChild(svg);
+    setTimeout(() => svg.remove(), 1500);
+  });
+}
+
+function spawnBurstParticles() {
+  const container = document.getElementById('burstParticles');
+  const colors = ['#a78bfa', '#7c3aed', '#ffd700', '#ffffff', '#ec4899', '#3b82f6', '#22c55e'];
+  for (let i = 0; i < 70; i++) {
+    const p = document.createElement('div');
+    p.classList.add('bp');
+    const angle = (Math.PI * 2 * i) / 70 + (Math.random() - 0.5) * 0.4;
+    const dist = 200 + Math.random() * 500;
+    const size = 3 + Math.random() * 8;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.boxShadow = `0 0 ${size}px ${p.style.background}`;
+    p.style.setProperty('--bp-x', (Math.cos(angle) * dist) + 'px');
+    p.style.setProperty('--bp-y', (Math.sin(angle) * dist) + 'px');
+    p.style.setProperty('--bp-s-end', (0.1 + Math.random() * 0.3).toFixed(2));
+    p.style.setProperty('--bp-dur', (0.8 + Math.random() * 1) + 's');
+    p.style.animationDelay = (Math.random() * 0.15) + 's';
+    container.appendChild(p);
+    requestAnimationFrame(() => p.classList.add('active'));
+  }
+}
+
+// Pre-build speed lines
+(function() {
+  const container = document.getElementById('speedLines');
+  for (let i = 0; i < 24; i++) {
+    const line = document.createElement('div');
+    line.classList.add('speed-line');
+    line.style.transform = `rotate(${i * 15}deg)`;
+    line.style.opacity = (0.3 + Math.random() * 0.5);
+    line.style.height = (100 + Math.random() * 150) + 'px';
+    container.appendChild(line);
+  }
+})();
+
+function spawnConfetti() {
+  const container = document.getElementById('confettiContainer');
+  const colors = ['#a78bfa', '#ffd700', '#ec4899', '#ffffff', '#7c3aed', '#3b82f6', '#22c55e', '#f97316'];
+  for (let i = 0; i < 50; i++) {
+    const c = document.createElement('div');
+    c.classList.add('confetti-piece');
+    const w = 4 + Math.random() * 10;
+    const h = Math.random() > 0.5 ? w : 10 + Math.random() * 20;
+    c.style.width = w + 'px';
+    c.style.height = h + 'px';
+    c.style.left = (Math.random() * 100) + '%';
+    c.style.top = '-40px';
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.borderRadius = Math.random() > 0.5 ? '2px' : '50%';
+    c.style.setProperty('--c-dur', (3 + Math.random() * 3) + 's');
+    c.style.setProperty('--c-rx', (360 + Math.random() * 720) + 'deg');
+    c.style.setProperty('--c-rz', (Math.random() * 720) + 'deg');
+    c.style.animationDelay = (Math.random() * 2.5) + 's';
+    container.appendChild(c);
+    requestAnimationFrame(() => c.classList.add('active'));
+  }
+}
+
+// ===== RESET =====
+function resetScene() {
+  isOpening = false;
+  window.enableTilt();
+  const scene = document.getElementById('scene');
+  scene.classList.remove('phase-anticipation', 'phase-crack', 'phase-burst', 'shaking');
+  document.getElementById('burstFlash').classList.remove('active');
+  document.getElementById('impactFrame').classList.remove('active');
+  document.getElementById('colorWash').classList.remove('active');
+  document.getElementById('speedLines').classList.remove('active');
+  document.getElementById('shockwaveRing').classList.remove('active');
+  document.getElementById('spotlightCone').classList.remove('active');
+  document.getElementById('lowMist').classList.remove('active');
+  document.getElementById('walkoutStage').classList.remove('active');
+  document.getElementById('cardWrapper').classList.remove('revealed');
+  document.querySelectorAll('.reveal-item').forEach(el => el.classList.remove('revealed'));
+  document.getElementById('revealFlash').classList.remove('pop');
+  document.getElementById('burstParticles').innerHTML = '';
+  document.getElementById('confettiContainer').innerHTML = '';
+  const prompt = document.getElementById('openPrompt');
+  prompt.style.opacity = '';
+  prompt.style.transform = '';
+  document.querySelectorAll('.crack-lightning, .energy-build').forEach(el => el.remove());
+  void scene.offsetWidth;
+}
+</script>
+</body>
+</html>
