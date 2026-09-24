@@ -546,6 +546,8 @@ const playerItemOverride = () => {
     if (this.__root && item) {
       const priceElement = await getPriceDiv(item);
       if (priceElement) {
+        const existing = this.__root.querySelector(":scope > .item-price");
+        if (existing) existing.remove();
         this.__root.prepend(priceElement);
       }
     }
@@ -565,6 +567,8 @@ const playerItemOverride = () => {
     let priceElement = await getPriceDiv(item);
     // Add the price element to the player item
     if (this.__root && priceElement) {
+      const existing = this.__root.querySelector(":scope > .item-price");
+      if (existing) existing.remove();
       this.__root.prepend(priceElement);
     }
 

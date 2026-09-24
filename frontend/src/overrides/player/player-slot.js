@@ -90,6 +90,8 @@ const appendSquadTotal = (total) => {
 const appendPriceToSlot = async (rootElement, item) => {
   let priceElement = await getPriceDiv(item);
   if (priceElement) {
+    const existing = rootElement.querySelector(":scope > .item-price");
+    if (existing) existing.remove();
     rootElement.prepend(priceElement);
   }
 };
