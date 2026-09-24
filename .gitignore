@@ -9,6 +9,7 @@ build/**
 *.spec
 installer/output/**
 logs/**
+**/logs/**
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
@@ -16,3 +17,15 @@ logs/**
 *.bak
 ~$*
 *.swp
+js Test Files/**
+.browser-profile/*
+
+# Runtime-generated backend state/caches (recreated on demand, user-specific)
+*.pid
+backend/settings.json
+backend/unassigned_rules.json
+backend/collections.json
+backend/collection_book_ownership.json
+
+# Scratch/debug output from manual testing scripts (drive_webapp_test.py, etc.)
+tmp/

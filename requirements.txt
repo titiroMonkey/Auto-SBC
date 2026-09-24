@@ -4,3 +4,4 @@ ortools>=9.8
 fastapi
 uvicorn
 requests
+playwright>=1.52

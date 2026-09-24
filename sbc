@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+PYTHON=".venv/Scripts/python.exe"
+if [ ! -f "$PYTHON" ]; then
+    PYTHON=".venv/bin/python"
+fi
+if [ ! -f "$PYTHON" ]; then
+    PYTHON="python"
+fi
+cd backend;
+"../$PYTHON" -m uvicorn main:app --reload --reload-dir ../backend --reload-dir ../frontend
