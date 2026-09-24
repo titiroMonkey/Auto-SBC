@@ -50,6 +50,14 @@ let fetchTransferList = () => {
     );
   });
 };
+
+let clearSoldItems = () => {
+  return new Promise((resolve) => {
+    services.Item.clearSoldItems().observe(undefined, (sender, response) => {
+      resolve(response);
+    });
+  });
+};
 let fetchDuplicateIds = () => {
   return new Promise((resolve) => {
     const result = [];
