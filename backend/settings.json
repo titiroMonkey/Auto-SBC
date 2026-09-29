@@ -1,0 +1,684 @@
+{
+  "sbcSettings": {
+    "global": {
+      "global": {
+        "autoSubmit": 0,
+        "animateWalkouts": 99,
+        "playSounds": false,
+        "ratingUI": true,
+        "showLogOverlay": true,
+        "ratingRange": [
+          40,
+          96
+        ],
+        "repeatCount": 0,
+        "enableClubSearchOverrides": true,
+        "autoOpenPacks": true,
+        "autoApplyQuickSolutionOnOpen": false,
+        "sbcBuyConceptsMaxPrice": 4000,
+        "sbcBuyConceptsPriceAbove": 1000,
+        "excludeRarity": [
+          "World Tour Silver Superstar"
+        ],
+        "excludeObjective": true,
+        "excludeSbcSquads": true,
+        "excludeSbc": true,
+        "conceptPremium": 3,
+        "excludePlayers": [
+          67347291,
+          84123147,
+          231747,
+          84112381,
+          83887477,
+          83937337,
+          100700872,
+          184783754,
+          134450308,
+          117442137,
+          202126,
+          50405533,
+          234396,
+          237288
+        ],
+        "sbcType": "All",
+        "loginSbcOrder": [
+          "4 of 10 82+ Player Pick",
+          "3x 88+ Upgrade",
+          "10x 85+ Summer Tournament Nations Upgrade",
+          "5 of 10 82+ Player Pick",
+          "4 of 10 83+ Player Pick",
+          "FUTTIES Daily Login Upgrade",
+          "2 of 3 85+ Rare Gold Players Pick",
+          "5x 88+ Upgrade"
+        ],
+        "useConcepts": false,
+        "useDupes": true,
+        "autoGrindSubmitMode": 1,
+        "sbcBuyConcepts": false,
+        "sbcOnLogin": false,
+        "excludeNations": [],
+        "replaceStoragePlayers": true,
+        "maxPlayerPrice": 50000,
+        "excludeSpecial": true,
+        "autoConfirmPicks": true,
+        "lockMinOnePlayerRequirements": false,
+        "excludeExtinct": true,
+        "sbcAllGroup": true,
+        "excludeLeagues": [],
+        "animateWalkoutItems": {
+          "filters": [
+            "price"
+          ],
+          "ratingRange": [
+            98,
+            99
+          ],
+          "priceRange": [
+            10000,
+            15000000
+          ],
+          "includeLeagues": [],
+          "excludeLeagues": [],
+          "includeTeams": [],
+          "excludeTeams": [],
+          "includeNations": [],
+          "excludeNations": [],
+          "includeRarity": [],
+          "excludeRarity": []
+        },
+        "showRecentPackedSpecials": false,
+        "excludeFromSquadIds": [
+          "0"
+        ],
+        "autoBuyCurrency": "POINTS",
+        "showAutoBuyButton": false,
+        "autoOpenSub100CoinPacks": true
+      }
+    },
+    "Daily Bronze Upgrade": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "sbcOnLogin": false
+      }
+    },
+    "Daily Silver Upgrade": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "sbcOnLogin": false
+      }
+    },
+    "Daily Common Gold Upgrade": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "sbcOnLogin": false,
+        "ratingRange": [
+          40,
+          82
+        ]
+      }
+    },
+    "Daily Rare Gold Upgrade": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "sbcOnLogin": false,
+        "ratingRange": [
+          40,
+          82
+        ]
+      }
+    },
+    "Provisions Upgrade": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "sbcBuyConcepts": true,
+        "useConcepts": true,
+        "ratingRange": [
+          85,
+          86
+        ],
+        "sbcOnLogin": false
+      }
+    },
+    "4 of 10 82+ Player Pick": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "autoConfirmPicks": true,
+        "sbcOnLogin": true
+      }
+    },
+    "3x 88+ Upgrade": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "useConcepts": true,
+        "ratingRange": [
+          40,
+          94
+        ],
+        "sbcOnLogin": true,
+        "sbcBuyConcepts": true
+      }
+    },
+    "84+ TOTW Upgrade": {
+      "global": {
+        "repeatCount": 6,
+        "autoSubmit": 4,
+        "sbcBuyConcepts": true,
+        "useConcepts": false,
+        "ratingRange": [
+          78,
+          92
+        ]
+      }
+    },
+    "Premium Mixed Leagues Upgrade": {
+      "global": {
+        "sbcBuyConcepts": true,
+        "ratingRange": [
+          52,
+          83
+        ],
+        "excludeSpecial": true,
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "sbcAllGroup": true,
+        "useConcepts": true,
+        "autoApplyQuickSolutionOnOpen": true
+      }
+    },
+    "Mixed Leagues Upgrade": {
+      "global": {
+        "repeatCount": -1,
+        "ratingRange": [
+          52,
+          83
+        ],
+        "autoSubmit": 4,
+        "sbcBuyConcepts": true,
+        "useConcepts": true,
+        "autoApplyQuickSolutionOnOpen": true,
+        "sbcAllGroup": true
+      }
+    },
+    "1 of 3 83+ Player Pick": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          75,
+          82
+        ],
+        "autoConfirmPicks": true
+      }
+    },
+    "1 of 3 93+ UEFA Winners, FOF PTG & FOF Star Performer Player Pick": {
+      "global": {
+        "ratingRange": [
+          40,
+          95
+        ],
+        "excludeObjective": false
+      }
+    },
+    "2x 84+ Upgrade": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          75,
+          82
+        ],
+        "useDupes": false
+      }
+    },
+    "10x 85+ Summer Tournament Nations Upgrade": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          89
+        ],
+        "sbcOnLogin": true
+      }
+    },
+    "3x 87-90 Upgrade": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          79,
+          86
+        ],
+        "useConcepts": true,
+        "sbcBuyConcepts": true,
+        "sbcOnLogin": false
+      }
+    },
+    "FOF Glory Hunters Crafting Upgrade": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "excludeRarity": [
+          "World Tour Silver Superstar",
+          "Rare"
+        ]
+      }
+    },
+    "1 of 4 93+ UEFA Winners, FOF PTG & FOF Star Performer Player Pick": {
+      "global": {
+        "ratingRange": [
+          40,
+          95
+        ]
+      }
+    },
+    "Throwback Marquee Matchups": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4
+      }
+    },
+    "5 of 10 82+ Player Pick": {
+      "global": {
+        "sbcOnLogin": true,
+        "autoConfirmPicks": true,
+        "ratingRange": [
+          75,
+          82
+        ],
+        "excludeRarity": [
+          "World Tour Silver Superstar",
+          "Rare"
+        ],
+        "autoSubmit": 4,
+        "repeatCount": -1
+      }
+    },
+    "1 of 5 83+ Player Pick": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "autoConfirmPicks": true,
+        "ratingRange": [
+          40,
+          82
+        ]
+      }
+    },
+    "5x 87+ Upgrade": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          88
+        ]
+      }
+    },
+    "1 of 3 FOF Phenoms Player Pick": {
+      "global": {
+        "autoConfirmPicks": true
+      }
+    },
+    "1 of 3 84+ Summer Tournament Nations Player Pick": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "autoConfirmPicks": true,
+        "excludeObjective": false
+      }
+    },
+    "Tradeable Summer Tournament Knockout Upgrade": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1
+      }
+    },
+    "83 OVR Token Swap": {
+      "global": {
+        "ratingRange": [
+          40,
+          83
+        ],
+        "useConcepts": true,
+        "sbcBuyConcepts": true,
+        "repeatCount": -1,
+        "autoSubmit": 4
+      }
+    },
+    "84 OVR Token Swap": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          84
+        ],
+        "useConcepts": true,
+        "sbcBuyConcepts": true
+      }
+    },
+    "85 OVR Token Swap": {
+      "global": {
+        "ratingRange": [
+          40,
+          85
+        ],
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "useConcepts": true,
+        "sbcBuyConcepts": true
+      }
+    },
+    "86 OVR Token Swap": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "useConcepts": true,
+        "sbcBuyConcepts": true,
+        "ratingRange": [
+          86,
+          89
+        ]
+      }
+    },
+    "87 OVR Token Swap": {
+      "global": {
+        "autoSubmit": 4,
+        "repeatCount": -1,
+        "useConcepts": true,
+        "sbcBuyConcepts": true,
+        "ratingRange": [
+          40,
+          87
+        ]
+      }
+    },
+    "88 OVR Token Swap": {
+      "global": {
+        "ratingRange": [
+          40,
+          88
+        ],
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "useConcepts": true,
+        "sbcBuyConcepts": true
+      }
+    },
+    "89 OVR Token Swap": {
+      "global": {
+        "ratingRange": [
+          40,
+          89
+        ],
+        "repeatCount": -1,
+        "autoSubmit": 4
+      }
+    },
+    "90 OVR Token Swap": {
+      "global": {
+        "ratingRange": [
+          40,
+          90
+        ],
+        "repeatCount": -1,
+        "autoSubmit": 4
+      }
+    },
+    "91 OVR Token Swap": {
+      "global": {
+        "ratingRange": [
+          40,
+          91
+        ],
+        "repeatCount": -1,
+        "autoSubmit": 4
+      }
+    },
+    "4 of 10 83+ Player Pick": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "autoConfirmPicks": true,
+        "sbcOnLogin": true
+      }
+    },
+    "FUTTIES Daily Login Upgrade": {
+      "global": {
+        "sbcOnLogin": true,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "autoSubmit": 4,
+        "repeatCount": -1
+      }
+    },
+    "5x 80+ Upgrade": {
+      "global": {
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "excludeRarity": [
+          "World Tour Silver Superstar",
+          "Rare"
+        ],
+        "excludeSpecial": true,
+        "repeatCount": -1
+      }
+    },
+    "1 of 3 84+ Player Pick": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "autoConfirmPicks": true
+      }
+    },
+    "2 of 3 85+ Rare Gold Players Pick": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "autoConfirmPicks": true,
+        "sbcOnLogin": true
+      }
+    },
+    "1 of 4 93+ Festival of Football Player Pick": {
+      "global": {
+        "ratingRange": [
+          40,
+          93
+        ],
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "useDupes": true
+      }
+    },
+    "7x 87+ Upgrade": {
+      "global": {
+        "ratingRange": [
+          40,
+          95
+        ],
+        "autoSubmit": 4,
+        "repeatCount": -1
+      }
+    },
+    "1 of 3 86+ Player Pick": {
+      "global": {
+        "repeatCount": -1,
+        "autoSubmit": 4,
+        "ratingRange": [
+          40,
+          82
+        ],
+        "autoConfirmPicks": true
+      }
+    },
+    "2x 85+ Upgrade": {
+      "global": {
+        "ratingRange": [
+          40,
+          82
+        ],
+        "repeatCount": -1,
+        "autoSubmit": 4
+      }
+    },
+    "1 of 3 94+ FOF or FUTTIES T1 Player Pick": {
+      "global": {
+        "ratingRange": [
+          40,
+          91
+        ],
+        "autoSubmit": 4,
+        "repeatCount": 0,
+        "autoConfirmPicks": true
+      }
+    },
+    "Eus\u00e9bio": {
+      "global": {
+        "ratingRange": [
+          40,
+          94
+        ],
+        "autoSubmit": 1
+      }
+    },
+    "1 of 4 95+ FOF or FUTTIES T1 Player Pick": {
+      "global": {
+        "sbcAllGroup": true
+      }
+    },
+    "1 of 5 84+ Player Pick": {
+      "global": {
+        "autoConfirmPicks": true
+      }
+    },
+    "5 of 10 83+ Player Pick": {
+      "global": {
+        "autoConfirmPicks": true,
+        "repeatCount": -1
+      }
+    },
+    "5x 88+ Upgrade": {
+      "global": {
+        "sbcOnLogin": true,
+        "repeatCount": -1,
+        "excludeObjective": true,
+        "excludeSpecial": false
+      }
+    },
+    "Repeatable FUTTIES Provisions Upgrade": {
+      "global": {
+        "ratingRange": [
+          40,
+          87
+        ],
+        "repeatCount": 5,
+        "useConcepts": false,
+        "autoApplyQuickSolutionOnOpen": false,
+        "sbcBuyConcepts": false,
+        "sbcBuyConceptsMaxPrice": 2000,
+        "excludeObjective": false,
+        "excludeSbc": true
+      }
+    },
+    "2 of 3 86+ Player Pick": {
+      "global": {
+        "autoConfirmPicks": true
+      }
+    },
+    "94+ GOTG & FUTTIES Team 1 & 2 (Icons & Heroes) Upgrade": {
+      "global": {
+        "repeatCount": 0,
+        "ratingRange": [
+          40,
+          95
+        ],
+        "useDupes": true
+      }
+    },
+    "1 of 3 95+ FOF or FUTTIES T1 & T2 Player Pick": {
+      "global": {
+        "repeatCount": 0
+      }
+    },
+    "1 of 3 85+ Player Pick": {
+      "global": {
+        "autoConfirmPicks": true,
+        "ratingRange": [
+          40,
+          82
+        ]
+      }
+    },
+    "4 of 10 84+ Player Pick": {
+      "global": {
+        "ratingRange": [
+          40,
+          82
+        ],
+        "autoConfirmPicks": true
+      }
+    },
+    "1 of 3 94+ GOTG or FUTTIES Icon or Hero Player Pick": {
+      "global": {
+        "useDupes": true
+      }
+    },
+    "1 of 3 87+ Player Pick": {
+      "global": {
+        "autoConfirmPicks": true
+      }
+    },
+    "1 of 4 95+ FOF or FUTTIES T1-T3 Player Pick": {
+      "global": {
+        "autoConfirmPicks": true
+      }
+    },
+    "10x 85+ Upgrade": {
+      "global": {
+        "lockMinOnePlayerRequirements": true
+      }
+    },
+    "1 of 3 98+ FOF or FUTTIES T1-T4 Player Pick": {
+      "global": {
+        "autoConfirmPicks": false
+      }
+    }
+  }
+}

@@ -1,0 +1,309 @@
+{
+  "rules": [
+    {
+      "id": "1782693400577-om85x",
+      "action": "sendToClub",
+      "color": "#1abc9c",
+      "filters": [
+        "isDuplicate:false",
+        "isTradable:false"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1790212901804-nj0xf",
+      "action": "sendToClub",
+      "color": "#1abc9c",
+      "filters": [
+        "isTradable:false",
+        "isMovable:true"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1782870391597-cw870",
+      "action": "sendToClub",
+      "color": "#1abc9c",
+      "filters": [
+        "isFirstOwner:false",
+        "isDuplicate:false"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1783898527468-zp6dq",
+      "action": "sendToTransferList",
+      "color": "#1abc9c",
+      "filters": [
+        "isFirstOwner:false",
+        "isDuplicate:true"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1782693400577-ctsxz",
+      "action": "sendToTransferList",
+      "color": "#2ecc71",
+      "filters": [
+        "isTradable:true",
+        "price"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        13000,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1783410433423-as2v2",
+      "action": "sendToTransferList",
+      "color": "#2ecc71",
+      "filters": [
+        "isTradable:true",
+        "isDuplicate:true",
+        "isFirstOwner:false"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        5000,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1782693400577-b00mw",
+      "action": "listOnTransferMarket",
+      "color": "#3498db",
+      "filters": [
+        "isTradable:true",
+        "isDuplicate:true",
+        "isFodder:false"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1782693400577-xkfj0",
+      "action": "sendToStorage",
+      "color": "#9b59b6",
+      "filters": [
+        "isTradable:false",
+        "isDuplicate:true",
+        "isPlayer:true"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1782693400577-nkair",
+      "action": "quickSell",
+      "color": "#e74c3c",
+      "filters": [
+        "isDuplicate:true",
+        "isPlayer:false",
+        "isFodder:true",
+        "price"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        1200
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1782693400577-qw5ap",
+      "action": "quickSell",
+      "color": "#d35400",
+      "filters": [
+        "isDuplicate:true",
+        "isPlayer:false",
+        "isTradable:false"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        1200
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1782693400577-lf34f",
+      "action": "sendToClub",
+      "color": "#ecf0f1",
+      "filters": [
+        "isDuplicate:false"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1782693400577-1mci3",
+      "action": "quickSell",
+      "color": "#c0392b",
+      "filters": [
+        "isDuplicate:true",
+        "isFirstOwner:true"
+      ],
+      "ratingRange": [
+        0,
+        99
+      ],
+      "priceRange": [
+        200,
+        15000000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    }
+  ]
+}
