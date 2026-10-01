@@ -1,3 +1,67 @@
+const getAutoSbcItemTypeLabel = (item) => {
+  const subtype = Number(item?.subtype);
+  const subtypeName =
+    typeof ItemSubType !== "undefined" ? ItemSubType[subtype] : "";
+  if (subtypeName === "VANITY_TIFO_BASE" || subtypeName === "VANITY_TIFO_BIG") {
+    return "Tifo";
+  }
+  if (subtypeName === "VANITY_STADIUM_THEME") return "Stadium Theme";
+  if (item?.type === "kit") return "Kit";
+  if (item?.type === "player") return "Player";
+  const searchType = String(item?.getSearchType?.() || "").toLowerCase();
+  if (searchType === "staff") return "Manager";
+  if (searchType === "stadium") return "Stadium";
+  if (searchType.includes("consumable")) return "Consumable";
+  return "Item";
+};
+
+const getAutoSbcItemDisplayName = (item) => {
+  const staticData = item?.getStaticData?.() || item?._staticData || {};
+  const isPlayer =
+    (typeof item?.isPlayer === "function" && item.isPlayer()) ||
+    item?.isPlayer === true ||
+    item?.type === "player";
+  const localize = (value) => {
+    if (!value) return "";
+    try {
+      return services?.Localization?.localize?.(String(value)) || String(value);
+    } catch {
+      return String(value);
+    }
+  };
+
+  let name = isPlayer && typeof staticData?.getFullName === "function"
+    ? localize(staticData.getFullName())
+    : "";
+  name =
+    name ||
+    localize(staticData?.description) ||
+    localize(staticData?.name || staticData?.knownAs) ||
+    localize(staticData?.lastName) ||
+    localize(item?.name) ||
+    String(item?.definitionId || "Unknown");
+  name = name.replace(/^\s*\*\s*/, "").trim();
+
+  if (isPlayer) return name;
+
+  if (item?.type === "kit") {
+    const teamId = Number(item?.teamId || staticData?.teamId || 0);
+    const team = (factories?.DataProvider?.getTeamDP?.() || []).find(
+      (entry) => Number(entry?.id) === teamId,
+    );
+    if (team?.label && staticData?.description) {
+      name = `${team.label} ${localize(staticData.description)}`;
+    }
+  }
+
+  return `${getAutoSbcItemTypeLabel(item)} - ${name}`;
+};
+
+try {
+  globalThis.getAutoSbcItemTypeLabel = getAutoSbcItemTypeLabel;
+  globalThis.getAutoSbcItemDisplayName = getAutoSbcItemDisplayName;
+} catch {}
+
 const searchConceptByDefId = async (defId, options = {}) => {
   const numericDefId = Number(defId);
   if (!Number.isFinite(numericDefId) || numericDefId <= 0) {
@@ -341,7 +405,7 @@ const quickSellTradableFodderUnderRating = async (
     sample: candidates.slice(0, 10).map((item) => ({
       id: item?.id,
       rating: item?.rating,
-      name: item?.itemData?.name || item?._staticData?.name || "Unknown",
+      name: getAutoSbcItemDisplayName(item),
       price: typeof getPrice === "function" ? getPrice(item) : null,
     })),
   });

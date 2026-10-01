@@ -4686,16 +4686,15 @@ word-wrap:breakword;
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
-  display: inline-block;
+  display: block;
   height: 1em;
-  margin-left: .25em;
-  vertical-align: middle;
+  margin: 2px auto 0;
   width: 1em;
 }
-.autosbc-auto-buy-currency-icon.currency-coins {
+.autosbc-auto-buy-currency-icon--coins {
   background-image: url(../web-app/images/coinIcon.png);
 }
-.autosbc-auto-buy-currency-icon.currency-points {
+.autosbc-auto-buy-currency-icon--points {
   background-image: url(../web-app/images/pointsIcon.png);
 }
 .choices__item, .choices__list--dropdown .choices__item {
@@ -6168,13 +6167,7 @@ const setClubPlayersFromItems = (players) => {
     const leagueId = _getLeagueId(item);
     const nationId = _getNationId(item);
     const teamId = _getTeamId(item);
-
-    const name =
-      item?._staticData?.name ||
-      [item?._staticData?.firstName, item?._staticData?.lastName]
-        .filter(Boolean)
-        .join(" ") ||
-      String(item?.definitionId ?? "Unknown");
+    const name = getAutoSbcItemDisplayName(item);
 
     const cardType =
       [
@@ -6279,7 +6272,7 @@ const exposeConceptPlayersToConsole = (players = []) => {
       const preview = list.slice(0, count).map((item) => ({
         id: item?.id,
         definitionId: item?.definitionId,
-        name: item?._staticData?.name || item?.name,
+        name: getAutoSbcItemDisplayName(item),
         rating: item?.rating,
         teamId: item?.teamId,
         leagueId: item?.leagueId,
@@ -6299,7 +6292,7 @@ const exposeConceptPlayersToConsole = (players = []) => {
       const rows = list.map((item) => ({
         id: item?.id,
         definitionId: item?.definitionId,
-        name: item?._staticData?.name || item?.name,
+        name: getAutoSbcItemDisplayName(item),
         rating: item?.rating,
         teamId: item?.teamId,
         leagueId: item?.leagueId,
@@ -6313,6 +6306,10 @@ const exposeConceptPlayersToConsole = (players = []) => {
       console.table(rows);
       return list;
     };
+    window.__autoSbcConceptsReady = players.length > 0;
+    window.dispatchEvent(new CustomEvent("autosbc:concepts-ready", {
+      detail: { count: players.length },
+    }));
   } catch (error) {
     console.warn("[concepts] failed to expose concept players", error);
   }
@@ -6381,7 +6378,7 @@ const buildPlayerDetails = (item, context = {}) => {
 
   return {
     id: item.id,
-    name: item._staticData?.name || item.name,
+    name: getAutoSbcItemDisplayName(item),
     cardType,
     rarityLabel,
     assetId: item._metaData?.id,
@@ -8619,6 +8616,39 @@ const collectionBookBuildRarityBatches = () => {
   return batches;
 };
 
+const collectionBookBuildRatingBatches = () => {
+  const collectionPlayers = new Map(
+    collectionBookGetAllCachedPlayers().map((player) => [
+      Number(player?.eaId),
+      player,
+    ]),
+  );
+  const concepts = collectionBookGetConceptIndex();
+  const groups = new Map();
+  for (const [eaId, entity] of concepts.entries()) {
+    const player = collectionPlayers.get(eaId) || {
+      eaId,
+      overall: entity?.rating,
+      position: entity?.preferredPosition,
+      rarityEaId: entity?.rareflag,
+      nationEaId: entity?.nationId,
+      leagueEaId: entity?.leagueId,
+      clubEaId: entity?.teamId,
+    };
+    const rating = Number(entity?.rating || player?.overall || 0);
+    if (!Number.isFinite(rating) || rating <= 0) continue;
+    if (!groups.has(rating)) {
+      groups.set(rating, { slug: `rating:${rating}`, name: `Rating ${rating}`, rating, players: [] });
+    }
+    groups.get(rating).players.push(player);
+  }
+  return Array.from(groups.values()).sort((a, b) => b.rating - a.rating).map((group) => ({
+    ...group,
+    total: group.players.length,
+    isRatingBatch: true,
+  }));
+};
+
 // Given a collection's players, compute per-player ownership + collection totals
 // using the club as the source of truth.
 const collectionBookComputeProgress = (players, ownedCounts) => {
@@ -10002,6 +10032,10 @@ const formatPriceCell = (value, fallback = "—") => {
 const formatRefreshItemName = (item) => {
   if (!item) return "Unknown item";
 
+  if (typeof getAutoSbcItemDisplayName === "function") {
+    return getAutoSbcItemDisplayName(item);
+  }
+
   try {
     if (typeof formatPlayerName === "function") {
       const formatted = formatPlayerName(item);
@@ -10011,14 +10045,7 @@ const formatRefreshItemName = (item) => {
     }
   } catch {}
 
-  return (
-    item?._staticData?.name ||
-    item?._staticData?.lastName ||
-    item?.name ||
-    item?.assetId ||
-    item?.definitionId ||
-    "Unknown item"
-  );
+  return getAutoSbcItemDisplayName(item);
 };
 
 const refreshLivePrice = async (item, { showUi = true, onCandidate } = {}) => {
@@ -10547,44 +10574,12 @@ const appendUnassignedHistoryRows = (entries, timestamp) => {
     return raw;
   };
 
-  const formatName = (item) => {
-    const staticData = item?._staticData;
-    const isPlayerItem =
-      (typeof item?.isPlayer === "function" && item.isPlayer()) ||
-      item?.isPlayer === true;
-
-    const staticName = localizeAndTrimName(
-      staticData?.name || staticData?.knownAs || "",
-    );
-
-    if (isPlayerItem && typeof staticData?.getFullName === "function") {
-      const fullName = localizeAndTrimName(staticData.getFullName());
-      if (fullName) {
-        return fullName;
-      }
-    }
-
-    const fullNameFallback =
-      typeof staticData?.getFullName === "function"
-        ? localizeAndTrimName(staticData.getFullName())
-        : "";
-
-    return (
-      staticName ||
-      fullNameFallback ||
-      localizeAndTrimName(staticData?.lastName || "") ||
-      localizeAndTrimName(item?.name || "") ||
-      item?.definitionId ||
-      "Unknown"
-    );
+  const formatType = (item) => {
+    return getAutoSbcItemTypeLabel(item);
   };
 
-  const formatType = (item) => {
-    if (typeof item?.getSearchType === "function") {
-      const searchType = item.getSearchType();
-      return String(searchType || "—");
-    }
-    return "—";
+  const formatName = (item) => {
+    return getAutoSbcItemDisplayName(item);
   };
 
   const formatPrice = (item) => {
@@ -11558,7 +11553,7 @@ const renderRecentSpecialsStrip = (options = {}) => {
           packedCountsByDefinitionId,
         );
       } else {
-        wrapper.textContent = String(entry.item?._staticData?.name || entry.item?.definitionId || "Special");
+        wrapper.textContent = getAutoSbcItemDisplayName(entry.item);
       }
       upsertRecentSpecialTimeAgoLabel(wrapper, entry.createdAt, index === 0);
       track.appendChild(wrapper);
@@ -11732,12 +11727,7 @@ let processUnassigned = async (options = {}) => {
     const getItemRarityIdSafe = (item) =>
       Number(item?.rareflag ?? item?._staticData?.rareflag ?? item?.rarityId) ||
       null;
-    const getItemNameSafe = (item) =>
-      item?._staticData?.name ||
-      item?._staticData?.lastName ||
-      item?.name ||
-      item?.definitionId ||
-      "Unknown";
+    const getItemNameSafe = (item) => getAutoSbcItemDisplayName(item);
     const addProcessedLog = (items, action, ruleNumber, ruleColor = null) => {
       (items || []).forEach((item) => {
         processedLog.push({
@@ -12083,12 +12073,7 @@ let processUnassigned = async (options = {}) => {
         const summarizeItems = (items) =>
           (items || []).map((item) => ({
             id: item?.id ?? null,
-            name:
-              item?._staticData?.name ||
-              item?._staticData?.lastName ||
-              item?.name ||
-              item?.definitionId ||
-              "Unknown",
+            name: getAutoSbcItemDisplayName(item),
             rating: item?.rating ?? item?._staticData?.rating ?? null,
             tradable:
               item?.tradable === true ||
@@ -15345,19 +15330,20 @@ const getCurrentSquadPlayerSlots = () => {
   const controller = getControllerInstance?.();
   const challengeSquadPlayers = controller?._challenge?.squad?._players;
   const activeSquadPlayers = controller?._squad?._players;
-  const squadPlayers = Array.isArray(activeSquadPlayers)
-    ? activeSquadPlayers
-    : Array.isArray(challengeSquadPlayers)
-      ? challengeSquadPlayers
-      : [];
+  const toPlayerSlots = (players) =>
+    (Array.isArray(players) ? players : [])
+      .map((slot, slotIndex) => ({
+        slot,
+        slotIndex,
+        item: slot?._item || slot?.item,
+      }))
+      .filter(({ item }) => item && Number(item?.definitionId) > 0);
 
-  return squadPlayers
-    .map((slot, slotIndex) => ({
-      slot,
-      slotIndex,
-      item: slot?._item || slot?.item,
-    }))
-    .filter(({ item }) => item && Number(item?.definitionId) > 0);
+  const activeSlots = toPlayerSlots(activeSquadPlayers);
+  const challengeSlots = toPlayerSlots(challengeSquadPlayers);
+  return activeSlots.length >= challengeSlots.length
+    ? activeSlots
+    : challengeSlots;
 };
 
 const isEnabledSetting = (value) =>
@@ -15991,7 +15977,7 @@ let solveSBC = async (
 
         return {
           id: item.id,
-          name: item._staticData.name,
+          name: getAutoSbcItemDisplayName(item),
           cardType:
             (item.isSpecial()
               ? ""
@@ -17062,7 +17048,7 @@ const createUnassignedLargeItemRow = (item, tapCallback) => {
       label.style.padding = "8px";
       label.style.textAlign = "center";
       label.textContent = String(
-        item?._staticData?.name || item?.name || item?.definitionId || "Item",
+        getAutoSbcItemDisplayName(item),
       );
       fallbackRoot.appendChild(label);
       if (tapCallback) {
@@ -18935,18 +18921,63 @@ async function autoApplyQuickSolutionOnPageOpen(options = {}) {
       }
     }
 
-    // Maps selectionRows index → solutionSquad index
-    const rowToSquadSlot = {};
-    for (
-      let idx = 0;
-      idx < openSlots.length && idx < selectionRows.length;
-      idx++
-    ) {
-      const selected = selectionRows[idx]?.player;
-      if (selected) {
-        solutionSquad[openSlots[idx]] = selected;
-        rowToSquadSlot[idx] = openSlots[idx];
+    const availableSlots = openSlots.filter(
+      (slotIndex) => solutionSquad[slotIndex] == undefined,
+    );
+    const getPossiblePositions = (player) => {
+      try {
+        const positions = Array.isArray(player?.possiblePositions)
+          ? player.possiblePositions
+          : player?.getBasePossiblePositions?.();
+        return Array.isArray(positions)
+          ? positions.map(Number).filter(Number.isFinite)
+          : [];
+      } catch {
+        return [];
       }
+    };
+    const rowCandidates = new Map();
+    for (let rowIndex = 0; rowIndex < selectionRows.length; rowIndex++) {
+      const player = selectionRows[rowIndex]?.player;
+      if (!player) continue;
+      const possiblePositions = getPossiblePositions(player);
+      const compatibleSlots = availableSlots.filter((slotIndex) =>
+        possiblePositions.includes(Number(sbcData.formation?.[slotIndex])),
+      );
+      rowCandidates.set(
+        rowIndex,
+        compatibleSlots.length ? compatibleSlots : availableSlots,
+      );
+    }
+
+    const rowToSquadSlot = {};
+    const slotToRow = new Map();
+    const assignRowToSlot = (rowIndex, visitedSlots) => {
+      for (const slotIndex of rowCandidates.get(rowIndex) || []) {
+        if (visitedSlots.has(slotIndex)) continue;
+        visitedSlots.add(slotIndex);
+        const assignedRow = slotToRow.get(slotIndex);
+        if (
+          assignedRow === undefined ||
+          assignRowToSlot(assignedRow, visitedSlots)
+        ) {
+          slotToRow.set(slotIndex, rowIndex);
+          return true;
+        }
+      }
+      return false;
+    };
+    const rowsToAssign = Array.from(rowCandidates.keys()).sort(
+      (left, right) =>
+        rowCandidates.get(left).length - rowCandidates.get(right).length ||
+        left - right,
+    );
+    for (const rowIndex of rowsToAssign) {
+      assignRowToSlot(rowIndex, new Set());
+    }
+    for (const [slotIndex, rowIndex] of slotToRow) {
+      solutionSquad[slotIndex] = selectionRows[rowIndex].player;
+      rowToSquadSlot[rowIndex] = slotIndex;
     }
 
     // ── Concept-to-club swap using EA's own chemistry calculator ─────────
@@ -21589,6 +21620,8 @@ const collectionBookEnsureStyles = () => {
     .collection-book-card .cb-media > * { max-width:100%; margin:0 auto; }
     .collection-book-card img, .collection-book-card canvas { max-width:100%; height:auto; display:block; }
     .collection-book-card .cb-placeholder { width:80%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; border-radius:8px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); font-size:13px; }
+    .collection-book-card { cursor:pointer; }
+    .collection-book-card:hover { filter:brightness(1.12); }
     /* Recolour EA's native loan counter when reused as the copy counter:
        green when the player is in the club, red when only seen before. */
     .collection-book-card .ut-item-player-state-indicator-view.loan { background:#38c172; color:#04150c; }
@@ -21685,6 +21718,7 @@ const collectionBookRenderCard = (row) => {
   // collectionBookApplyCopyCounter) for duplicate copies, coloured by club state.
   card.__cbCopies = copies;
   card.__cbInClub = inClub;
+  card.addEventListener("click", () => collectionBookOpenNativeSidebar(row));
 
   // Media area starts as a lightweight placeholder; upgraded to an EA card on
   // scroll via the IntersectionObserver.
@@ -21776,6 +21810,36 @@ const collectionBookCreateEaCardElement = (player, owned, copies, inClub) => {
   collectionBookApplyCopyCounter(view, copies, inClub);
   const el = view.getRootElement?.() || null;
   return el ? { el, view } : null;
+};
+
+const collectionBookItemsController = function () {
+  const Base =
+    typeof isPhone === "function" && isPhone()
+      ? UTUnassignedItemsViewController
+      : UTUnassignedItemsSplitViewController;
+  Base.call(this);
+};
+const collectionBookItemsBase =
+  typeof isPhone === "function" && isPhone()
+    ? UTUnassignedItemsViewController
+    : UTUnassignedItemsSplitViewController;
+JSUtils.inherits(collectionBookItemsController, collectionBookItemsBase);
+
+const collectionBookOpenNativeSidebar = (row) => {
+  const entity = collectionBookGetItemEntity(row?.player?.eaId);
+  if (!entity) return;
+  const current = getCurrentViewController?.();
+  const navigation = current?.rootController?.getRootNavigationController?.();
+  if (!navigation) return;
+  const viewController = new collectionBookItemsController();
+  try {
+    viewController.init();
+    viewController.initWithItems([entity]);
+    navigation.pushViewController(viewController);
+  } catch (error) {
+    console.warn("[CollectionBook] could not open native item controller", error);
+    viewController.dealloc?.();
+  }
 };
 
 // --- view state -----------------------------------------------------------
@@ -21941,15 +22005,15 @@ const collectionBookCreateSection = (batch) => {
 const collectionBookApplySelectedBatch = (root, value) => {
   root.querySelectorAll(".collection-book-section").forEach((sec) => {
     const slug = sec.dataset.slug || "";
-    const isRarity = slug.startsWith("rarity:");
+    const isSynthetic = slug.startsWith("rarity:") || slug.startsWith("rating:");
     const show =
-      value === COLLECTION_BOOK_ALL_COLLECTIONS ? !isRarity : slug === value;
+      value === COLLECTION_BOOK_ALL_COLLECTIONS ? !isSynthetic : slug === value;
     sec.style.display = show ? "" : "none";
   });
   // Lazily load a collection section the first time it is selected.
   if (
     value !== COLLECTION_BOOK_ALL_COLLECTIONS &&
-    !value.startsWith("rarity:")
+    !value.startsWith("rarity:") && !value.startsWith("rating:")
   ) {
     const section = _collectionBookSections.get(value);
     if (section && !section.players) collectionBookLoadSection(value);
@@ -22052,6 +22116,10 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
     typeof collectionBookBuildRarityBatches === "function"
       ? collectionBookBuildRarityBatches()
       : [];
+  const ratingBatches =
+    typeof collectionBookBuildRatingBatches === "function"
+      ? collectionBookBuildRatingBatches()
+      : [];
 
   // Populate the batch dropdown: All Collections + each collection + each rarity.
   select.innerHTML = "";
@@ -22081,6 +22149,17 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
     }
     select.appendChild(rarGroup);
   }
+  if (ratingBatches.length) {
+    const ratingGroup = document.createElement("optgroup");
+    ratingGroup.label = "Rating";
+    for (const batch of ratingBatches) {
+      const option = document.createElement("option");
+      option.value = batch.slug;
+      option.textContent = `${batch.name} (${batch.total})`;
+      ratingGroup.appendChild(option);
+    }
+    select.appendChild(ratingGroup);
+  }
 
   select.addEventListener("change", () => {
     collectionBookApplySelectedBatch(root, select.value);
@@ -22094,6 +22173,10 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   for (const b of rarityBatches) {
     root.appendChild(collectionBookCreateSection(b));
     collectionBookRenderSectionGrid(b.slug, b.players);
+  }
+  for (const batch of ratingBatches) {
+    root.appendChild(collectionBookCreateSection(batch));
+    collectionBookRenderSectionGrid(batch.slug, batch.players);
   }
 
   // Kick off the background prefetch for any collections not yet cached, then
@@ -22124,6 +22207,14 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   // Prime the overall counter from whatever club data already exists.
   collectionBookUpdateFromClub();
 };
+
+window.addEventListener("autosbc:concepts-ready", () => {
+  const root = document.getElementById("CollectionBookPanel");
+  if (!root || !root.dataset.cbBuilt) return;
+  collectionBookBuildPage(root, { force: false }).catch((err) => {
+    console.warn("[CollectionBook] concept rating refresh failed", err);
+  });
+});
 
 // When the background prefetch finishes a collection, render it into the open
 // page if that section hasn't been populated yet.
@@ -22825,13 +22916,7 @@ const quickBuySquadButton = createButton(
     );
   },
 );
-const formatPlayerName = (item) =>
-  item?._staticData?.name ||
-  item?._staticData?.commonName ||
-  item?._staticData?.lastName ||
-  item?.name ||
-  item?.definitionId ||
-  "Unknown";
+const formatPlayerName = (item) => getAutoSbcItemDisplayName(item);
 const getCurrentConceptItems = () => {
   const controller = getControllerInstance();
   const { _squad } = controller || {};
@@ -24841,12 +24926,7 @@ const listLowestPricePlayersByRating = async ({
   includeStorage = true,
   refreshPrices = false,
 } = {}) => {
-  const nameOf = (p) =>
-    p?._staticData?.name ||
-    [p?._staticData?.firstName, p?._staticData?.lastName]
-      .filter(Boolean)
-      .join(" ") ||
-    String(p?.definitionId ?? "Unknown");
+  const nameOf = (p) => getAutoSbcItemDisplayName(p);
 
   const club = (await fetchPlayers({ count: Infinity })) || [];
   const storage = includeStorage ? (await getStoragePlayers()) || [] : [];
@@ -24998,7 +25078,7 @@ let isFodder = function (item, itemType, itemRating, debug = false) {
 
   if (debug) {
     console.groupCollapsed(
-      `[isFodder] ${item?._staticData?.name ?? item.definitionId} => evaluating`,
+      `[isFodder] ${getAutoSbcItemDisplayName(item)} => evaluating`,
     );
     log({ definitionId: item.definitionId, rating, type });
     log({ priceEntry, price });
@@ -25369,11 +25449,7 @@ let ensureItemMarketData = (item) =>
     const isExtinct = Boolean(getPriceItems()?.[item?.definitionId]?.isExtinct);
     const cardInfo = {
       defId: item?.definitionId,
-      name:
-        item?._staticData?.name ||
-        item?._staticData?.lastName ||
-        item?.name ||
-        item?.definitionId,
+      name: getAutoSbcItemDisplayName(item),
       rating: item?.rating ?? item?._staticData?.rating,
       isExtinct,
     };
@@ -25551,11 +25627,7 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
         isExtinct: Boolean(isExtinct),
         ...(Number.isFinite(priceLimitMax) ? { priceLimitMax } : {}),
         ...(Number.isFinite(priceLimitMin) ? { priceLimitMin } : {}),
-        name:
-          player?._staticData?.name ||
-          player?._staticData?.lastName ||
-          player?.name ||
-          player?.definitionId,
+        name: getAutoSbcItemDisplayName(player),
         source: "liveSearch",
         type: (player.getSearchType?.() || "player").toString().toUpperCase(),
       },
@@ -25584,7 +25656,7 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
         !isFodder(player)
       ) {
         showNotification(
-          `${player?._staticData?.name || player?.name || player?.definitionId}: ${
+          `${getAutoSbcItemDisplayName(player)}: ${
             Number.isFinite(price) ? price.toLocaleString() : "N/A"
           }`,
           UINotificationType.POSITIVE,
@@ -25603,7 +25675,7 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
     try {
       if (!suppressNotification && typeof showNotification === "function") {
         showNotification(
-          `${player?._staticData?.name || player?.name || player?.definitionId} appears to be extinct`,
+          `${getAutoSbcItemDisplayName(player)} appears to be extinct`,
           UINotificationType.NEGATIVE,
         );
       }
@@ -26326,7 +26398,7 @@ const fetchPlayerPricesInternal = async (players, options = {}) => {
             "PLAYER";
 
           priceResponse[key].rating = matchingPlayer?.rating;
-          priceResponse[key].name = matchingPlayer?._staticData?.name || "";
+          priceResponse[key].name = getAutoSbcItemDisplayName(matchingPlayer);
           priceResponse[key].type = normalizePriceType(rawType);
         }
         PriceItem(priceResponse);
@@ -26716,7 +26788,7 @@ let openPack = async (pack, repeat = 0, allPacks = false) => {
                   .slice()
                   .sort((t, e) => getSBCPrice(e) - getSBCPrice(t))
                   .map((item) => ({
-                    name: item?._staticData?.name,
+                    name: getAutoSbcItemDisplayName(item),
                     cardType:
                       (item?.isSpecial?.()
                         ? ""
@@ -27701,13 +27773,11 @@ const getUserPlatform = () => {
 const createPackList = async () => {
   let packs = await getPacks();
   let i = services.Localization;
-  const visiblePackCount = packs.packs.filter(
-    (f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101,
-  ).length;
+  const myPacks = packs.packs.filter((pack) => pack?.isMyPack);
+  const visiblePackCount = myPacks.length;
 
   let packContent = `<span>Packs<br>${visiblePackCount}</span>`;
-  let packCounts = packs.packs
-    .filter((f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101)
+  let packCounts = myPacks
     .reduce((acc, pack) => {
       let key = `${pack.packName} ${
         pack.tradeable ? "(Tradable)" : "(Untradable)"
@@ -28724,11 +28794,101 @@ let createSBCTab = async () => {
   );
   const PACK_PURCHASE_COUNTS_KEY = "packPurchaseCountsById";
   const AUTO_BUY_PACK_ID_KEY = "autosbc_autoBuyPackId";
+  const AUTO_BUY_PACK_NAME_KEY = "autosbc_autoBuyPackName";
   const DEFAULT_AUTO_BUY_PACK_ID = 101; // Bronze Pack
   const autoBuyCurrency =
     getSettings(0, 0, "autoBuyCurrency") === "POINTS" ? "POINTS" : "COINS";
   const autoBuyGameCurrency =
     autoBuyCurrency === "POINTS" ? GameCurrency.POINTS : GameCurrency.COINS;
+
+  const purchasePackById = async (packId, currency) => {
+    const packsResponse = await getPacks(true);
+    const savedName = localStorage.getItem(AUTO_BUY_PACK_NAME_KEY) || "";
+    const packName = autoBuyPackName(packId);
+    const packs = packsResponse?.packs || [];
+    const pack = packs.find(
+      (candidate) =>
+        !candidate?.isMyPack &&
+        services.Localization.localize(candidate?.packName) ===
+          (savedName || packName),
+    ) || packs.find(
+      (candidate) =>
+        !candidate?.isMyPack && String(candidate?.id) === String(packId),
+    );
+    if (!pack || pack.isMyPack) {
+      throw new Error(`Purchasable pack ${packId} is no longer available`);
+    }
+
+    window.__autoBuyPackId = pack.id;
+
+    const observer = new UTStoreViewController();
+    await new Promise((resolve, reject) => {
+      try {
+        const request = pack.purchase(currency);
+        if (!request || typeof request.observe !== "function") {
+          reject(new Error(`Pack purchase request unavailable: ${packId}`));
+          return;
+        }
+        request.observe(observer, function (obs, event) {
+          try {
+            obs?.unobserve?.(observer);
+          } catch {}
+          if (event?.success) {
+            resolve();
+            return;
+          }
+          const status = Number(event?.status ?? event?.error?.code ?? 0);
+          const error = new Error(
+            `Pack purchase failed (${status || "unknown"}): ${packId}`,
+          );
+          error.status = status;
+          reject(error);
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    await openPack(pack);
+  };
+
+  const getCurrencyBalance = async (currency) => {
+    try {
+      const user = services?.User?.getUser?.();
+      const person = user?.getSelectedPersona?.() || user;
+      if (!person) return null;
+
+      const isPointsCurrency =
+        currency === GameCurrency.POINTS ||
+        currency === "POINTS" ||
+        currency === 1;
+
+      const candidates = isPointsCurrency
+        ? [
+            person.getPoints,
+            person.getFifaPoints,
+            person.getUTPoints,
+            person.getPointsBalance,
+            person.getPointBalance,
+          ]
+        : [
+            person.getCoins,
+            person.getCredits,
+            person.getCredit,
+            person.getCoinBalance,
+            person.getCoinsBalance,
+            person.getCreditsBalance,
+            person.getBalance,
+          ];
+
+      for (const fn of candidates) {
+        if (typeof fn !== "function") continue;
+        const value = Number(fn.call(person));
+        if (Number.isFinite(value)) return value;
+      }
+    } catch {}
+    return null;
+  };
 
   const readPackPurchaseCount = (packId) => {
     try {
@@ -28756,6 +28916,15 @@ let createSBCTab = async () => {
   const saveAutoBuyPackId = (packId) => {
     try {
       localStorage.setItem(AUTO_BUY_PACK_ID_KEY, String(packId));
+    } catch {}
+  };
+
+  const saveAutoBuyPackName = (packId) => {
+    try {
+      localStorage.setItem(
+        AUTO_BUY_PACK_NAME_KEY,
+        autoBuyPackCatalog.find((pack) => pack.id === packId)?.name || "",
+      );
     } catch {}
   };
 
@@ -28821,13 +28990,23 @@ let createSBCTab = async () => {
   };
 
   window.__autoBuyPackId = resolveDefaultAutoBuyPackId();
+  try {
+    if (!localStorage.getItem(AUTO_BUY_PACK_NAME_KEY)) {
+      localStorage.setItem(
+        AUTO_BUY_PACK_NAME_KEY,
+        autoBuyPackCatalog.find((pack) => pack.id === window.__autoBuyPackId)?.name || "",
+      );
+    }
+  } catch {}
   window.__autoBuyRunning = false;
   window.__autoBuyCountTimer = null;
 
   const autoBuyPackName = (packId) =>
     autoBuyPackCatalog.find((p) => p.id === packId)?.name || "Bronze Packs";
   const autoBuyCurrencyClass =
-    autoBuyCurrency === "POINTS" ? "currency-points" : "currency-coins";
+    autoBuyCurrency === "POINTS"
+      ? "autosbc-auto-buy-currency-icon--points"
+      : "autosbc-auto-buy-currency-icon--coins";
   const autoBuyCurrencyLabel = autoBuyCurrency === "POINTS" ? "Points" : "Coins";
 
   const updateAutoBuyLabel = () => {
@@ -28849,9 +29028,10 @@ let createSBCTab = async () => {
       () => {
         window.__autoBuyPackId = entry.id;
         saveAutoBuyPackId(entry.id);
+        saveAutoBuyPackName(entry.id);
         updateAutoBuyLabel();
       },
-      { width: "20vw", marginTop: "0px", background: "none", color: "#fff" },
+      { width: "20vw", marginTop: "0px", background: "#1e1f1f", color: "#fff" },
     );
   });
 
@@ -28947,10 +29127,15 @@ let createSBCTab = async () => {
 
           await sleep(randDelay());
         }
-      } catch (err) {
-        console.warn("Auto Buy loop error", err);
+        } catch (err) {
+          const status = Number(err?.status ?? err?.code ?? err);
+          const message =
+            status === 404
+              ? "Auto Buy stopped: EA rejected this pack purchase (404). Refresh the store and select a current pack."
+              : `Auto Buy stopped: ${err?.message || "pack purchase failed"}`;
+          console.warn("Auto Buy loop error", { error: err, status });
         showNotification(
-          "Auto Buy encountered an error; stopping.",
+            message,
           UINotificationType.NEGATIVE,
         );
       } finally {
@@ -32949,7 +33134,7 @@ evoHelperView.prototype._generate = function _generate() {
 // Temporarily removed from the sidebar; flip to true to reinstate. Core tab
 // code is kept intact below.
 const ENABLE_EVO_HELPER_TAB = false;
-const ENABLE_COLLECTION_BOOK_TAB = false;
+const ENABLE_COLLECTION_BOOK_TAB = true;
 
 const sideBarNavOverride = () => {
   if (UTGameTabBarController.prototype.__autoSbcSidebarPatched) {
@@ -33778,6 +33963,70 @@ const downloadAllAssets = async () => {
     `[Asset Downloader] Complete. Downloaded: ${downloaded}, Skipped/Failed: ${skipped}`,
   );
 };
+const getAutoSbcItemTypeLabel = (item) => {
+  const subtype = Number(item?.subtype);
+  const subtypeName =
+    typeof ItemSubType !== "undefined" ? ItemSubType[subtype] : "";
+  if (subtypeName === "VANITY_TIFO_BASE" || subtypeName === "VANITY_TIFO_BIG") {
+    return "Tifo";
+  }
+  if (subtypeName === "VANITY_STADIUM_THEME") return "Stadium Theme";
+  if (item?.type === "kit") return "Kit";
+  if (item?.type === "player") return "Player";
+  const searchType = String(item?.getSearchType?.() || "").toLowerCase();
+  if (searchType === "staff") return "Manager";
+  if (searchType === "stadium") return "Stadium";
+  if (searchType.includes("consumable")) return "Consumable";
+  return "Item";
+};
+
+const getAutoSbcItemDisplayName = (item) => {
+  const staticData = item?.getStaticData?.() || item?._staticData || {};
+  const isPlayer =
+    (typeof item?.isPlayer === "function" && item.isPlayer()) ||
+    item?.isPlayer === true ||
+    item?.type === "player";
+  const localize = (value) => {
+    if (!value) return "";
+    try {
+      return services?.Localization?.localize?.(String(value)) || String(value);
+    } catch {
+      return String(value);
+    }
+  };
+
+  let name = isPlayer && typeof staticData?.getFullName === "function"
+    ? localize(staticData.getFullName())
+    : "";
+  name =
+    name ||
+    localize(staticData?.description) ||
+    localize(staticData?.name || staticData?.knownAs) ||
+    localize(staticData?.lastName) ||
+    localize(item?.name) ||
+    String(item?.definitionId || "Unknown");
+  name = name.replace(/^\s*\*\s*/, "").trim();
+
+  if (isPlayer) return name;
+
+  if (item?.type === "kit") {
+    const teamId = Number(item?.teamId || staticData?.teamId || 0);
+    const team = (factories?.DataProvider?.getTeamDP?.() || []).find(
+      (entry) => Number(entry?.id) === teamId,
+    );
+    if (team?.label && staticData?.description) {
+      name = `${team.label} ${localize(staticData.description)}`;
+    }
+  }
+
+  return `${getAutoSbcItemTypeLabel(item)} - ${name}`;
+};
+
+try {
+  globalThis.getAutoSbcItemTypeLabel = getAutoSbcItemTypeLabel;
+  globalThis.getAutoSbcItemDisplayName = getAutoSbcItemDisplayName;
+} catch {}
+
 const searchConceptByDefId = async (defId, options = {}) => {
   const numericDefId = Number(defId);
   if (!Number.isFinite(numericDefId) || numericDefId <= 0) {
@@ -34121,7 +34370,7 @@ const quickSellTradableFodderUnderRating = async (
     sample: candidates.slice(0, 10).map((item) => ({
       id: item?.id,
       rating: item?.rating,
-      name: item?.itemData?.name || item?._staticData?.name || "Unknown",
+      name: getAutoSbcItemDisplayName(item),
       price: typeof getPrice === "function" ? getPrice(item) : null,
     })),
   });

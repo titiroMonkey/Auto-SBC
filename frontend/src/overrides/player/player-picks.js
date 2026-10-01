@@ -248,7 +248,7 @@ let openPack = async (pack, repeat = 0, allPacks = false) => {
                   .slice()
                   .sort((t, e) => getSBCPrice(e) - getSBCPrice(t))
                   .map((item) => ({
-                    name: item?._staticData?.name,
+                    name: getAutoSbcItemDisplayName(item),
                     cardType:
                       (item?.isSpecial?.()
                         ? ""

@@ -40,44 +40,12 @@ const appendUnassignedHistoryRows = (entries, timestamp) => {
     return raw;
   };
 
-  const formatName = (item) => {
-    const staticData = item?._staticData;
-    const isPlayerItem =
-      (typeof item?.isPlayer === "function" && item.isPlayer()) ||
-      item?.isPlayer === true;
-
-    const staticName = localizeAndTrimName(
-      staticData?.name || staticData?.knownAs || "",
-    );
-
-    if (isPlayerItem && typeof staticData?.getFullName === "function") {
-      const fullName = localizeAndTrimName(staticData.getFullName());
-      if (fullName) {
-        return fullName;
-      }
-    }
-
-    const fullNameFallback =
-      typeof staticData?.getFullName === "function"
-        ? localizeAndTrimName(staticData.getFullName())
-        : "";
-
-    return (
-      staticName ||
-      fullNameFallback ||
-      localizeAndTrimName(staticData?.lastName || "") ||
-      localizeAndTrimName(item?.name || "") ||
-      item?.definitionId ||
-      "Unknown"
-    );
+  const formatType = (item) => {
+    return getAutoSbcItemTypeLabel(item);
   };
 
-  const formatType = (item) => {
-    if (typeof item?.getSearchType === "function") {
-      const searchType = item.getSearchType();
-      return String(searchType || "—");
-    }
-    return "—";
+  const formatName = (item) => {
+    return getAutoSbcItemDisplayName(item);
   };
 
   const formatPrice = (item) => {
@@ -1051,7 +1019,7 @@ const renderRecentSpecialsStrip = (options = {}) => {
           packedCountsByDefinitionId,
         );
       } else {
-        wrapper.textContent = String(entry.item?._staticData?.name || entry.item?.definitionId || "Special");
+        wrapper.textContent = getAutoSbcItemDisplayName(entry.item);
       }
       upsertRecentSpecialTimeAgoLabel(wrapper, entry.createdAt, index === 0);
       track.appendChild(wrapper);

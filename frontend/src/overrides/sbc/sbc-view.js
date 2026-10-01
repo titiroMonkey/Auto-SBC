@@ -615,13 +615,7 @@ const quickBuySquadButton = createButton(
     );
   },
 );
-const formatPlayerName = (item) =>
-  item?._staticData?.name ||
-  item?._staticData?.commonName ||
-  item?._staticData?.lastName ||
-  item?.name ||
-  item?.definitionId ||
-  "Unknown";
+const formatPlayerName = (item) => getAutoSbcItemDisplayName(item);
 const getCurrentConceptItems = () => {
   const controller = getControllerInstance();
   const { _squad } = controller || {};

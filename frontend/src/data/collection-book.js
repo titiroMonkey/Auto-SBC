@@ -685,6 +685,46 @@ const collectionBookBuildRarityBatches = () => {
   return batches;
 };
 
+const collectionBookBuildRatingBatches = () => {
+  const collectionPlayers = new Map(
+    collectionBookGetAllCachedPlayers().map((player) => [
+      Number(player?.eaId),
+      player,
+    ]),
+  );
+  const concepts = collectionBookGetConceptIndex();
+  const groups = new Map();
+  for (const [eaId, entity] of concepts.entries()) {
+    const player = collectionPlayers.get(eaId) || {
+      eaId,
+      overall: entity?.rating,
+      position: entity?.preferredPosition,
+      rarityEaId: entity?.rareflag,
+      nationEaId: entity?.nationId,
+      leagueEaId: entity?.leagueId,
+      clubEaId: entity?.teamId,
+    };
+    const rating = Number(entity?.rating || player?.overall || 0);
+    if (!Number.isFinite(rating) || rating <= 0) continue;
+    if (!groups.has(rating)) {
+      groups.set(rating, {
+        slug: `rating:${rating}`,
+        name: `Rating ${rating}`,
+        rating,
+        players: [],
+      });
+    }
+    groups.get(rating).players.push(player);
+  }
+  return Array.from(groups.values())
+    .sort((a, b) => b.rating - a.rating)
+    .map((group) => ({
+      ...group,
+      total: group.players.length,
+      isRatingBatch: true,
+    }));
+};
+
 // Given a collection's players, compute per-player ownership + collection totals
 // using the club as the source of truth.
 const collectionBookComputeProgress = (players, ownedCounts) => {
@@ -907,6 +947,7 @@ try {
   window.collectionBookGetItemEntity = collectionBookGetItemEntity;
   window.collectionBookGetAllCachedPlayers = collectionBookGetAllCachedPlayers;
   window.collectionBookBuildRarityBatches = collectionBookBuildRarityBatches;
+  window.collectionBookBuildRatingBatches = collectionBookBuildRatingBatches;
   window.collectionBookComputeProgress = collectionBookComputeProgress;
   window.collectionBookDetectNewlyCollected = collectionBookDetectNewlyCollected;
   window.collectionBookDetectNewFromIds = collectionBookDetectNewFromIds;

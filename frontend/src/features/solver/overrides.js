@@ -217,7 +217,7 @@ const createUnassignedLargeItemRow = (item, tapCallback) => {
       label.style.padding = "8px";
       label.style.textAlign = "center";
       label.textContent = String(
-        item?._staticData?.name || item?.name || item?.definitionId || "Item",
+        getAutoSbcItemDisplayName(item),
       );
       fallbackRoot.appendChild(label);
       if (tapCallback) {

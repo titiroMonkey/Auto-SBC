@@ -26,12 +26,7 @@ let processUnassigned = async (options = {}) => {
     const getItemRarityIdSafe = (item) =>
       Number(item?.rareflag ?? item?._staticData?.rareflag ?? item?.rarityId) ||
       null;
-    const getItemNameSafe = (item) =>
-      item?._staticData?.name ||
-      item?._staticData?.lastName ||
-      item?.name ||
-      item?.definitionId ||
-      "Unknown";
+    const getItemNameSafe = (item) => getAutoSbcItemDisplayName(item);
     const addProcessedLog = (items, action, ruleNumber, ruleColor = null) => {
       (items || []).forEach((item) => {
         processedLog.push({
@@ -377,12 +372,7 @@ let processUnassigned = async (options = {}) => {
         const summarizeItems = (items) =>
           (items || []).map((item) => ({
             id: item?.id ?? null,
-            name:
-              item?._staticData?.name ||
-              item?._staticData?.lastName ||
-              item?.name ||
-              item?.definitionId ||
-              "Unknown",
+            name: getAutoSbcItemDisplayName(item),
             rating: item?.rating ?? item?._staticData?.rating ?? null,
             tradable:
               item?.tradable === true ||

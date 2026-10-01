@@ -98,13 +98,7 @@ const setClubPlayersFromItems = (players) => {
     const leagueId = _getLeagueId(item);
     const nationId = _getNationId(item);
     const teamId = _getTeamId(item);
-
-    const name =
-      item?._staticData?.name ||
-      [item?._staticData?.firstName, item?._staticData?.lastName]
-        .filter(Boolean)
-        .join(" ") ||
-      String(item?.definitionId ?? "Unknown");
+    const name = getAutoSbcItemDisplayName(item);
 
     const cardType =
       [

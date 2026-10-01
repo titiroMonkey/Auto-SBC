@@ -48,6 +48,8 @@ const collectionBookEnsureStyles = () => {
     .collection-book-card .cb-media > * { max-width:100%; margin:0 auto; }
     .collection-book-card img, .collection-book-card canvas { max-width:100%; height:auto; display:block; }
     .collection-book-card .cb-placeholder { width:80%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; border-radius:8px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); font-size:13px; }
+    .collection-book-card { cursor:pointer; }
+    .collection-book-card:hover { filter:brightness(1.12); }
     /* Recolour EA's native loan counter when reused as the copy counter:
        green when the player is in the club, red when only seen before. */
     .collection-book-card .ut-item-player-state-indicator-view.loan { background:#38c172; color:#04150c; }
@@ -144,6 +146,7 @@ const collectionBookRenderCard = (row) => {
   // collectionBookApplyCopyCounter) for duplicate copies, coloured by club state.
   card.__cbCopies = copies;
   card.__cbInClub = inClub;
+  card.addEventListener("click", () => collectionBookOpenNativeSidebar(row));
 
   // Media area starts as a lightweight placeholder; upgraded to an EA card on
   // scroll via the IntersectionObserver.
@@ -160,6 +163,37 @@ const collectionBookRenderCard = (row) => {
   else collectionBookMountEaCard(card); // no IO support: mount immediately
 
   return card;
+};
+
+const collectionBookItemsController = function () {
+  const Base =
+    typeof isPhone === "function" && isPhone()
+      ? UTUnassignedItemsViewController
+      : UTUnassignedItemsSplitViewController;
+  Base.call(this);
+};
+
+const collectionBookItemsBase =
+  typeof isPhone === "function" && isPhone()
+    ? UTUnassignedItemsViewController
+    : UTUnassignedItemsSplitViewController;
+JSUtils.inherits(collectionBookItemsController, collectionBookItemsBase);
+
+const collectionBookOpenNativeSidebar = (row) => {
+  const entity = collectionBookGetItemEntity(row?.player?.eaId);
+  if (!entity) return;
+  const current = getCurrentViewController?.();
+  const navigation = current?.rootController?.getRootNavigationController?.();
+  if (!navigation) return;
+  const viewController = new collectionBookItemsController();
+  try {
+    viewController.init();
+    viewController.initWithItems([entity]);
+    navigation.pushViewController(viewController);
+  } catch (error) {
+    console.warn("[CollectionBook] could not open native item controller", error);
+    viewController.dealloc?.();
+  }
 };
 
 // Build a live EA item view (UTItemViewFactory) from the collection metadata,
@@ -400,15 +434,15 @@ const collectionBookCreateSection = (batch) => {
 const collectionBookApplySelectedBatch = (root, value) => {
   root.querySelectorAll(".collection-book-section").forEach((sec) => {
     const slug = sec.dataset.slug || "";
-    const isRarity = slug.startsWith("rarity:");
+    const isSynthetic = slug.startsWith("rarity:") || slug.startsWith("rating:");
     const show =
-      value === COLLECTION_BOOK_ALL_COLLECTIONS ? !isRarity : slug === value;
+      value === COLLECTION_BOOK_ALL_COLLECTIONS ? !isSynthetic : slug === value;
     sec.style.display = show ? "" : "none";
   });
   // Lazily load a collection section the first time it is selected.
   if (
     value !== COLLECTION_BOOK_ALL_COLLECTIONS &&
-    !value.startsWith("rarity:")
+    !value.startsWith("rarity:") && !value.startsWith("rating:")
   ) {
     const section = _collectionBookSections.get(value);
     if (section && !section.players) collectionBookLoadSection(value);
@@ -511,6 +545,10 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
     typeof collectionBookBuildRarityBatches === "function"
       ? collectionBookBuildRarityBatches()
       : [];
+  const ratingBatches =
+    typeof collectionBookBuildRatingBatches === "function"
+      ? collectionBookBuildRatingBatches()
+      : [];
 
   // Populate the batch dropdown: All Collections + each collection + each rarity.
   select.innerHTML = "";
@@ -541,6 +579,18 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
     select.appendChild(rarGroup);
   }
 
+  if (ratingBatches.length) {
+    const ratingGroup = document.createElement("optgroup");
+    ratingGroup.label = "Rating";
+    for (const batch of ratingBatches) {
+      const option = document.createElement("option");
+      option.value = batch.slug;
+      option.textContent = `${batch.name} (${batch.total})`;
+      ratingGroup.appendChild(option);
+    }
+    select.appendChild(ratingGroup);
+  }
+
   select.addEventListener("change", () => {
     collectionBookApplySelectedBatch(root, select.value);
   });
@@ -553,6 +603,10 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   for (const b of rarityBatches) {
     root.appendChild(collectionBookCreateSection(b));
     collectionBookRenderSectionGrid(b.slug, b.players);
+  }
+  for (const batch of ratingBatches) {
+    root.appendChild(collectionBookCreateSection(batch));
+    collectionBookRenderSectionGrid(batch.slug, batch.players);
   }
 
   // Kick off the background prefetch for any collections not yet cached, then
@@ -583,6 +637,14 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   // Prime the overall counter from whatever club data already exists.
   collectionBookUpdateFromClub();
 };
+
+window.addEventListener("autosbc:concepts-ready", () => {
+  const root = document.getElementById("CollectionBookPanel");
+  if (!root || !root.dataset.cbBuilt) return;
+  collectionBookBuildPage(root, { force: false }).catch((err) => {
+    console.warn("[CollectionBook] concept rating refresh failed", err);
+  });
+});
 
 // When the background prefetch finishes a collection, render it into the open
 // page if that section hasn't been populated yet.

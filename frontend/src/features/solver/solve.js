@@ -81,19 +81,20 @@ const getCurrentSquadPlayerSlots = () => {
   const controller = getControllerInstance?.();
   const challengeSquadPlayers = controller?._challenge?.squad?._players;
   const activeSquadPlayers = controller?._squad?._players;
-  const squadPlayers = Array.isArray(activeSquadPlayers)
-    ? activeSquadPlayers
-    : Array.isArray(challengeSquadPlayers)
-      ? challengeSquadPlayers
-      : [];
+  const toPlayerSlots = (players) =>
+    (Array.isArray(players) ? players : [])
+      .map((slot, slotIndex) => ({
+        slot,
+        slotIndex,
+        item: slot?._item || slot?.item,
+      }))
+      .filter(({ item }) => item && Number(item?.definitionId) > 0);
 
-  return squadPlayers
-    .map((slot, slotIndex) => ({
-      slot,
-      slotIndex,
-      item: slot?._item || slot?.item,
-    }))
-    .filter(({ item }) => item && Number(item?.definitionId) > 0);
+  const activeSlots = toPlayerSlots(activeSquadPlayers);
+  const challengeSlots = toPlayerSlots(challengeSquadPlayers);
+  return activeSlots.length >= challengeSlots.length
+    ? activeSlots
+    : challengeSlots;
 };
 
 const isEnabledSetting = (value) =>
@@ -727,7 +728,7 @@ let solveSBC = async (
 
         return {
           id: item.id,
-          name: item._staticData.name,
+          name: getAutoSbcItemDisplayName(item),
           cardType:
             (item.isSpecial()
               ? ""

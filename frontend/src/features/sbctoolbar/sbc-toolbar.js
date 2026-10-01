@@ -1,13 +1,11 @@
 const createPackList = async () => {
   let packs = await getPacks();
   let i = services.Localization;
-  const visiblePackCount = packs.packs.filter(
-    (f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101,
-  ).length;
+  const myPacks = packs.packs.filter((pack) => pack?.isMyPack);
+  const visiblePackCount = myPacks.length;
 
   let packContent = `<span>Packs<br>${visiblePackCount}</span>`;
-  let packCounts = packs.packs
-    .filter((f) => f.isMyPack || f?.prices?._collection?.COINS?.amount < 101)
+  let packCounts = myPacks
     .reduce((acc, pack) => {
       let key = `${pack.packName} ${
         pack.tradeable ? "(Tradable)" : "(Untradable)"
@@ -1024,11 +1022,101 @@ let createSBCTab = async () => {
   );
   const PACK_PURCHASE_COUNTS_KEY = "packPurchaseCountsById";
   const AUTO_BUY_PACK_ID_KEY = "autosbc_autoBuyPackId";
+  const AUTO_BUY_PACK_NAME_KEY = "autosbc_autoBuyPackName";
   const DEFAULT_AUTO_BUY_PACK_ID = 101; // Bronze Pack
   const autoBuyCurrency =
     getSettings(0, 0, "autoBuyCurrency") === "POINTS" ? "POINTS" : "COINS";
   const autoBuyGameCurrency =
     autoBuyCurrency === "POINTS" ? GameCurrency.POINTS : GameCurrency.COINS;
+
+  const purchasePackById = async (packId, currency) => {
+    const packsResponse = await getPacks(true);
+    const savedName = localStorage.getItem(AUTO_BUY_PACK_NAME_KEY) || "";
+    const packName = autoBuyPackName(packId);
+    const packs = packsResponse?.packs || [];
+    const pack = packs.find(
+      (candidate) =>
+        !candidate?.isMyPack &&
+        services.Localization.localize(candidate?.packName) ===
+          (savedName || packName),
+    ) || packs.find(
+      (candidate) =>
+        !candidate?.isMyPack && String(candidate?.id) === String(packId),
+    );
+    if (!pack || pack.isMyPack) {
+      throw new Error(`Purchasable pack ${packId} is no longer available`);
+    }
+
+    window.__autoBuyPackId = pack.id;
+
+    const observer = new UTStoreViewController();
+    await new Promise((resolve, reject) => {
+      try {
+        const request = pack.purchase(currency);
+        if (!request || typeof request.observe !== "function") {
+          reject(new Error(`Pack purchase request unavailable: ${packId}`));
+          return;
+        }
+        request.observe(observer, function (obs, event) {
+          try {
+            obs?.unobserve?.(observer);
+          } catch {}
+          if (event?.success) {
+            resolve();
+            return;
+          }
+          const status = Number(event?.status ?? event?.error?.code ?? 0);
+          const error = new Error(
+            `Pack purchase failed (${status || "unknown"}): ${packId}`,
+          );
+          error.status = status;
+          reject(error);
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    await openPack(pack);
+  };
+
+  const getCurrencyBalance = async (currency) => {
+    try {
+      const user = services?.User?.getUser?.();
+      const person = user?.getSelectedPersona?.() || user;
+      if (!person) return null;
+
+      const isPointsCurrency =
+        currency === GameCurrency.POINTS ||
+        currency === "POINTS" ||
+        currency === 1;
+
+      const candidates = isPointsCurrency
+        ? [
+            person.getPoints,
+            person.getFifaPoints,
+            person.getUTPoints,
+            person.getPointsBalance,
+            person.getPointBalance,
+          ]
+        : [
+            person.getCoins,
+            person.getCredits,
+            person.getCredit,
+            person.getCoinBalance,
+            person.getCoinsBalance,
+            person.getCreditsBalance,
+            person.getBalance,
+          ];
+
+      for (const fn of candidates) {
+        if (typeof fn !== "function") continue;
+        const value = Number(fn.call(person));
+        if (Number.isFinite(value)) return value;
+      }
+    } catch {}
+    return null;
+  };
 
   const readPackPurchaseCount = (packId) => {
     try {
@@ -1056,6 +1144,15 @@ let createSBCTab = async () => {
   const saveAutoBuyPackId = (packId) => {
     try {
       localStorage.setItem(AUTO_BUY_PACK_ID_KEY, String(packId));
+    } catch {}
+  };
+
+  const saveAutoBuyPackName = (packId) => {
+    try {
+      localStorage.setItem(
+        AUTO_BUY_PACK_NAME_KEY,
+        autoBuyPackCatalog.find((pack) => pack.id === packId)?.name || "",
+      );
     } catch {}
   };
 
@@ -1121,13 +1218,23 @@ let createSBCTab = async () => {
   };
 
   window.__autoBuyPackId = resolveDefaultAutoBuyPackId();
+  try {
+    if (!localStorage.getItem(AUTO_BUY_PACK_NAME_KEY)) {
+      localStorage.setItem(
+        AUTO_BUY_PACK_NAME_KEY,
+        autoBuyPackCatalog.find((pack) => pack.id === window.__autoBuyPackId)?.name || "",
+      );
+    }
+  } catch {}
   window.__autoBuyRunning = false;
   window.__autoBuyCountTimer = null;
 
   const autoBuyPackName = (packId) =>
     autoBuyPackCatalog.find((p) => p.id === packId)?.name || "Bronze Packs";
   const autoBuyCurrencyClass =
-    autoBuyCurrency === "POINTS" ? "currency-points" : "currency-coins";
+    autoBuyCurrency === "POINTS"
+      ? "autosbc-auto-buy-currency-icon--points"
+      : "autosbc-auto-buy-currency-icon--coins";
   const autoBuyCurrencyLabel = autoBuyCurrency === "POINTS" ? "Points" : "Coins";
 
   const updateAutoBuyLabel = () => {
@@ -1149,9 +1256,10 @@ let createSBCTab = async () => {
       () => {
         window.__autoBuyPackId = entry.id;
         saveAutoBuyPackId(entry.id);
+        saveAutoBuyPackName(entry.id);
         updateAutoBuyLabel();
       },
-      { width: "20vw", marginTop: "0px", background: "none", color: "#fff" },
+      { width: "20vw", marginTop: "0px", background: "#1e1f1f", color: "#fff" },
     );
   });
 
@@ -1247,10 +1355,15 @@ let createSBCTab = async () => {
 
           await sleep(randDelay());
         }
-      } catch (err) {
-        console.warn("Auto Buy loop error", err);
+        } catch (err) {
+          const status = Number(err?.status ?? err?.code ?? err);
+          const message =
+            status === 404
+              ? "Auto Buy stopped: EA rejected this pack purchase (404). Refresh the store and select a current pack."
+              : `Auto Buy stopped: ${err?.message || "pack purchase failed"}`;
+          console.warn("Auto Buy loop error", { error: err, status });
         showNotification(
-          "Auto Buy encountered an error; stopping.",
+            message,
           UINotificationType.NEGATIVE,
         );
       } finally {

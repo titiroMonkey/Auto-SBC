@@ -1049,6 +1049,10 @@ const formatPriceCell = (value, fallback = "—") => {
 const formatRefreshItemName = (item) => {
   if (!item) return "Unknown item";
 
+  if (typeof getAutoSbcItemDisplayName === "function") {
+    return getAutoSbcItemDisplayName(item);
+  }
+
   try {
     if (typeof formatPlayerName === "function") {
       const formatted = formatPlayerName(item);
@@ -1058,14 +1062,7 @@ const formatRefreshItemName = (item) => {
     }
   } catch {}
 
-  return (
-    item?._staticData?.name ||
-    item?._staticData?.lastName ||
-    item?.name ||
-    item?.assetId ||
-    item?.definitionId ||
-    "Unknown item"
-  );
+  return getAutoSbcItemDisplayName(item);
 };
 
 const refreshLivePrice = async (item, { showUi = true, onCandidate } = {}) => {

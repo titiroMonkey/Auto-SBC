@@ -15,7 +15,7 @@ const exposeConceptPlayersToConsole = (players = []) => {
       const preview = list.slice(0, count).map((item) => ({
         id: item?.id,
         definitionId: item?.definitionId,
-        name: item?._staticData?.name || item?.name,
+        name: getAutoSbcItemDisplayName(item),
         rating: item?.rating,
         teamId: item?.teamId,
         leagueId: item?.leagueId,
@@ -35,7 +35,7 @@ const exposeConceptPlayersToConsole = (players = []) => {
       const rows = list.map((item) => ({
         id: item?.id,
         definitionId: item?.definitionId,
-        name: item?._staticData?.name || item?.name,
+        name: getAutoSbcItemDisplayName(item),
         rating: item?.rating,
         teamId: item?.teamId,
         leagueId: item?.leagueId,
@@ -49,6 +49,10 @@ const exposeConceptPlayersToConsole = (players = []) => {
       console.table(rows);
       return list;
     };
+    window.__autoSbcConceptsReady = players.length > 0;
+    window.dispatchEvent(new CustomEvent("autosbc:concepts-ready", {
+      detail: { count: players.length },
+    }));
   } catch (error) {
     console.warn("[concepts] failed to expose concept players", error);
   }
@@ -117,7 +121,7 @@ const buildPlayerDetails = (item, context = {}) => {
 
   return {
     id: item.id,
-    name: item._staticData?.name || item.name,
+    name: getAutoSbcItemDisplayName(item),
     cardType,
     rarityLabel,
     assetId: item._metaData?.id,

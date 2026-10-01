@@ -385,12 +385,7 @@ const listLowestPricePlayersByRating = async ({
   includeStorage = true,
   refreshPrices = false,
 } = {}) => {
-  const nameOf = (p) =>
-    p?._staticData?.name ||
-    [p?._staticData?.firstName, p?._staticData?.lastName]
-      .filter(Boolean)
-      .join(" ") ||
-    String(p?.definitionId ?? "Unknown");
+  const nameOf = (p) => getAutoSbcItemDisplayName(p);
 
   const club = (await fetchPlayers({ count: Infinity })) || [];
   const storage = includeStorage ? (await getStoragePlayers()) || [] : [];
@@ -542,7 +537,7 @@ let isFodder = function (item, itemType, itemRating, debug = false) {
 
   if (debug) {
     console.groupCollapsed(
-      `[isFodder] ${item?._staticData?.name ?? item.definitionId} => evaluating`,
+      `[isFodder] ${getAutoSbcItemDisplayName(item)} => evaluating`,
     );
     log({ definitionId: item.definitionId, rating, type });
     log({ priceEntry, price });
@@ -913,11 +908,7 @@ let ensureItemMarketData = (item) =>
     const isExtinct = Boolean(getPriceItems()?.[item?.definitionId]?.isExtinct);
     const cardInfo = {
       defId: item?.definitionId,
-      name:
-        item?._staticData?.name ||
-        item?._staticData?.lastName ||
-        item?.name ||
-        item?.definitionId,
+      name: getAutoSbcItemDisplayName(item),
       rating: item?.rating ?? item?._staticData?.rating,
       isExtinct,
     };
@@ -1095,11 +1086,7 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
         isExtinct: Boolean(isExtinct),
         ...(Number.isFinite(priceLimitMax) ? { priceLimitMax } : {}),
         ...(Number.isFinite(priceLimitMin) ? { priceLimitMin } : {}),
-        name:
-          player?._staticData?.name ||
-          player?._staticData?.lastName ||
-          player?.name ||
-          player?.definitionId,
+        name: getAutoSbcItemDisplayName(player),
         source: "liveSearch",
         type: (player.getSearchType?.() || "player").toString().toUpperCase(),
       },
@@ -1128,7 +1115,7 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
         !isFodder(player)
       ) {
         showNotification(
-          `${player?._staticData?.name || player?.name || player?.definitionId}: ${
+          `${getAutoSbcItemDisplayName(player)}: ${
             Number.isFinite(price) ? price.toLocaleString() : "N/A"
           }`,
           UINotificationType.POSITIVE,
@@ -1147,7 +1134,7 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
     try {
       if (!suppressNotification && typeof showNotification === "function") {
         showNotification(
-          `${player?._staticData?.name || player?.name || player?.definitionId} appears to be extinct`,
+          `${getAutoSbcItemDisplayName(player)} appears to be extinct`,
           UINotificationType.NEGATIVE,
         );
       }
@@ -1870,7 +1857,7 @@ const fetchPlayerPricesInternal = async (players, options = {}) => {
             "PLAYER";
 
           priceResponse[key].rating = matchingPlayer?.rating;
-          priceResponse[key].name = matchingPlayer?._staticData?.name || "";
+          priceResponse[key].name = getAutoSbcItemDisplayName(matchingPlayer);
           priceResponse[key].type = normalizePriceType(rawType);
         }
         PriceItem(priceResponse);
