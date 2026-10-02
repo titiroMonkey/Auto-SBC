@@ -6803,6 +6803,50 @@ const searchEaConceptEntitiesByDefIds = async (definitionIds, options = {}) => {
   return gathered;
 };
 
+const normalizeEaPosition = (position) => {
+  if (position == null || position === "") return -1;
+  if (Number.isFinite(Number(position))) return Number(position);
+  const positionIds = {
+    GK: 0,
+    RWB: 2,
+    RB: 3,
+    CB: 5,
+    LB: 7,
+    LWB: 8,
+    CDM: 10,
+    RM: 12,
+    CM: 14,
+    LM: 16,
+    CAM: 18,
+    CF: 21,
+    RW: 23,
+    ST: 25,
+    LW: 27,
+  };
+  return globalThis.PlayerPosition?.[String(position).trim().toUpperCase()] ??
+    positionIds[String(position).trim().toUpperCase()] ?? -1;
+};
+
+const normalizeEaPositions = (positions) =>
+  Array.isArray(positions)
+    ? positions.map(normalizeEaPosition).filter((position) => position >= 0)
+    : [];
+
+const conceptNamePart = value => {
+  const name = String(value || "").trim();
+  return name && name !== "---" ? name : "";
+};
+
+const getConceptStaticName = (item, staticData = item?._staticData || {}) =>
+  conceptNamePart(staticData.name) ||
+  conceptNamePart(staticData.knownAs) ||
+  conceptNamePart(staticData.getFullName?.()) ||
+  conceptNamePart(item?.getFullName?.()) ||
+  [conceptNamePart(staticData.firstName), conceptNamePart(staticData.lastName)]
+    .filter(Boolean)
+    .join(" ") ||
+  conceptNamePart(item?.displayName);
+
 const createConceptEntityFromEaSearch = (eaEntity, futggPlayer, playerName = "Unknown") => {
   if (!eaEntity) return null;
 
@@ -6840,6 +6884,8 @@ const getFutSbcDbVersion = () => {
   globalThis.__autoSbcDbVersion = version;
   return version;
 };
+
+const CONCEPT_CACHE_SCHEMA_VERSION = 6;
 
 const openConceptsDb = () => {
   const dbName = "futSBCDatabase";
@@ -6919,20 +6965,40 @@ const toSerializableConcept = (item) => {
   if (!Number.isFinite(definitionId) || definitionId <= 0) return null;
 
   const sd = item?._staticData || {};
+  const attributes =
+    (typeof item?.getAttributes === "function" && item.getAttributes()) ||
+    item?.attributeArray ||
+    item?.attributes ||
+    sd?.attributeArray ||
+    [];
+  const stats =
+    (typeof item?.getStats === "function" && item.getStats()) ||
+    item?.statsArray ||
+    item?._stats ||
+    sd?.statsArray ||
+    [];
 
   const payload = {
-    v: 4,
+    v: 6,
     // Identity
     id: Number(item?.id || item?.itemId || 0),
     resourceId: definitionId,
-    assetId: Number(item?.assetId || definitionId || 0),
+    assetId: Number(item?.databaseId || item?._metaData?.id || item?.assetId || definitionId),
+    staticName: getConceptStaticName(item, sd),
+    firstName: item?.firstName || sd.firstName || "",
+    lastName: item?.lastName || sd.lastName || "",
+    knownAs: sd.knownAs || "",
     // Item classification
-    itemType: Number(item?.itemType || globalThis.ItemType?.PLAYER || 1),
+    itemType: item?.type ?? item?.itemType ?? globalThis.ItemType?.PLAYER ?? "player",
     concept: !!item?.concept,
     untradeable: !!item?.untradeable || !!item?.untrade,
+    authenticity: !!item?.authenticity,
+    holographicType: item?.holographicType || null,
     sourceApi: item?.sourceApi || "eafc",
     // Core attributes
     rating: Number(item?.rating || sd?.rating || 0),
+    gradingScore: Number(item?.sbsScore ?? item?.gradingScore ?? 0),
+    hyperCosmeticDTOs: item?._hyperCosmeticDTOs || {},
     owners: Number(item?.owners || 0),
     rareflag: Number(item?._rareflag || item?.rareflag || sd?.rareflag || 0),
     // Card properties
@@ -6943,23 +7009,17 @@ const toSerializableConcept = (item) => {
     teamId: Number(item?.teamId || sd?.teamId || item?.teamIdId || 0),
     leagueId: Number(item?.leagueId || sd?.leagueId || 0),
     // Player-specific
-    firstName: item?.firstName || sd?.firstName || "",
-    lastName: item?.lastName || sd?.lastName || "",
-    preferredPosition: item?.preferredPosition || sd?.preferredPosition || "",
-    preferredfoot: Number(item?.preferredfoot || sd?.preferredfoot || 0),
-    skillmoves: Number(item?.skillmoves || sd?.skillmoves || 0),
-    weakfootabilitytypecode: Number(item?.weakfootabilitytypecode || sd?.weakfootabilitytypecode || 0),
+    preferredPosition: normalizeEaPosition(
+      item?.preferredPosition ?? sd?.preferredPosition,
+    ),
+    preferredfoot: Number(item?._preferredFoot ?? item?.preferredfoot ?? sd?.preferredfoot ?? 0),
+    skillmoves: Math.max(0, Number(item?.getSkillMoves?.() ?? item?._skillMoves ?? 1) - 1),
+    weakfootabilitytypecode: Number(item?.getWeakFoot?.() ?? item?._weakFoot ?? item?.weakfootabilitytypecode ?? 0),
     // Player stats
-    attributeArray: Array.isArray(item?.attributeArray)
-      ? item.attributeArray.map((v) => Number(v))
-      : Array.isArray(sd?.attributeArray)
-        ? sd.attributeArray.map((v) => Number(v))
-        : [],
-    statsArray: Array.isArray(item?.statsArray)
-      ? item.statsArray.map((v) => Number(v))
-      : Array.isArray(sd?.statsArray)
-        ? sd.statsArray.map((v) => Number(v))
-        : [],
+    attributeArray: Array.isArray(attributes)
+      ? attributes.map((v) => Number(v))
+      : [],
+    statsArray: Array.isArray(stats) ? stats.map((v) => Number(v)) : [],
     lifetimeStatsArray: Array.isArray(item?.lifetimeStatsArray)
       ? item.lifetimeStatsArray.map((v) => Number(v))
       : Array.isArray(sd?.lifetimeStatsArray)
@@ -6980,11 +7040,11 @@ const toSerializableConcept = (item) => {
       : Array.isArray(sd?.groups)
         ? sd.groups.map((v) => Number(v))
         : [],
-    possiblePositions: Array.isArray(item?.possiblePositions)
-      ? item.possiblePositions.slice()
-      : Array.isArray(sd?.possiblePositions)
-        ? sd.possiblePositions.slice()
-        : [],
+    possiblePositions: normalizeEaPositions(
+      Array.isArray(item?.possiblePositions)
+        ? item.possiblePositions
+        : sd?.possiblePositions,
+    ),
     // Consumable/injury
     contract: Number(item?.contract || sd?.contract || 0),
     injuryType: item?.injuryType || sd?.injuryType || "none",
@@ -7010,7 +7070,6 @@ const toSerializableConcept = (item) => {
   const compact = {};
   for (const [key, value] of Object.entries(payload)) {
     if (value === undefined || value === null) continue;
-    if (typeof value === "number" && value === 0 && key !== "id" && key !== "resourceId" && key !== "assetId") continue;
     if (typeof value === "string" && value === "") continue;
     if (Array.isArray(value) && value.length === 0) continue;
     compact[key] = value;
@@ -7068,7 +7127,10 @@ const rehydrateConceptEntity = (rawItem) => {
     itemType: rawItem?.itemType || globalThis.ItemType?.PLAYER || 1,
     // Full item structure from cache
     assetId: Number(rawItem?.assetId || defId || 0),
+    definitionId: defId,
+    staticName: rawItem?.staticName || "",
     rating: Number(rawItem?.rating || 0),
+    gradingScore: Number(rawItem?.gradingScore || 0),
     owners: Number(rawItem?.owners || 0),
     untradeable: !!rawItem?.untradeable,
     rareflag: Number(rawItem?.rareflag || 0),
@@ -7079,7 +7141,8 @@ const rehydrateConceptEntity = (rawItem) => {
     playStyle: Number(rawItem?.playStyle || 0),
     firstName: rawItem?.firstName || "",
     lastName: rawItem?.lastName || "",
-    preferredPosition: rawItem?.preferredPosition || "",
+    knownAs: rawItem?.knownAs || "",
+    preferredPosition: globalThis.PlayerPosition?.[normalizeEaPosition(rawItem?.preferredPosition)] || rawItem?.preferredPosition,
     preferredfoot: Number(rawItem?.preferredfoot || 0),
     skillmoves: Number(rawItem?.skillmoves || 0),
     weakfootabilitytypecode: Number(rawItem?.weakfootabilitytypecode || 0),
@@ -7089,7 +7152,7 @@ const rehydrateConceptEntity = (rawItem) => {
     baseTraits: Array.isArray(rawItem?.baseTraits) ? rawItem.baseTraits : [],
     plusRoles: Array.isArray(rawItem?.plusRoles) ? rawItem.plusRoles : [],
     groups: Array.isArray(rawItem?.groups) ? rawItem.groups : [],
-    possiblePositions: Array.isArray(rawItem?.possiblePositions) ? rawItem.possiblePositions : [],
+    possiblePositions: normalizeEaPositions(rawItem?.possiblePositions).map(position => globalThis.PlayerPosition?.[position] || position),
     contract: Number(rawItem?.contract || 0),
     injuryType: rawItem?.injuryType || "none",
     injuryGames: Number(rawItem?.injuryGames || 0),
@@ -7106,6 +7169,10 @@ const rehydrateConceptEntity = (rawItem) => {
     timestamp: Number(rawItem?.timestamp || 0),
     gender: Number(rawItem?.gender || 0),
     concept: !!rawItem?.concept,
+    authenticity: !!rawItem?.authenticity,
+    holographicType: rawItem?.holographicType || null,
+    hyperCosmeticDTOs: rawItem?.hyperCosmeticDTOs || {},
+    _hyperCosmeticDTOs: rawItem?.hyperCosmeticDTOs || {},
     sourceApi: rawItem?.sourceApi || "eafc",
   };
 
@@ -7115,6 +7182,17 @@ const rehydrateConceptEntity = (rawItem) => {
 
     // Concepts loaded from this cache path must always remain concept entities.
     entity.concept = true;
+    entity.authenticity = !!rawItem?.authenticity;
+    entity.holographicType = rawItem?.holographicType || null;
+    entity._hyperCosmeticDTOs = rawItem?.hyperCosmeticDTOs || {};
+    const staticData = entity.getStaticData?.() || entity._staticData;
+    if (staticData) {
+      staticData.firstName = rawItem?.firstName || staticData.firstName || "";
+      staticData.lastName = rawItem?.lastName || staticData.lastName || "";
+      staticData.knownAs = rawItem?.knownAs || staticData.knownAs || "";
+      staticData.name = conceptNamePart(rawItem?.staticName) || getConceptStaticName(null, staticData);
+      entity.setStaticData?.(staticData);
+    }
 
     // Ensure definitionId is set
     if (!Number(entity?.definitionId)) {
@@ -7178,8 +7256,13 @@ const getConceptsFromIndexedDB = () => {
       const getRequest = store.get("allConcepts");
 
       getRequest.onsuccess = function (event) {
-        if (event.target.result && event.target.result.data) {
-          const cachedRaw = event.target.result.data || [];
+        const cachedRecord = event.target.result;
+        if (
+          cachedRecord &&
+          cachedRecord.data &&
+          Number(cachedRecord.schemaVersion || 0) >= CONCEPT_CACHE_SCHEMA_VERSION
+        ) {
+          const cachedRaw = cachedRecord.data || [];
           let missingCoreCount = 0;
           const cached = cachedRaw
             .map((rawItem) => {
@@ -7203,6 +7286,9 @@ const getConceptsFromIndexedDB = () => {
           console.log(`[concepts-cache] Loaded ${cached.length} UTItemEntity concepts from IndexedDB`);
           resolve(cached);
         } else {
+          if (cachedRecord?.data) {
+            console.warn("[concepts-cache] Ignoring stale concept cache schema");
+          }
           resolve([]);
         }
       };
@@ -7309,6 +7395,7 @@ const saveConceptsToIndexedDB = (concepts) => {
       const allConcepts = {
         id: "allConcepts",
         data: serializedConcepts,
+        schemaVersion: CONCEPT_CACHE_SCHEMA_VERSION,
         savedAt: new Date().toISOString(),
       };
 
@@ -8004,6 +8091,7 @@ const _collectionBookSlimPlayer = (p) => {
     [p?.firstName, p?.lastName].filter(Boolean).join(" ") ||
     String(p?.eaId);
   return {
+    ...p,
     eaId: Number(p?.eaId),
     name,
     overall: p?.overall ?? null,
@@ -8075,6 +8163,10 @@ const collectionBookFetchList = async ({ force = false } = {}) => {
   } finally {
     _collectionBookListInFlight = null;
   }
+};
+
+const collectionBookRefreshSetIndexOnStartup = async () => {
+  return futGalleryLoadCatalogue({ force: true });
 };
 
 // --- per-collection players (lazy) ---------------------------------------
@@ -8214,8 +8306,10 @@ const COLLECTION_BOOK_OWNERSHIP_API_URL =
 
 // definitionId(number) -> count(number), hydrated from the backend.
 let _collectionBookOwnershipCounts = new Map();
+let _collectionBookFirstOwnerCounts = new Map();
+const collectionBookGetFirstOwnerCounts = () => _collectionBookFirstOwnerCounts;
 
-const _collectionBookApplyOwnershipCounts = (counts) => {
+const _collectionBookApplyOwnershipCounts = (counts, firstOwnerCounts = {}) => {
   if (!counts || typeof counts !== "object") return;
   const next = new Map();
   for (const [defId, n] of Object.entries(counts)) {
@@ -8226,6 +8320,10 @@ const _collectionBookApplyOwnershipCounts = (counts) => {
     }
   }
   _collectionBookOwnershipCounts = next;
+  _collectionBookFirstOwnerCounts = new Map(Object.entries(firstOwnerCounts || {})
+    .filter(([id, count]) => Number(id) > 0 && Number(count) > 0)
+    .map(([id, count]) => [Number(id), Number(count)]));
+  window.dispatchEvent(new CustomEvent("autosbc:ownership-ready"));
 };
 
 // Load persisted ownership counts from the backend into memory.
@@ -8236,7 +8334,7 @@ const collectionBookFetchOwnership = async () => {
     });
     if (!resp.ok) return;
     const json = await resp.json();
-    _collectionBookApplyOwnershipCounts(json?.counts);
+    _collectionBookApplyOwnershipCounts(json?.counts, json?.firstOwnerCounts);
   } catch (err) {
     console.warn("[CollectionBook] ownership fetch failed", err);
   }
@@ -8251,7 +8349,9 @@ const _collectionBookOwnershipPairs = (items) => {
     const entityId = item?.id;
     if (!Number.isFinite(defId) || defId <= 0) continue;
     if (entityId == null) continue;
-    pairs.push({ definitionId: defId, entityId: String(entityId) });
+    if (item.concept || (typeof item.isLoan === "function" ? item.isLoan() : Number(item.loans ?? -1) >= 0)) continue;
+    const owners = Number(item.owners);
+    pairs.push({ definitionId: defId, entityId: String(entityId), firstOwner: owners > 0 ? owners === 1 : null });
   }
   return pairs;
 };
@@ -8270,7 +8370,7 @@ const collectionBookRecordOwnership = async (items) => {
     });
     if (!resp.ok) return;
     const json = await resp.json();
-    _collectionBookApplyOwnershipCounts(json?.counts);
+    _collectionBookApplyOwnershipCounts(json?.counts, json?.firstOwnerCounts);
     if (typeof window.__collectionBookOnClubUpdate === "function") {
       window.__collectionBookOnClubUpdate(collectionBookGetOwnedCounts());
     }
@@ -8290,6 +8390,8 @@ const collectionBookGetOwnedCounts = () => {
     ? window.__clubPlayersEntries
     : [];
   for (const entry of entries) {
+    const item = entry.itemAttributes || entry;
+    if (item.concept || item.isLoan?.() || Number(item.loans ?? entry.loans ?? -1) >= 0) continue;
     const defId = Number(entry?.definitionId);
     if (!Number.isFinite(defId) || defId <= 0) continue;
     counts.set(defId, (counts.get(defId) || 0) + 1);
@@ -8638,15 +8740,22 @@ const collectionBookBuildRatingBatches = () => {
     const rating = Number(entity?.rating || player?.overall || 0);
     if (!Number.isFinite(rating) || rating <= 0) continue;
     if (!groups.has(rating)) {
-      groups.set(rating, { slug: `rating:${rating}`, name: `Rating ${rating}`, rating, players: [] });
+      groups.set(rating, {
+        slug: `rating:${rating}`,
+        name: `Rating ${rating}`,
+        rating,
+        players: [],
+      });
     }
     groups.get(rating).players.push(player);
   }
-  return Array.from(groups.values()).sort((a, b) => b.rating - a.rating).map((group) => ({
-    ...group,
-    total: group.players.length,
-    isRatingBatch: true,
-  }));
+  return Array.from(groups.values())
+    .sort((a, b) => b.rating - a.rating)
+    .map((group) => ({
+      ...group,
+      total: group.players.length,
+      isRatingBatch: true,
+    }));
 };
 
 // Given a collection's players, compute per-player ownership + collection totals
@@ -8858,6 +8967,7 @@ const collectionBookUpdateFromClub = () => {
 
 try {
   window.collectionBookFetchList = collectionBookFetchList;
+  window.collectionBookRefreshSetIndexOnStartup = collectionBookRefreshSetIndexOnStartup;
   window.collectionBookFetchPlayers = collectionBookFetchPlayers;
   window.collectionBookPrefetchAll = collectionBookPrefetchAll;
   window.collectionBookGetOwnedCounts = collectionBookGetOwnedCounts;
@@ -8871,12 +8981,432 @@ try {
   window.collectionBookGetItemEntity = collectionBookGetItemEntity;
   window.collectionBookGetAllCachedPlayers = collectionBookGetAllCachedPlayers;
   window.collectionBookBuildRarityBatches = collectionBookBuildRarityBatches;
+  window.collectionBookBuildRatingBatches = collectionBookBuildRatingBatches;
   window.collectionBookComputeProgress = collectionBookComputeProgress;
   window.collectionBookDetectNewlyCollected = collectionBookDetectNewlyCollected;
   window.collectionBookDetectNewFromIds = collectionBookDetectNewFromIds;
   window.collectionBookScanItems = collectionBookScanItems;
   window.collectionBookUpdateFromClub = collectionBookUpdateFromClub;
 } catch {}
+const FUT_GALLERY_CATALOGUE_KEY = "futGallery.catalogue.v2";
+let futGalleryCatalogueRequest = null;
+const futGalleryVariantPriceCache = new Map();
+const futGalleryVariantPriceRequests = new Map();
+const futGalleryFetchVariantPrice = async (variantEaId, { holographicType = null, force = false } = {}) => {
+  const id = Number(variantEaId);
+  if (!id || typeof fetchFutggSignedJson !== "function") return null;
+  const cacheKey = `${id}:${holographicType || "standard"}`;
+  const cached = futGalleryVariantPriceCache.get(cacheKey);
+  if (!force && cached && Date.now() - cached.timestamp < 5 * 60 * 1000) return cached.price;
+  if (futGalleryVariantPriceRequests.has(cacheKey)) return futGalleryVariantPriceRequests.get(cacheKey);
+
+  const request = (async () => {
+    try {
+      const response = (await fetchFutggSignedJson(`/api/fut/player-prices/27/${id}/`))?.data;
+      const price = Number(response?.currentPrice?.price ?? response?.price ?? response?.currentDbPrice);
+      if (!Number.isFinite(price) || price <= 0) return null;
+      futGalleryVariantPriceCache.set(cacheKey, { price, timestamp: Date.now() });
+      return price;
+    } catch (error) {
+      console.warn("[Gallery] FUT.GG item price lookup failed", { id, holographicType, error: String(error) });
+      return null;
+    } finally {
+      futGalleryVariantPriceRequests.delete(cacheKey);
+    }
+  })();
+  futGalleryVariantPriceRequests.set(cacheKey, request);
+  return request;
+};
+
+const futGalleryIsVariantItem = (entity, definitionId) => {
+  const assetId = Number(entity?.databaseId || entity?._metaData?.id || entity?.assetId || 0);
+  const hasHyperCosmetics = Object.keys(entity?._hyperCosmeticDTOs || {}).length > 0;
+  return !!entity?.authenticity || !!entity?.holographicType || hasHyperCosmetics || (assetId > 0 && assetId !== Number(definitionId));
+};
+
+const futGalleryPrice = player => {
+  if (player?.variantPrice != null && Number.isFinite(Number(player.variantPrice))) return Number(player.variantPrice);
+  if (player?.isVariantItem) return NaN;
+  const price = typeof getPrice === "function" ? Number(getPrice(player?.entity)) : NaN;
+  return Number.isFinite(price) && price > 0 ? price : null;
+};
+
+const futGalleryAddPristineVariants = async (players, { cancelled = () => false } = {}) => {
+  if (typeof fetchFutggSignedJson !== "function" || typeof searchEaConceptEntitiesByDefIds !== "function") return players;
+  const definitions = [];
+  const ids = [...new Set((players || []).map(player => Number(player.eaId)).filter(Boolean))];
+  for (let offset = 0; offset < ids.length && !cancelled(); offset += 40) {
+    const slugs = ids.slice(offset, offset + 40).map(id => `27-${id}`).join(",");
+    try {
+      const response = await fetchFutggSignedJson(`/api/fut/players/v2/definition-data/?game=27&slugs=${encodeURIComponent(slugs)}`);
+      definitions.push(...(Array.isArray(response?.data) ? response.data : []));
+    } catch (error) {
+      console.warn("[Gallery] FUT.GG variant discovery failed", String(error));
+    }
+  }
+  if (cancelled()) return players;
+
+  const existing = new Set((players || []).map(player => Number(player.eaId)));
+  const byId = new Map((players || []).map(player => [Number(player.eaId), player]));
+  const missing = [...new Map(definitions.flatMap(definition => (definition.itemVariants || [])
+    .filter(variant => variant.holographicType === "pristine" && !existing.has(Number(variant.eaId)))
+    .map(variant => [Number(variant.eaId), { eaId: Number(variant.eaId), baseEaId: Number(definition.standardItemEaId || definition.basePlayerEaId), holographicType: variant.holographicType }]))).values()]
+    .filter(variant => variant.eaId && byId.has(variant.baseEaId));
+  if (!missing.length || cancelled()) return players;
+
+  const entities = await searchEaConceptEntitiesByDefIds(missing.map(variant => variant.eaId));
+  if (cancelled()) return players;
+  const entityById = new Map((entities || []).map(entity => [Number(entity.resourceId || entity.definitionId || entity.eaId || entity.id), entity]));
+  const additions = missing.flatMap(variant => {
+    const entity = entityById.get(variant.eaId);
+    const base = byId.get(variant.baseEaId);
+    if (!entity || !base) return [];
+    entity.holographicType = variant.holographicType;
+    entity._hyperCosmeticDTOs = entity._hyperCosmeticDTOs || {};
+    const staticData = entity._staticData || base.entity?._staticData || {};
+    return [{
+      ...base,
+      eaId: variant.eaId,
+      entity,
+      name: entity.getFullName?.() || staticData.name || base.name,
+      assetId: Number(entity.databaseId || entity._metaData?.id || base.assetId),
+      itemDefinitionId: variant.eaId,
+      isVariantItem: true,
+      holographicType: variant.holographicType,
+      holographic: true,
+      variantPrice: null,
+      variantPriceResolved: false,
+      price: null,
+      purchaseCost: null,
+      inClub: false,
+      seen: false,
+      available: false,
+      firstOwner: false,
+    }];
+  });
+  return [...players, ...additions];
+};
+
+const futGalleryEnrichVariantPrices = async (players, { cancelled = () => false, force = false, concurrency = 4 } = {}) => {
+  players = await futGalleryAddPristineVariants(players, { cancelled });
+  const targets = [...new Map((players || [])
+    .filter(player => player?.isVariantItem && (force || !player.variantPriceResolved))
+    .map(player => [Number(player.eaId), player]))
+    .values()];
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, concurrency), targets.length) }, async () => {
+    while (cursor < targets.length && !cancelled()) {
+      const player = targets[cursor++];
+      const price = await futGalleryFetchVariantPrice(player.itemDefinitionId || player.eaId, {
+        holographicType: player.holographicType,
+        force,
+      });
+      player.variantPriceResolved = true;
+      if (price != null && !cancelled()) {
+        player.variantPrice = price;
+        player.price = price;
+        player.purchaseCost = player.available ? 0 : price;
+      }
+    }
+  });
+  await Promise.all(workers);
+  return players;
+};
+
+const futGalleryLoadCatalogue = async ({ force = false } = {}) => {
+  const cached = _collectionBookReadCache(FUT_GALLERY_CATALOGUE_KEY, 0);
+  if (!force && cached?.sets?.length && cached?.categories?.length) return cached;
+  if (futGalleryCatalogueRequest) return futGalleryCatalogueRequest;
+  futGalleryCatalogueRequest = (async () => {
+    try {
+      const [catalogue, hub] = await Promise.all([
+        _collectionBookGetJson(`${COLLECTION_BOOK_ORIGIN}/api/fut/gallery/fc27/`),
+        _collectionBookGetJson(`${COLLECTION_BOOK_ORIGIN}/api/fut/gallery/fc27/hub/`),
+      ]);
+      const summaries = new Map((hub.data?.categories || []).flatMap(category => category.sets).map(set => [set.id, set]));
+      const data = {
+        capturedAt: catalogue.data.capturedAt,
+        tags: catalogue.data.tags,
+        categories: catalogue.data.categories.map(({ sets, ...category }) => category),
+        sets: catalogue.data.categories.flatMap(category => category.sets.map(set => ({
+          ...summaries.get(set.id), ...set, category: category.name, categorySlug: category.slug,
+        }))),
+      };
+      _collectionBookWriteCache(FUT_GALLERY_CATALOGUE_KEY, data);
+      window.dispatchEvent(new CustomEvent("autosbc:gallery-sets-ready"));
+      return data;
+    } catch (error) {
+      if (cached?.sets?.length) return { ...cached, stale: true };
+      throw error;
+    } finally {
+      futGalleryCatalogueRequest = null;
+    }
+  })();
+  return futGalleryCatalogueRequest;
+};
+
+const futGalleryNormalizeLabel = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const futGalleryCategories = catalogue => {
+  const categories = catalogue.categories || [...new Map(catalogue.sets.map(set => [set.categorySlug, { slug: set.categorySlug, name: set.category }])).values()];
+  return categories.map(category => {
+    const sets = catalogue.sets.filter(set => set.categorySlug === category.slug);
+    return { ...category, sets, totalTokens: sets.reduce((total, set) => total + Number(set.totalTokens || 0), 0) };
+  });
+};
+
+const futGalleryIconUrls = item => {
+  const assets = globalThis.AssetLocationUtils;
+  if (!assets) return [];
+  if (item.clubEaId) return [assets.getBadgeImageUri(Number(item.clubEaId))];
+  const leagueIds = { "premier-league": [13, 2216], laliga: [53, 2222], bundesliga: [19, 2218], "ligue-1": [16, 2219], "serie-a": [31], leagues: [13, 53, 19] };
+  if (item.categorySlug === "leagues") {
+    const target = futGalleryNormalizeLabel(item.name === "Frauen-Bundesliga" ? "GPFBL" : item.name);
+    const league = globalThis.factories?.DataProvider?.getLeagueDP?.().find(value => futGalleryNormalizeLabel(String(value.label).replace(/\s*\([^)]*\)\s*$/, "")) === target);
+    return league ? [assets.getLeagueImageUri(Number(league.id))] : [];
+  }
+  if (leagueIds[item.slug]) return leagueIds[item.slug].map(id => assets.getLeagueImageUri(id));
+  const rarity = { totw: 3, heroes: 22, "squad-foundations": 87, "starter-set": 1, "season-1": 72, holographics: 3, rarities: 3 }[item.slug];
+  return rarity === undefined ? [] : [assets.getShellUri(0, 1, rarity, 3)];
+};
+const futGalleryQuality = rating => rating >= 75 ? "gold" : rating >= 65 ? "silver" : "bronze";
+const futGalleryIsLoan = item => typeof item?.isLoan === "function" ? item.isLoan() : Number(item?.loans ?? -1) >= 0;
+
+const futGalleryGetCandidates = () => {
+  const concepts = window.getAutoSbcConceptPlayers?.() || window.autoSbcConceptPlayers || [];
+  const seenCounts = typeof collectionBookGetOwnedCounts === "function" ? collectionBookGetOwnedCounts() : new Map();
+  const firstOwnerCounts = typeof collectionBookGetFirstOwnerCounts === "function" ? collectionBookGetFirstOwnerCounts() : new Map();
+  const entities = new Map(concepts.map(item => [Number(item.definitionId), { entity: item, inClub: false }]));
+  const entries = window.__clubPlayersEntries || [];
+  const liveItems = globalThis.services?.Item?.itemDao?.itemRepo?.club?.items?._collection || {};
+  const live = new Map(Object.values(liveItems).filter(item => item.isPlayer?.()).map(item => [Number(item.id), item]));
+  for (const entry of entries) {
+    const entity = live.get(Number(entry.id)) || entry.itemAttributes || entry;
+    if (futGalleryIsLoan(entity)) continue;
+    const previous = entities.get(Number(entry.definitionId));
+    if (previous?.inClub && previous.entity.owners === 1) continue;
+    entities.set(Number(entry.definitionId), { entity, entry, inClub: true, concept: previous?.entity });
+  }
+  const chemistry = typeof UTSquadChemCalculatorUtils === "function" ? new UTSquadChemCalculatorUtils() : null;
+  if (chemistry) {
+    chemistry.chemService = globalThis.services?.Chemistry;
+    chemistry.teamConfigRepo = globalThis.repositories?.TeamConfig;
+  }
+  const positions = globalThis.PlayerPosition || {};
+  return [...entities].flatMap(([eaId, source]) => {
+    const { entity, entry, inClub, concept } = source;
+    if (!eaId || futGalleryIsLoan(entity)) return [];
+    const field = (name, fallback) => entity[name] ?? concept?.[name] ?? entry?.[name] ?? fallback;
+    const teamId = Number(field("teamId", 0));
+    const score = Number(entity.sbsScore || entity.gradingScore || concept?.sbsScore || 0);
+    const hyper = entity._hyperCosmeticDTOs || concept?._hyperCosmeticDTOs || {};
+    const rawPositions = field("possiblePositions", field("_basePossiblePositions", []));
+    const rating = Number(field("rating", 0));
+    const rareflag = Number(field("rareflag", field("_rareflag", 0)));
+    const itemDefinitionId = Number(entity.definitionId || eaId);
+    const assetId = Number(entity.databaseId || entity._metaData?.id || entity.assetId || eaId);
+    const holographicType = entity.holographicType || null;
+    const isVariantItem = futGalleryIsVariantItem(entity, itemDefinitionId);
+    const staticData = entity._staticData || concept?._staticData || {};
+    const name = entry?.name || entity.getFullName?.() || staticData.name || [staticData.firstName, staticData.lastName].filter(Boolean).join(" ") || String(eaId);
+    return [{
+      eaId, entity, name, rating, score: score > 0 ? score : null, inClub,
+      assetId, itemDefinitionId, isVariantItem, holographicType,
+      variantPrice: null, variantPriceResolved: !isVariantItem,
+      price: isVariantItem ? null : (typeof getPrice === "function" ? Number(getPrice(entity)) : null),
+      purchaseCost: inClub ? 0 : null,
+      seen: (seenCounts.get(eaId) || 0) > 0,
+      available: inClub || (seenCounts.get(eaId) || 0) > 0,
+      firstOwner: (inClub && Number(entity.owners ?? entry?.owners) === 1) || (firstOwnerCounts.get(eaId) || 0) > 0,
+      teamId, clubId: teamId,
+      eligibilityClubId: chemistry?.teamConfigRepo ? chemistry.normalizeClubId(teamId) : teamId,
+      leagueId: Number(field("leagueId", 0)), nationId: Number(field("nationId", field("nation", 0))),
+      playerId: Number(entity.databaseId || entity._metaData?.id || concept?.databaseId || entry?.assetId || eaId),
+      rarityId: rareflag, rarityName: globalThis.services?.Localization?.localize?.(`item.raretype${rareflag}`) || "",
+      holographic: holographicType === "pristine" || Object.values(hyper).some(value => value?.type === 1 && [0, 1].includes(value.subtype)),
+      positions: rawPositions.map(position => typeof position === "number" ? positions[position] : position).filter(Boolean),
+      weakFoot: Number(entity.getWeakFoot?.() ?? field("_weakFoot", 0)),
+      skillMoves: Number(entity.getSkillMoves?.() ?? field("_skillMoves", 0)),
+    }];
+  });
+};
+
+const futGalleryEligibility = (set, tags) => {
+  if (set.clubEaId) return { matches: player => (player.eligibilityClubId ?? player.clubId) === Number(set.clubEaId) };
+  if (set.categorySlug === "leagues") {
+    const leagues = globalThis.factories?.DataProvider?.getLeagueDP?.() || [];
+    const target = futGalleryNormalizeLabel(set.name === "Frauen-Bundesliga" ? "GPFBL" : set.name);
+    const league = leagues.find(value => futGalleryNormalizeLabel(String(value.label).replace(/\s*\([^)]*\)\s*$/, "")) === target);
+    return league ? { matches: player => player.leagueId === Number(league.id) } : { error: "League requirement could not be matched to EA data." };
+  }
+  const tagNames = { totw: "TOTW", heroes: "Heroic", holographics: "Holographic" };
+  const tag = tags.find(value => value.name === tagNames[set.slug]);
+  if (tag) return { matches: player => futGalleryMatchRule(tag.rules[0], player) };
+  if (set.slug === "starter-set") return { matches: player => [0, 1].includes(player.rarityId) };
+  const rarityNames = { "season-1": ["Ones to Watch", "Destined for Glory", "Future Stars"], "squad-foundations": ["Squad Foundations"] };
+  if (rarityNames[set.slug]) {
+    const names = rarityNames[set.slug].map(futGalleryNormalizeLabel);
+    return { matches: player => names.includes(futGalleryNormalizeLabel(player.rarityName)) };
+  }
+  return { error: "This set's eligibility rule is not supported yet." };
+};
+
+const futGalleryMatchRule = (rule, player) => {
+  const values = rule.values.map(String);
+  switch (rule.attribute) {
+    case "LEVEL": return values.includes(futGalleryQuality(player.rating));
+    case "RARE": return values.includes(String(player.rarityId));
+    case "HYPER_COSMETIC_TYPE": return player.holographic;
+    case "FIRST_OWNED": return player.firstOwner;
+    case "POSSIBLE_POSITIONS": return player.positions.some(position => values.includes(position));
+    case "WEAK_FOOT": return player.weakFoot >= Number(values[0]);
+    case "SKILL_MOVES": return player.skillMoves >= Number(values[0]) + 1;
+    default: return false;
+  }
+};
+
+const futGalleryEvaluateTag = (tag, players) => {
+  const rule = tag.rules.length === 1 ? tag.rules[0] : null;
+  let matched = [];
+  if (rule && ["COUNT", "COUNT_ANY", "MIN_COUNT"].includes(rule.type)) {
+    matched = players.filter(player => futGalleryMatchRule(rule, player));
+  } else if (rule && ["COUNT_DIFF", "MAX_COUNT_ALL_SAME"].includes(rule.type)) {
+    const key = { NATION: "nationId", CLUB: "clubId", LEAGUEID: "leagueId", BASE_DEF_ID: "playerId" }[rule.attribute];
+    const groups = new Map();
+    for (const player of players) {
+      if (!key || !player[key]) continue;
+      if (!groups.has(player[key])) groups.set(player[key], []);
+      groups.get(player[key]).push(player);
+    }
+    const sum = group => group.reduce((total, player) => total + (player.score || 0), 0);
+    matched = rule.type === "COUNT_DIFF"
+      ? [...groups.values()].map(group => group.reduce((best, player) => player.score > best.score ? player : best))
+      : [...groups.values()].sort((left, right) => right.length - left.length || sum(right) - sum(left))[0] || [];
+  }
+  const tier = [...tag.tiers].sort((left, right) => left.minItems - right.minItems).filter(value => matched.length >= value.minItems).at(-1);
+  const matchedScore = matched.reduce((total, player) => total + (player.score || 0), 0);
+  const nextTier = [...tag.tiers].sort((left, right) => left.minItems - right.minItems).find(value => value.minItems > matched.length) || null;
+  return { id: tag.id, name: tag.name, count: matched.length, percent: tier?.bonus || 0, matchedScore, nextTier,
+    matchedIds: matched.map(player => player.eaId), bonus: Math.floor(matchedScore * (tier?.bonus || 0) / 100) };
+};
+
+const futGalleryEvaluate = (set, tags, players) => {
+  const bonuses = tags.map(tag => futGalleryEvaluateTag(tag, players)).sort((left, right) => right.bonus - left.bonus).map((tag, index) => ({ ...tag, paid: index < 10 && tag.bonus > 0 }));
+  const baseScore = players.reduce((total, player) => total + (player.score || 0), 0);
+  const bonusScore = bonuses.filter(tag => tag.paid).reduce((total, tag) => total + tag.bonus, 0);
+  const totalScore = baseScore + bonusScore;
+  const complete = players.length === set.requiredCards && players.every(player => player.score !== null);
+  const grades = [...set.grades].sort((left, right) => left.threshold - right.threshold);
+  const reached = complete ? grades.filter(grade => totalScore >= grade.threshold) : [];
+  const next = grades.find(grade => totalScore < grade.threshold);
+  const tokens = reached.flatMap(grade => grade.rewards || []).filter(reward => reward.type === "event_token_1").reduce((total, reward) => total + reward.value * reward.count, 0);
+  return { baseScore, bonusScore, totalScore, bonuses, complete, grade: reached.at(-1)?.name || null, next, tokens };
+};
+
+const futGalleryOptimize = async (set, tags, candidates, { cancelled = () => false, maxChecks = 60000, target = null } = {}) => {
+  const pool = [...new Map(candidates.filter(player => player.score !== null && (target === null || !player.isVariantItem || Number(player.variantPrice) > 0)).map(player => [player.eaId, player])).values()].sort((left, right) => right.score - left.score || left.eaId - right.eaId);
+  const size = Math.min(set.requiredCards, pool.length);
+  const evaluate = players => {
+    const result = futGalleryEvaluate(set, tags, players);
+    return { score: result.totalScore, feasible: result.complete && result.totalScore >= target, cost: players.reduce((total, player) => total + (player.available ? 0 : Number(player.isVariantItem ? player.variantPrice : player.purchaseCost || 0)), 0) };
+  };
+  const compare = (left, right) => target === null ? left.score - right.score
+    : Number(left.feasible) - Number(right.feasible) || (left.feasible ? right.cost - left.cost || left.score - right.score : left.score - right.score || right.cost - left.cost);
+  if (cancelled()) return null;
+  let best = pool.slice(0, size);
+  let bestScore = evaluate(best);
+  let combinations = 1;
+  for (let index = 1; index <= size; index++) {
+    combinations = combinations * (pool.length - size + index) / index;
+    if (combinations > 25000) break;
+  }
+  const yieldControl = () => new Promise(resolve => setTimeout(resolve, 0));
+  let checks = 0;
+  if (combinations <= 25000) {
+    const indexes = Array.from({ length: size }, (_, index) => index);
+    if (size) do {
+      const selected = indexes.map(index => pool[index]);
+      const score = evaluate(selected);
+      if (compare(score, bestScore) > 0) { best = selected; bestScore = score; }
+      if (++checks % 200 === 0) { await yieldControl(); if (cancelled()) return null; }
+      let cursor = size - 1;
+      while (cursor >= 0 && indexes[cursor] === pool.length - size + cursor) cursor--;
+      if (cursor < 0) break;
+      indexes[cursor]++;
+      for (let index = cursor + 1; index < size; index++) indexes[index] = indexes[index - 1] + 1;
+    } while (true);
+    return { players: best, optimal: true, checks };
+  }
+  const seeds = [best];
+  if (target !== null) {
+    seeds.push([...pool].sort((left, right) => left.purchaseCost - right.purchaseCost || right.score - left.score).slice(0, size));
+    seeds.push([...pool].sort((left, right) => right.score / (right.purchaseCost + 1) - left.score / (left.purchaseCost + 1)).slice(0, size));
+  }
+  for (const tag of tags) {
+    const rule = tag.rules[0];
+    if (!rule) continue;
+    const key = { NATION: "nationId", CLUB: "clubId", LEAGUEID: "leagueId", BASE_DEF_ID: "playerId" }[rule.attribute];
+    const grouped = new Map();
+    if (key) for (const player of pool) {
+      if (!player[key]) continue;
+      if (!grouped.has(player[key])) grouped.set(player[key], []);
+      if (grouped.get(player[key]).length < size) grouped.get(player[key]).push(player);
+    }
+    const groups = key ? [...grouped].sort((left, right) =>
+      right[1].reduce((total, player) => total + player.score, 0) - left[1].reduce((total, player) => total + player.score, 0)
+    ).slice(0, 8).map(([group]) => group) : [null];
+    for (const group of groups) {
+      const preferred = pool.filter(player => key ? player[key] === group : futGalleryMatchRule(rule, player));
+      if (!preferred.length) continue;
+      const ids = new Set(preferred.map(player => player.eaId));
+      seeds.push([...preferred, ...pool.filter(player => !ids.has(player.eaId))].slice(0, size));
+    }
+  }
+  const starts = seeds.map(players => ({ players, score: evaluate(players) })).sort((left, right) => compare(right.score, left.score)).slice(0, 5);
+  if (starts[0] && compare(starts[0].score, bestScore) > 0) { best = starts[0].players; bestScore = starts[0].score; }
+  for (const start of starts) {
+    let selected = start.players;
+    let score = start.score;
+    for (let pass = 0; pass < 6; pass++) {
+      let improvement = null;
+      const ids = new Set(selected.map(player => player.eaId));
+      for (const player of pool) {
+        if (ids.has(player.eaId)) continue;
+        for (let slot = 0; slot < size; slot++) {
+          const proposal = selected.slice();
+          proposal[slot] = player;
+          const value = evaluate(proposal);
+          if (compare(value, score) > 0) { improvement = proposal; score = value; }
+          if (compare(value, bestScore) > 0) { best = proposal; bestScore = value; }
+          if (++checks % 200 === 0) { await yieldControl(); if (cancelled()) return null; }
+          if (checks >= maxChecks) return { players: best, optimal: false, checks };
+        }
+      }
+      if (!improvement) break;
+      selected = improvement;
+    }
+    if (compare(score, bestScore) > 0) { best = selected; bestScore = score; }
+  }
+  return { players: best, optimal: false, checks };
+};
+
+const futGalleryCheapest = async (set, tags, candidates, grade, options = {}) => {
+  const target = set.grades.find(value => value.name === grade)?.threshold;
+  if (!Number.isFinite(target)) throw new Error("Unknown Gallery grade");
+  let unpriced = 0;
+  const pool = candidates.flatMap(player => {
+    if (player.score === null) return [];
+    if (player.available) return [{ ...player, purchaseCost: 0 }];
+    const price = Number(options.price ? options.price(player) : futGalleryPrice(player));
+    if (!Number.isFinite(price) || price <= 0) { unpriced++; return []; }
+    return [{ ...player, purchaseCost: price, firstOwner: false }];
+  });
+  const result = await futGalleryOptimize(set, tags, pool, { ...options, target });
+  if (!result || options.cancelled?.()) return null;
+  const outcome = futGalleryEvaluate(set, tags, result.players);
+  return { ...result, reached: outcome.complete && outcome.totalScore >= target, grade, unpriced,
+    cost: result.players.reduce((total, player) => total + player.purchaseCost, 0),
+    missing: result.players.filter(player => player.purchaseCost > 0) };
+};
 const refreshUnassignedPrices = async (items = [], refreshAll = false) => {
   if (!Array.isArray(items) || !items.length) return;
 
@@ -13421,6 +13951,18 @@ const ensureNumCounterExists = () => {
       shield.appendChild(numCounter);
     }
   }
+  if (numCounter) {
+    if (!counter || counter.DOM?.scope !== numCounter) {
+      counter = new Counter(".numCounter", {
+        direction: "rtl",
+        delay: 200,
+        digits: 3,
+      });
+    }
+    if (Number.isFinite(Number(count))) {
+      counter.count(pad(count, 4));
+    }
+  }
   return numCounter;
 };
 
@@ -14433,6 +14975,9 @@ let getUserSquads = async function () {
 };
 
 let loadChallenge = async function (currentChallenge, count = 0) {
+  if (currentChallenge.type === "ONE_CLICK_CHALLENGE") {
+    return;
+  }
   if (currentChallenge.status == "COMPLETED") {
     return;
   }
@@ -15247,7 +15792,282 @@ let getSBCPrice = (item, sbcId = 0, challengeId = 0) => {
 
   return sbcPrice;
 };
-const buildSolutionSquadFromResults = (results, sbcData, players) => {
+const optimizeScoreSbc = async (candidates, target, options = {}) => {
+  if (!Number.isSafeInteger(target) || target < 0) {
+    throw new Error("Invalid score target");
+  }
+  if (!target) return { items: [], score: 0, cost: 0, reached: true };
+  const groups = new Map();
+  const ids = new Set();
+  for (const candidate of candidates) {
+    if (ids.has(String(candidate.item.id)) || !Number.isSafeInteger(candidate.score) || candidate.score <= 0 ||
+        !Number.isFinite(candidate.cost) || candidate.cost < 0) continue;
+    ids.add(String(candidate.item.id));
+    const score = Math.min(target, candidate.score);
+    if (!groups.has(score)) groups.set(score, []);
+    groups.get(score).push(candidate);
+  }
+  const pool = [...groups.entries()].flatMap(([score, group]) => group.sort((left, right) => left.cost - right.cost || left.score - right.score).slice(0, Math.ceil(target / score)));
+  const states = new Map();
+  states.set(0, { cost: 0, score: 0, count: 0, previous: null, candidate: null });
+  let operations = 0;
+  for (const candidate of pool) {
+      for (const [score, previous] of [...states]) {
+        if (score === target) continue;
+        if (++operations > 10000000) throw new Error("Score optimization is too large for a local search");
+        if (operations % 20000 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+          if (options.cancelled?.()) throw new Error("Score optimization cancelled");
+        }
+        const nextScore = Math.min(target, score + candidate.score);
+        const cost = previous.cost + candidate.cost;
+        const actualScore = previous.score + candidate.score;
+        const count = previous.count + 1;
+        const existing = states.get(nextScore);
+        if (!existing || cost < existing.cost || (cost === existing.cost && (actualScore < existing.score ||
+            (actualScore === existing.score && count < existing.count)))) {
+          states.set(nextScore, { cost, score: actualScore, count, previous, candidate });
+        }
+      }
+  }
+  let best = states.get(0);
+  let bestScore = 0;
+    for (const [score, state] of states) {
+      if (score > bestScore || (score === bestScore && (state.cost < best.cost ||
+          (state.cost === best.cost && (state.score < best.score ||
+            (state.score === best.score && state.count < best.count)))))) {
+        best = state;
+        bestScore = score;
+      }
+    }
+  const items = [];
+  for (let node = best; node.candidate; node = node.previous) items.push(node.candidate.item);
+  return { items, score: best.score, cost: best.cost, reached: bestScore === target };
+};
+
+const createScoreSbcFilter = async (set, challenge) => {
+  const settings = Object.fromEntries([
+    "ratingRange", "useDupes", "excludePlayers", "excludeLeagues", "excludeNations", "excludeTeams",
+    "excludeRarity", "excludeSbc", "excludeObjective", "excludeEvolutions", "excludeSpecial",
+    "excludeTradable", "excludeExtinct", "onlyStorage", "maxPlayerPrice", "excludeSbcSquads", "excludeFromSquadIds",
+  ].map(key => [key, getSettings(set.id, challenge.id, key)]));
+  const contains = (values, value) => (values || []).some(entry => String(entry) === String(value));
+  const protectedIds = new Set();
+  const sbcIds = new Set();
+  if (settings.excludeFromSquadIds?.length) {
+    const squads = await getUserSquads();
+    if (!Array.isArray(squads)) throw new Error("Could not load protected squads");
+    for (const squad of squads) {
+      if (!contains(settings.excludeFromSquadIds, squad.getId?.() ?? squad._id)) continue;
+      for (const slot of squad.getPlayers?.() ?? squad._players ?? []) {
+        const item = slot?._item ?? slot?.item;
+        if (item?.id > 0) protectedIds.add(String(item.id));
+      }
+    }
+  }
+  if (settings.excludeSbcSquads) {
+    const response = await getChallenges(set);
+    if (!Array.isArray(response?.challenges)) throw new Error("Could not load protected SBC squads");
+    for (const other of response.challenges) {
+      if (String(other.id) === String(challenge.id) || other.status === "COMPLETED" || other.type === "ONE_CLICK_CHALLENGE") continue;
+      await loadChallenge(other);
+      if (!other.squad) throw new Error("Could not load protected SBC squad");
+      for (const slot of other.squad.getPlayers?.() ?? other.squad._players ?? []) {
+        const item = slot?._item ?? slot?.item;
+        if (item?.id > 0) sbcIds.add(String(item.id));
+      }
+    }
+  }
+  return (item, cost) => {
+    if (item.concept || item.isLoan?.() || Number(item.loans ?? -1) >= 0 || isItemLocked(item) ||
+        item.isTimeLimited?.() || !Number.isFinite(cost) || cost < 0) return false;
+    if (settings.useDupes && (item.isStorage || item.isDuplicateItem)) return true;
+    const range = settings.ratingRange || [40, 99];
+    const price = getPriceItems()?.[item.definitionId];
+    return cost < 100000 && item.rating >= range[0] && item.rating <= range[1] &&
+      !contains(settings.excludePlayers, item.definitionId) && !contains(settings.excludeLeagues, item.leagueId) &&
+      !contains(settings.excludeNations, item.nationId) && !contains(settings.excludeTeams, item.teamId) &&
+      !contains(settings.excludeRarity, services.Localization.localize("item.raretype" + item.rareflag)) &&
+      !protectedIds.has(String(item.id)) && !sbcIds.has(String(item.id)) &&
+      !(settings.excludeSbc && price?.isSbc) && !(settings.excludeObjective && price?.isObjective) &&
+      !(settings.excludeExtinct && price?.isExtinct) && !(settings.excludeEvolutions && item.upgrades) &&
+      !(settings.excludeSpecial && item.isSpecial?.()) && !(settings.excludeTradable && item.isTradeable?.()) &&
+      (!settings.onlyStorage || !!item.isStorage) &&
+      (!(Number(settings.maxPlayerPrice) > 0) || cost <= Number(settings.maxPlayerPrice));
+  };
+};
+
+let scoreSbcOpening = false;
+const openScoreSbcFromSidebar = async (set, challengeId = 0) => {
+  const response = await getChallenges(set);
+  if (!Array.isArray(response?.challenges)) throw new Error("Could not load SBC challenges");
+  const challenge = response.challenges.find(entry => challengeId
+    ? String(entry.id) === String(challengeId)
+    : entry.status !== "COMPLETED");
+  if (challenge?.type !== "ONE_CLICK_CHALLENGE") return false;
+  if (scoreSbcOpening) return true;
+  scoreSbcOpening = true;
+  try {
+    await processUnassigned({ suppressNavigation: true });
+    const navigation = getCurrentViewController()?.rootController?.getRootNavigationController?.();
+    if (!navigation) throw new Error("SBC navigation unavailable");
+    installScoreSbcAutoSelect();
+    await new Promise((resolve, reject) => {
+      UTOneClickSBCController.enterChallenge(navigation, challenge, resolve,
+        () => reject(new Error("Could not start score SBC")));
+    });
+    const phone = isPhone();
+    const controller = phone
+      ? new UTOneClickSBCWorkAreaViewController()
+      : new UTOneClickSBCWorkAreaSplitViewController();
+    controller.initWithSBCSet(set, challenge.id);
+    navigation.pushViewController(controller);
+    document.getElementById("hoverNav")?.remove();
+    document.getElementById("challengeNav")?.remove();
+    await (phone ? controller : controller.workAreaController)._eAutoSelect();
+    return true;
+  } finally {
+    scoreSbcOpening = false;
+  }
+};
+
+const showScoreSbcSelectedFirst = (model, items, serverOffset) => {
+  const selected = [];
+  const remaining = [];
+  const ids = new Set();
+  for (const item of items) {
+    if (ids.has(String(item.id))) continue;
+    ids.add(String(item.id));
+    (model.isItemSelected(item) ? selected : remaining).push(item);
+  }
+  const state = model._currentState();
+  state.items = selected.concat(remaining);
+  state.currentPage = 0;
+  state.serverOffset = serverOffset;
+  state.retrievedAll = true;
+};
+
+const installScoreSbcSubmitRefresh = () => {
+  if (typeof UTOneClickSBCReviewViewController === "undefined") return;
+  const prototype = UTOneClickSBCReviewViewController.prototype;
+  if (prototype.__autoSbcSubmitRefresh || typeof prototype._onSubmissionComplete !== "function") return;
+  const onSubmissionComplete = prototype._onSubmissionComplete;
+  prototype._onSubmissionComplete = function (observable, response) {
+    const succeeded = response?.success && response.data && this.viewModel;
+    const result = onSubmissionComplete.apply(this, arguments);
+    if (succeeded) {
+      void Promise.resolve().then(() => createSBCTab()).catch(error => {
+        console.warn("Score SBC tab refresh failed", error);
+      });
+    }
+    return result;
+  };
+  prototype.__autoSbcSubmitRefresh = true;
+};
+
+const installScoreSbcAutoSelect = () => {
+  if (typeof UTOneClickSBCWorkAreaViewController === "undefined") return;
+  const prototype = UTOneClickSBCWorkAreaViewController.prototype;
+  if (prototype.__autoSbcCostSelect) return;
+  prototype.__autoSbcCostSelect = true;
+  prototype._eAutoSelect = async function () {
+    const model = this.viewModel;
+    if (!model || this.__scoreSbcBusy || model.getActiveTab() === OneClickSBCWorkAreaTab.FAVOURITE) return;
+    const tab = model.getActiveTab();
+    const challenge = model.getChallenge();
+    const set = model.getSet();
+    const originalIds = model.getSelectedItemIds().map(String).sort().join(",");
+    const submittedScore = challenge.submittedScore;
+    const cancelled = () => this.viewModel !== model || model.getActiveTab() !== tab ||
+      challenge.submittedScore !== submittedScore || model.getSelectedItemIds().map(String).sort().join(",") !== originalIds;
+    this.__scoreSbcBusy = true;
+    gClickShield.showShield(EAClickShieldView.Shield.LOADING);
+    try {
+      const allows = await createScoreSbcFilter(set, challenge);
+      const retained = model.getSelectedEntries().filter(entry => model._itemTabMap.get(entry.item.id) !== tab);
+      for (const entry of retained) {
+        const pricedItem = Object.create(entry.item);
+        pricedItem.isStorage = model._itemTabMap.get(entry.item.id) === OneClickSBCWorkAreaTab.STORAGE;
+        if (!allows(pricedItem, Number(getSBCPrice(pricedItem, set.id, challenge.id)))) {
+          throw new Error("A selection in another tab is excluded by SBC settings. Remove it before Auto-Select.");
+        }
+      }
+      const retainedIds = new Set(retained.map(entry => String(entry.item.id)));
+      const batchLimit = model.getSelectionLimit();
+      const availableSlots = batchLimit - retained.length;
+      const target = Math.max(0, challenge.scoreRequirement - submittedScore - retained.reduce((sum, entry) => sum + entry.item.sbsScore, 0));
+      if (availableSlots <= 0) throw new Error("Batch is full with selections from another tab");
+      const candidates = [];
+      const fetchedItems = [];
+      const fetchedIds = new Set();
+      let offset = 0;
+      while (target > 0) {
+        const criteria = model._buildCriteria();
+        criteria.offset = offset;
+        criteria.count = batchLimit;
+        const response = await new Promise((resolve, reject) => {
+          const observer = {};
+          const request = services.Club.search(criteria);
+          const timer = setTimeout(() => {
+            request.unobserve(observer);
+            reject(new Error("Eligible player search timed out"));
+          }, 30000);
+          request.observe(observer, (observable, result) => {
+            clearTimeout(timer);
+            observable.unobserve(observer);
+            if (!result.success || !Array.isArray(result.response?.items)) reject(new Error("Could not load eligible players"));
+            else resolve(result.response);
+          });
+        });
+        if (cancelled()) throw new Error("Selection changed; run Auto-Select again");
+        let added = 0;
+        for (const item of response.items) {
+          if (fetchedIds.has(String(item.id))) continue;
+          fetchedIds.add(String(item.id));
+          fetchedItems.push(item);
+          added++;
+          if (retainedIds.has(String(item.id)) || item.concept || item.isLoan?.() || Number(item.loans ?? -1) >= 0 ||
+              isItemLocked(item) || item.isTimeLimited?.() || !model.isItemSelectable(item)) continue;
+          const pricedItem = Object.create(item);
+          pricedItem.isStorage = tab === OneClickSBCWorkAreaTab.STORAGE;
+          const cost = Number(getSBCPrice(pricedItem, set.id, challenge.id));
+          if (allows(pricedItem, cost)) candidates.push({ item, score: Number(item.sbsScore), cost });
+        }
+        offset += response.items.length;
+        if (response.retrievedAll || !response.items.length) break;
+        if (!added || offset > 20000) throw new Error("Eligible player pagination did not finish");
+      }
+      const result = await optimizeScoreSbc(candidates, target, { cancelled });
+      if (cancelled()) throw new Error("Selection changed; run Auto-Select again");
+      const batch = result.items.slice(0, availableSlots);
+      model.deselectCurrentTab();
+      for (const item of fetchedItems) {
+        model._itemTabMap.set(item.id, tab);
+        model._itemScoreMap.set(item.id, item.sbsScore);
+        model._itemEntityMap.set(item.id, item);
+      }
+      for (const item of batch) {
+        model._itemTabMap.set(item.id, tab);
+        model._itemScoreMap.set(item.id, item.sbsScore);
+        model._itemEntityMap.set(item.id, item);
+        model.selectItem(item);
+      }
+      if (target > 0) showScoreSbcSelectedFirst(model, fetchedItems, offset);
+      this._refreshCurrentPage();
+      const batches = Math.ceil((retained.length + result.items.length) / batchLimit);
+      const message = `${result.items.length} optimized cards / ${result.score.toLocaleString()} score / ${Math.round(result.cost).toLocaleString()} SBC cost` +
+        (batches > 1 ? ` / ${batches} submission batches required. First batch selected; run Auto-Select again after submitting.` : "") +
+        (result.reached ? "" : " / Not enough eligible score to finish.");
+      services.Notification.queue([message, batches > 1 || !result.reached ? UINotificationType.WARNING : UINotificationType.POSITIVE]);
+    } catch (error) {
+      console.warn("[Auto-SBC] Score optimization failed", error);
+      services.Notification.queue([error.message || "Score optimization failed", UINotificationType.NEGATIVE]);
+    } finally {
+      this.__scoreSbcBusy = false;
+      gClickShield.hideShield(EAClickShieldView.Shield.LOADING);
+    }
+  };
+};const buildSolutionSquadFromResults = (results, sbcData, players) => {
   let solutionSquad = [...Array(11)];
   sbcData.brickIndices.forEach((item) => {
     solutionSquad[item] = new UTItemEntity();
@@ -21581,13 +22401,23 @@ window.playstyleModal = new PlaystyleModal();
 // greyed out like a concept card, with a copy counter badge.
 
 const COLLECTION_BOOK_TAB_TAG = 109;
+const FUT_GALLERY_TAB_TAG = 110;
 
 const generateCollectionBookTab = () => {
   const tab = new UTTabBarItemView();
   tab.init();
   tab.setTag(COLLECTION_BOOK_TAB_TAG);
   tab.setText("Collection Book");
-  tab.addClass("icon-players"); // reuse an existing nav glyph
+  tab.addClass("icon-club");
+  return tab;
+};
+
+const generateFutGalleryTab = () => {
+  const tab = new UTTabBarItemView();
+  tab.init();
+  tab.setTag(FUT_GALLERY_TAB_TAG);
+  tab.setText("FUT Gallery");
+  tab.addClass("icon-squad");
   return tab;
 };
 
@@ -21598,12 +22428,15 @@ const collectionBookEnsureStyles = () => {
   const style = document.createElement("style");
   style.id = "collection-book-styles";
   style.textContent = `
+    .ut-split-view > .ut-content:has(.collection-book-container) { max-width: none; }
     .collection-book-container { padding: 16px; overflow-y: auto; height: 100%; }
     .collection-book-topbar { position:sticky; top:0; z-index:30; display:flex; align-items:center; justify-content:space-between; gap:12px; margin:-16px -16px 12px; padding:16px; background:rgba(18,22,30,.96); backdrop-filter:blur(8px); box-shadow:0 2px 8px rgba(0,0,0,.35); }
     .collection-book-topbar h1 { font-size:22px; margin:0; }
     .collection-book-topbar .cb-overall { opacity:.85; font-size:14px; }
     .collection-book-toggle { display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer; user-select:none; white-space:nowrap; }
     .collection-book-toggle input { cursor:pointer; margin:0; }
+    .collection-book-status-select { cursor:pointer; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:inherit; font-size:14px; }
+    .collection-book-status-select option { color:#111; }
     .collection-book-batch-select { cursor:pointer; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:inherit; font-size:14px; max-width:260px; }
     .collection-book-batch-select option, .collection-book-batch-select optgroup { color:#111; }
     .collection-book-refresh { cursor:pointer; padding:6px 12px; border-radius:6px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:inherit; }
@@ -21622,6 +22455,23 @@ const collectionBookEnsureStyles = () => {
     .collection-book-card .cb-placeholder { width:80%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; border-radius:8px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); font-size:13px; }
     .collection-book-card { cursor:pointer; }
     .collection-book-card:hover { filter:brightness(1.12); }
+    .collection-book-card .cb-state { align-self:stretch; text-align:center; margin-top:3px; font-size:11px; opacity:.9; }
+    .collection-book-card.cb-current .cb-state { color:#38c172; }
+    .collection-book-card.cb-seen .cb-state { color:#f0ad4e; }
+    .collection-book-card.cb-never .cb-state { color:#aab2bf; }
+    .fut-gallery-grid { grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
+    .fut-gallery-grid .collection-book-card { min-height:210px; }
+    .fut-gallery-sets { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+    .fut-gallery-set-card { padding:14px; border:1px solid rgba(255,255,255,.14); border-radius:8px; background:rgba(255,255,255,.07); }
+    .fut-gallery-set-card h2 { margin:0 0 10px; font-size:17px; }
+    .fut-gallery-set-meta { display:flex; justify-content:space-between; gap:8px; opacity:.85; }
+    .fut-gallery-set-card p { margin:8px 0; opacity:.8; font-size:13px; }
+    .fut-gallery-set-card button { width:100%; padding:8px; border:0; border-radius:5px; cursor:pointer; background:#38c172; color:#04150c; font-weight:600; }
+    .fut-gallery-set-detail { position:fixed; inset:5%; z-index:1001; overflow:auto; padding:18px; background:#12161e; border:1px solid rgba(255,255,255,.2); border-radius:8px; }
+    .fut-gallery-set-detail h2 { margin:0 0 12px; }
+    .fut-gallery-close { float:right; padding:6px 10px; cursor:pointer; }
+    .fut-gallery-set-players { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+    .collection-book-container.cb-status-current .collection-book-card:not(.cb-current), .collection-book-container.cb-status-seen .collection-book-card:not(.cb-seen), .collection-book-container.cb-status-never .collection-book-card:not(.cb-never) { display:none; }
     /* Recolour EA's native loan counter when reused as the copy counter:
        green when the player is in the club, red when only seen before. */
     .collection-book-card .ut-item-player-state-indicator-view.loan { background:#38c172; color:#04150c; }
@@ -21712,13 +22562,18 @@ const collectionBookRenderCard = (row) => {
   card.classList.add("collection-book-card");
   card.classList.add(owned ? "cb-owned" : "cb-unowned");
   card.classList.toggle("cb-in-club", !!inClub);
+  card.classList.add(inClub ? "cb-current" : copies > 0 ? "cb-seen" : "cb-never");
   card.dataset.eaId = String(player.eaId);
   card.__cbPlayer = player;
   // Stashed so the lazy mount can drive EA's native loan counter (see
   // collectionBookApplyCopyCounter) for duplicate copies, coloured by club state.
   card.__cbCopies = copies;
   card.__cbInClub = inClub;
-  card.addEventListener("click", () => collectionBookOpenNativeSidebar(row));
+  card.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    collectionBookOpenNativeSidebar(row);
+  }, true);
 
   // Media area starts as a lightweight placeholder; upgraded to an EA card on
   // scroll via the IntersectionObserver.
@@ -21729,12 +22584,62 @@ const collectionBookRenderCard = (row) => {
   ph.textContent = `${player.overall ?? ""} ${player.position ?? ""}`.trim();
   media.appendChild(ph);
   card.appendChild(media);
+  const state = document.createElement("div");
+  state.className = "cb-state";
+  state.textContent = inClub ? "Current" : copies > 0 ? "Seen before" : "Not seen";
+  card.appendChild(state);
 
   const obs = collectionBookGetCardObserver();
   if (obs) obs.observe(card);
   else collectionBookMountEaCard(card); // no IO support: mount immediately
 
   return card;
+};
+
+const collectionBookItemsController = function () {
+  const Base =
+    typeof isPhone === "function" && isPhone()
+      ? UTUnassignedItemsViewController
+      : UTUnassignedItemsSplitViewController;
+  Base.call(this);
+};
+
+const collectionBookItemsBase =
+  typeof isPhone === "function" && isPhone()
+    ? UTUnassignedItemsViewController
+    : UTUnassignedItemsSplitViewController;
+JSUtils.inherits(collectionBookItemsController, collectionBookItemsBase);
+
+const collectionBookOpenNativeSidebar = (row) => {
+  const entity = collectionBookGetItemEntity(row?.player?.eaId);
+  if (!entity) return;
+  const root = document.getElementById("CollectionBookPanel");
+  if (!root?.__galleryController) return;
+  try {
+    futGalleryEnsureStyles();
+    futGalleryOpenPlayerDetails(root, { entity });
+  } catch (error) {
+    console.warn("[CollectionBook] could not open native item controller", error);
+    root.__galleryCloseDetails?.();
+  }
+};
+
+const collectionBookEnsureNativePlayerName = (entity, player, conceptEntity) => {
+  const current = entity?.getStaticData?.() || entity?._staticData;
+  const hasName = current?.hasNameData?.() ?? !!(current?.firstName || current?.lastName || current?.name);
+  if (hasName && current?.name && current.name !== "---") return;
+  if (typeof UTStaticPlayerItemDataDTO !== "function") return;
+
+  const source = conceptEntity?.getStaticData?.() || {};
+  const usable = value => value && value !== "---" ? value : "";
+  const firstName = usable(current?.firstName) || usable(source.firstName) || usable(player.firstName);
+  const lastName = usable(current?.lastName) || usable(source.lastName) || usable(player.lastName);
+  const knownAs = usable(current?.knownAs) || usable(source.knownAs) || usable(player.nickname) || usable(player.name);
+  if (!firstName && !lastName && !knownAs) return;
+
+  const staticData = new UTStaticPlayerItemDataDTO();
+  staticData.generateNameData(firstName, lastName, knownAs);
+  entity.setStaticData?.(staticData);
 };
 
 // Build a live EA item view (UTItemViewFactory) from the collection metadata,
@@ -21745,56 +22650,87 @@ const collectionBookCreateEaCardElement = (player, owned, copies, inClub) => {
   if (!Factory || typeof createUtItemEntity !== "function") return null;
 
   const defId = Number(player.eaId);
+  const conceptEntity = collectionBookGetConceptIndex().get(defId);
 
   // Prefer a REAL EA item entity (owned club copy, else concept-pool item) so
   // the card renders the game's own rating + face stats. The fut.gg metadata
   // often has overall == null, which is what produced the 0-rating / 0-stat
   // cards; only fall back to the synthetic payload when no entity exists.
-  let entity =
-    typeof window.collectionBookGetItemEntity === "function"
-      ? window.collectionBookGetItemEntity(defId)
-      : null;
+  let entity = owned && typeof window.collectionBookGetItemEntity === "function"
+    ? window.collectionBookGetItemEntity(defId)
+    : null;
 
   if (entity) {
     // Reuse the real entity, but reflect this collection slot's ownership:
     // greyed concept card when unowned, full-colour when owned.
     try {
-      entity.concept = !owned;
-      entity.owners = owned ? 1 : 0;
+      const sourceEntity = entity;
+      entity = new UTItemEntity(sourceEntity);
+      entity.setStaticData?.(sourceEntity.getStaticData?.() || conceptEntity?.getStaticData?.());
+      entity.authenticity = sourceEntity.authenticity || conceptEntity?.authenticity;
+      entity.cosmetics = sourceEntity.cosmetics || conceptEntity?.cosmetics;
+      entity._hyperCosmeticDTOs = sourceEntity._hyperCosmeticDTOs || conceptEntity?._hyperCosmeticDTOs || {};
+      entity.holographicType = sourceEntity.holographicType || conceptEntity?.holographicType || null;
+      entity.concept = false;
       if (entity.definitionId == null) entity.definitionId = defId;
     } catch {}
   } else {
     // Real EA face stats from the concept pool, so cards don't render 0s.
     const attributeArray =
-      typeof window.collectionBookGetFaceStats === "function"
+      conceptEntity && typeof conceptEntity.getAttributes === "function"
+        ? conceptEntity.getAttributes()
+        : typeof window.collectionBookGetFaceStats === "function"
         ? window.collectionBookGetFaceStats(defId)
         : [];
     const payload = {
-      id: 0,
+      id: Number(conceptEntity?.id || 0),
       resourceId: defId,
+      definitionId: defId,
       itemType: globalThis.ItemType?.PLAYER || 1,
-      assetId: defId,
-      rating: Number(player.overall || 0),
-      rareflag: Number(player.rarityEaId || 0),
-      owners: owned ? 1 : 0,
-      nation: Number(player.nationEaId || 0),
-      leagueId: Number(player.leagueEaId || 0),
-      teamId: Number(player.clubEaId || 0),
-      preferredPosition: player.position || "",
+      assetId: Number(conceptEntity?.databaseId || conceptEntity?._metaData?.id || defId),
+      rating: Number(conceptEntity?.rating || player.overall || 0),
+      rareflag: Number(conceptEntity?.rareflag || player.rarityEaId || 0),
+      owners: Number(conceptEntity?.owners || 0),
+      nation: Number(conceptEntity?.nationId || player.nationEaId || 0),
+      leagueId: Number(conceptEntity?.leagueId || player.leagueEaId || 0),
+      teamId: Number(conceptEntity?.teamId || player.clubEaId || 0),
+      preferredPosition: conceptEntity?.getStaticData?.()?.preferredPosition != null
+        ? PlayerPosition?.[conceptEntity.getStaticData().preferredPosition] || conceptEntity.getStaticData().preferredPosition
+        : PlayerPosition?.[normalizeEaPosition(player.position)] || player.position,
       attributeArray,
-      statsArray: [],
+      statsArray: Array.isArray(conceptEntity?.getStats?.())
+        ? conceptEntity.getStats().map((value) => Number(value))
+        : [],
       baseTraits: [],
       plusRoles: [],
       groups: [],
-      possiblePositions: [],
+      possiblePositions: (conceptEntity?.getBasePossiblePositions?.() || [normalizeEaPosition(player.position)])
+        .map(position => PlayerPosition?.[position] || position),
+      loans: -1,
+      limitedUseType: globalThis.LimitedUseType?.NONE ?? 0,
+      firstName: conceptEntity?.getStaticData?.()?.firstName || player.firstName || "",
+      lastName: conceptEntity?.getStaticData?.()?.lastName || player.lastName || player.name || "",
+      knownAs: conceptEntity?.getStaticData?.()?.knownAs || player.nickname || "",
+      authenticity: !!conceptEntity?.authenticity,
+      holographicType: conceptEntity?.holographicType || null,
+      hyperCosmeticDTOs: conceptEntity?._hyperCosmeticDTOs || {},
+      _hyperCosmeticDTOs: conceptEntity?._hyperCosmeticDTOs || {},
       concept: !owned,
     };
 
     entity = createUtItemEntity(payload);
     if (!entity) return null;
-    entity.concept = !owned;
+    entity.concept = true;
     entity.definitionId = defId;
+    if (conceptEntity) {
+      entity.setStaticData?.(conceptEntity.getStaticData?.());
+      entity.authenticity = conceptEntity.authenticity;
+      entity.cosmetics = conceptEntity.cosmetics;
+      entity._hyperCosmeticDTOs = conceptEntity._hyperCosmeticDTOs || {};
+      entity.holographicType = conceptEntity.holographicType || null;
+    }
   }
+  collectionBookEnsureNativePlayerName(entity, player, conceptEntity);
 
   const view =
     typeof Factory.createLargeItem === "function"
@@ -21810,36 +22746,6 @@ const collectionBookCreateEaCardElement = (player, owned, copies, inClub) => {
   collectionBookApplyCopyCounter(view, copies, inClub);
   const el = view.getRootElement?.() || null;
   return el ? { el, view } : null;
-};
-
-const collectionBookItemsController = function () {
-  const Base =
-    typeof isPhone === "function" && isPhone()
-      ? UTUnassignedItemsViewController
-      : UTUnassignedItemsSplitViewController;
-  Base.call(this);
-};
-const collectionBookItemsBase =
-  typeof isPhone === "function" && isPhone()
-    ? UTUnassignedItemsViewController
-    : UTUnassignedItemsSplitViewController;
-JSUtils.inherits(collectionBookItemsController, collectionBookItemsBase);
-
-const collectionBookOpenNativeSidebar = (row) => {
-  const entity = collectionBookGetItemEntity(row?.player?.eaId);
-  if (!entity) return;
-  const current = getCurrentViewController?.();
-  const navigation = current?.rootController?.getRootNavigationController?.();
-  if (!navigation) return;
-  const viewController = new collectionBookItemsController();
-  try {
-    viewController.init();
-    viewController.initWithItems([entity]);
-    navigation.pushViewController(viewController);
-  } catch (error) {
-    console.warn("[CollectionBook] could not open native item controller", error);
-    viewController.dealloc?.();
-  }
 };
 
 // --- view state -----------------------------------------------------------
@@ -22024,6 +22930,8 @@ const collectionBookApplySelectedBatch = (root, value) => {
 };
 
 const collectionBookBuildPage = async (root, { force = false } = {}) => {
+  const build = {};
+  root.__collectionBookBuild = build;
   collectionBookEnsureStyles();
   _collectionBookSections.clear();
   root.innerHTML = "";
@@ -22033,6 +22941,7 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   if (typeof collectionBookFetchOwnership === "function") {
     await collectionBookFetchOwnership();
   }
+  if (root.__collectionBookBuild !== build) return;
 
   const topbar = document.createElement("div");
   topbar.classList.add("collection-book-topbar");
@@ -22065,6 +22974,14 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
     } catch {}
   });
 
+  const statusSelect = document.createElement("select");
+  statusSelect.className = "collection-book-status-select";
+  statusSelect.innerHTML = '<option value="all">All players</option><option value="current">Current in club</option><option value="seen">Seen before</option><option value="never">Not seen</option>';
+  statusSelect.addEventListener("change", () => {
+    root.classList.remove("cb-status-current", "cb-status-seen", "cb-status-never");
+    if (statusSelect.value !== "all") root.classList.add(`cb-status-${statusSelect.value}`);
+  });
+
   const refresh = document.createElement("button");
   refresh.classList.add("collection-book-refresh");
   refresh.textContent = "Refresh";
@@ -22084,6 +23001,7 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   topbar.appendChild(heading);
   topbar.appendChild(select);
   topbar.appendChild(onlyClubLabel);
+  topbar.appendChild(statusSelect);
   topbar.appendChild(refresh);
   root.appendChild(topbar);
 
@@ -22096,10 +23014,12 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   try {
     collections = await collectionBookFetchList({ force });
   } catch {
+    if (root.__collectionBookBuild !== build) return;
     loading.textContent =
       "Failed to load collections from fut.gg. Try Refresh.";
     return;
   }
+  if (root.__collectionBookBuild !== build) return;
   loading.remove();
 
   if (!collections.length) {
@@ -22149,6 +23069,7 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
     }
     select.appendChild(rarGroup);
   }
+
   if (ratingBatches.length) {
     const ratingGroup = document.createElement("optgroup");
     ratingGroup.label = "Rating";
@@ -22240,14 +23161,29 @@ const collectionBookLoadSection = async (slug, force = false) => {
 // --- EA controller / view -------------------------------------------------
 
 const collectionBookController = function () {
-  UTHomeHubViewController.call(this);
+  UTSplitViewController.call(this);
 };
-JSUtils.inherits(collectionBookController, UTHomeHubViewController);
+JSUtils.inherits(collectionBookController, UTSplitViewController);
 
-collectionBookController.prototype._getViewInstanceFromData = function () {
+const collectionBookMountNativeContent = (owner) => {
+  if (!owner.collectionContentController) {
+    const content = new EAViewController();
+    content._getViewInstanceFromData = () => owner.createCollectionContentView();
+    content.init();
+    owner.addChildViewController(content);
+    owner.collectionContentController = content;
+  }
+  owner.collectionContentController.getView().addClass(enums.UILayout.LEFT);
+  owner.setLeftController(owner.collectionContentController);
+  owner.hideRightPanel(!owner.rightController);
+  return owner.collectionContentController.getView().getRootElement();
+};
+
+collectionBookController.prototype.createCollectionContentView = function () {
   return new collectionBookView();
 };
 collectionBookController.prototype.viewDidAppear = function () {
+  UTSplitViewController.prototype.viewDidAppear.call(this);
   this.getNavigationController().setNavigationVisibility(true, true);
   // Ownership comes only from the club, so pull it on every visit — otherwise a
   // first-of-session open (or a club changed since the last fetch) shows owned
@@ -22255,10 +23191,8 @@ collectionBookController.prototype.viewDidAppear = function () {
   // collectionBookUpdateFromClub() when it resolves, flipping owned cards in.
   collectionBookEnsureClubLoaded();
   // Build (or rebuild) on every visit so club-based progress stays current.
-  const view = this.getView && this.getView();
-  const root =
-    (view && view.getRootElement && view.getRootElement()) ||
-    document.getElementById("CollectionBookPanel");
+  const root = collectionBookMountNativeContent(this);
+  if (root) root.__galleryController = this;
   if (root && !root.dataset.cbBuilt) {
     root.dataset.cbBuilt = "1";
     collectionBookBuildPage(root);
@@ -22268,6 +23202,7 @@ collectionBookController.prototype.viewDidAppear = function () {
   }
 };
 collectionBookController.prototype.viewWillDisappear = function () {
+  UTSplitViewController.prototype.viewWillDisappear.call(this);
   this.getNavigationController().setNavigationVisibility(false, false);
 };
 collectionBookController.prototype.getNavigationTitle = function () {
@@ -22275,19 +23210,19 @@ collectionBookController.prototype.getNavigationTitle = function () {
 };
 
 const collectionBookView = function () {
-  UTHomeHubView.call(this);
+  EAView.call(this);
 };
-JSUtils.inherits(collectionBookView, UTHomeHubView);
+JSUtils.inherits(collectionBookView, EAView);
 
 collectionBookView.prototype.destroyGeneratedElements =
   function destroyGeneratedElements() {
+    this.__root?.__galleryCloseDetails?.();
     DOMKit.remove(this.__root);
     this.__root = null;
   };
 
 collectionBookView.prototype._generate = function _generate() {
   const wrap = document.createElement("div");
-  wrap.classList.add("ut-market-search-filters-view", "floating");
   wrap.classList.add("collection-book-container");
   wrap.setAttribute("id", "CollectionBookPanel");
   this.__root = wrap;
@@ -22296,10 +23231,886 @@ collectionBookView.prototype._generate = function _generate() {
 
 try {
   window.generateCollectionBookTab = generateCollectionBookTab;
+  window.generateFutGalleryTab = generateFutGalleryTab;
   window.collectionBookController = collectionBookController;
   window.collectionBookView = collectionBookView;
 } catch {}
-const sbcSubmitChallengeOverride = () => {
+
+const futGalleryController = function () {
+  UTSplitViewController.call(this);
+};
+JSUtils.inherits(futGalleryController, UTSplitViewController);
+
+const futGalleryView = function () {
+  EAView.call(this);
+};
+JSUtils.inherits(futGalleryView, EAView);
+
+futGalleryController.prototype.createCollectionContentView = function () {
+  return new futGalleryView();
+};
+futGalleryController.prototype.viewDidAppear = function () {
+  UTSplitViewController.prototype.viewDidAppear.call(this);
+  this.getNavigationController().setNavigationVisibility(true, true);
+  collectionBookEnsureClubLoaded();
+  ensureConceptCacheInit();
+  const root = collectionBookMountNativeContent(this);
+  if (root) root.__galleryController = this;
+  if (root && !root.dataset.galleryBuilt) {
+    root.dataset.galleryBuilt = "1";
+    futGalleryBuildPage(root);
+  }
+};
+futGalleryController.prototype.viewWillDisappear = function () {
+  UTSplitViewController.prototype.viewWillDisappear.call(this);
+  this.getNavigationController().setNavigationVisibility(false, false);
+};
+futGalleryController.prototype.getNavigationTitle = function () {
+  return "FUT Gallery";
+};
+
+futGalleryView.prototype.destroyGeneratedElements = function () {
+  this.__root?.__galleryDispose?.();
+  DOMKit.remove(this.__root);
+  this.__root = null;
+};
+futGalleryView.prototype._generate = function () {
+  const root = document.createElement("div");
+  root.className = "collection-book-container fut-gallery-container";
+  root.id = "FutGalleryPanel";
+  this.__root = root;
+  this._generated = true;
+};
+
+const futGalleryBuildPage = (root) => {
+  collectionBookEnsureStyles();
+  return futGalleryMountPage(root);
+};
+
+try {
+  window.futGalleryController = futGalleryController;
+  window.futGalleryView = futGalleryView;
+} catch {}
+const futGallerySetBadge = (entry) => {
+  const graded = !entry.error && entry.item.requiredCards > 0 && entry.filled === entry.item.requiredCards && !!entry.outcome.grade;
+  return { graded, text: graded ? entry.outcome.grade : `${entry.filled}/${entry.item.requiredCards}` };
+};
+
+const futGalleryOverviewEntries = (summaries, sort, completedOnly, ascending = sort === "name") => summaries
+  .filter(entry => !completedOnly || (!entry.error && entry.filled === entry.item.requiredCards && entry.item.requiredCards > 0))
+  .sort((left, right) => {
+    const completion = entry => entry.item.requiredCards > 0 ? Math.min(entry.filled / entry.item.requiredCards, 1) : 0;
+    const difference = sort === "completion" ? completion(left) - completion(right)
+      : sort === "points" ? left.outcome.totalScore - right.outcome.totalScore
+      : left.item.name.localeCompare(right.item.name);
+    return difference * (ascending ? 1 : -1) || left.item.name.localeCompare(right.item.name);
+  });
+
+const futGalleryPlayerPrice = player => {
+  if (typeof futGalleryPrice === "function") return futGalleryPrice(player);
+  if (Number.isFinite(Number(player?.variantPrice)) && Number(player.variantPrice) > 0) return Number(player.variantPrice);
+  if (player?.isVariantItem) return NaN;
+  return typeof getPrice === "function" ? Number(getPrice(player?.entity)) : NaN;
+};
+
+const futGallerySortPlayers = (players, type, ascending, price = futGalleryPlayerPrice) => players
+  .map(player => ({ player, value: type === "price" ? Number(price(player)) : player[type] }))
+  .sort((left, right) => {
+    const valid = value => Number.isFinite(value) && (type !== "price" || value > 0);
+    const leftValid = valid(left.value), rightValid = valid(right.value);
+    return Number(rightValid) - Number(leftValid)
+      || (leftValid && rightValid ? (left.value - right.value) * (ascending ? 1 : -1) : 0)
+      || left.player.name.localeCompare(right.player.name) || left.player.eaId - right.player.eaId;
+  }).map(entry => entry.player);
+
+const futGalleryPurchaseCost = (players, purchasedIds = new Set(), price = futGalleryPlayerPrice) => {
+  const missing = [...new Map(players.filter(player => !player.available && !purchasedIds.has(player.eaId)).map(player => [player.eaId, player])).values()];
+  let total = 0;
+  let unpriced = 0;
+  for (const player of missing) {
+    const value = Number(price(player));
+    if (Number.isFinite(value) && value > 0) total += value;
+    else unpriced++;
+  }
+  return { total, unpriced, count: missing.length };
+};
+
+const futGalleryShowBonuses = (root, outcome, players, trigger) => {
+  root.querySelector(".fg-bonus-dialog")?.remove();
+  const dialog = document.createElement("dialog"); dialog.className = "fg-bonus-dialog";
+  dialog.setAttribute("aria-labelledby", "fg-bonus-title");
+  dialog.innerHTML = `<header class="fg-dialog-header"><div><h2 id="fg-bonus-title">Bonus tags</h2><p class="fg-muted"></p></div><button type="button" aria-label="Close bonus tags" title="Close">&#215;</button></header><div class="fg-tag-grid"></div>`;
+  const number = value => Number(value).toLocaleString();
+  dialog.querySelector("p").textContent = `${outcome.bonuses.filter(tag => tag.paid).length} / ${outcome.bonuses.length} paid tags / ${number(outcome.baseScore)} base + ${number(outcome.bonusScore)} bonus = ${number(outcome.totalScore)}`;
+  const byId = new Map(players.map(player => [player.eaId, player]));
+  for (const tag of outcome.bonuses) {
+    const row = document.createElement("article"); row.className = `fg-tag-detail${tag.paid ? " active" : ""}`;
+    const heading = document.createElement("h3"); heading.textContent = tag.name;
+    const count = document.createElement("span"); count.className = "fg-muted";
+    count.textContent = `${tag.count} matching / ${tag.percent}%${tag.nextTier ? ` / ${tag.nextTier.minItems - tag.count} more for ${tag.nextTier.bonus}%` : " / Highest tier"}`;
+    const calculation = document.createElement("strong");
+    calculation.textContent = `floor(${number(tag.matchedScore)} x ${tag.percent} / 100) = ${number(tag.bonus)}${tag.bonus > 0 && !tag.paid ? " / Not paid (10-tag limit)" : ""}`;
+    const names = document.createElement("p"); names.className = "fg-muted";
+    names.textContent = tag.matchedIds.map(id => byId.get(id)?.name || String(id)).join(", ") || "No matching players";
+    row.append(heading, count, calculation, names); dialog.querySelector(".fg-tag-grid").append(row);
+  }
+  const close = () => dialog.close();
+  dialog.addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); }
+  }, true);
+  dialog.querySelector("button").onclick = close;
+  dialog.onclick = event => { if (event.target === dialog) { const bounds = dialog.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) close(); } };
+  dialog.onclose = () => { dialog.remove(); if (trigger?.isConnected) trigger.focus(); };
+  root.append(dialog); dialog.showModal();
+};
+
+const futGalleryEnsureStyles = () => {
+  if (document.getElementById("fut-gallery-styles")) return;
+  const style = document.createElement("style");
+  style.id = "fut-gallery-styles";
+  style.textContent = `
+    #FutGalleryPanel { --fg-bg:#171a1c; --fg-panel:#202426; --fg-line:#3b4245; --fg-muted:#aeb9bc; --fg-accent:#b7f36b; color:#f5f7f8; background:var(--fg-bg); height:100%; min-height:0; padding:0; overflow:auto; font-family:inherit; font-size:14px; line-height:1.45; container-type:inline-size; }
+    #FutGalleryPanel * { box-sizing:border-box; letter-spacing:0; }
+    #FutGalleryPanel [hidden] { display:none !important; }
+    #FutGalleryPanel h1,#FutGalleryPanel h2,#FutGalleryPanel h3,#FutGalleryPanel p { margin:0; color:inherit; }
+    #FutGalleryPanel h1 { font-size:26px; line-height:1.2; } #FutGalleryPanel h2 { font-size:23px; line-height:1.25; } #FutGalleryPanel h3 { font-size:16px; }
+    #FutGalleryPanel button,#FutGalleryPanel input,#FutGalleryPanel select { font:inherit; border-radius:4px; min-height:38px; max-width:100%; }
+    #FutGalleryPanel button { cursor:pointer; background:#303638; border:1px solid var(--fg-line); color:#f5f7f8; padding:8px 12px; line-height:1.25; }
+    #FutGalleryPanel button:hover { border-color:var(--fg-accent); } #FutGalleryPanel button:disabled { opacity:.45; cursor:default; }
+    #FutGalleryPanel :focus-visible { outline:2px solid var(--fg-accent); outline-offset:3px; }
+    #FutGalleryPanel input,#FutGalleryPanel select { width:100%; background:#151819; color:#f5f7f8; border:1px solid #596164; padding:8px 10px; }
+    #FutGalleryPanel .fg-header { padding:22px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid var(--fg-line); background:linear-gradient(100deg,#242b26,#202426 60%); }
+    #FutGalleryPanel .fg-header-title { display:flex; align-items:center; gap:12px; } #FutGalleryPanel .fg-header-title img { width:32px; height:40px; object-fit:contain; }
+    #FutGalleryPanel .fg-muted { color:var(--fg-muted); font-size:12px; } #FutGalleryPanel .fg-accent { color:var(--fg-accent); }
+    #FutGalleryPanel .fg-layout { display:grid; grid-template-columns:250px minmax(0,1fr); min-height:calc(100% - 85px); }
+    #FutGalleryPanel .fg-rail { border-right:1px solid var(--fg-line); padding:16px 12px; min-width:0; background:#1b1f21; }
+    #FutGalleryPanel .fg-filters { display:grid; gap:8px; padding:0 4px 14px; }
+    #FutGalleryPanel .fg-set-list { display:grid; gap:4px; max-height:calc(100vh - 290px); overflow:auto; }
+    #FutGalleryPanel .fg-set { display:block; text-align:left; width:100%; padding:12px; background:transparent; border:1px solid transparent; border-left:3px solid transparent; }
+    #FutGalleryPanel .fg-set[aria-pressed=true] { background:#30392b; border-left-color:var(--fg-accent); }
+    #FutGalleryPanel .fg-set strong { display:block; font-size:14px; overflow-wrap:anywhere; } #FutGalleryPanel .fg-set span { display:block; margin-top:4px; color:var(--fg-muted); font-size:12px; }
+    #FutGalleryPanel .fg-workspace { padding:24px; min-width:0; }
+    #FutGalleryPanel .fg-navigation { display:flex; flex-wrap:wrap; gap:6px; padding:12px 24px; border-bottom:1px solid var(--fg-line); }
+    #FutGalleryPanel .fg-navigation button[aria-pressed=true] { background:var(--fg-accent); color:#17200e; }
+    #FutGalleryPanel .fg-browser { padding:24px; }
+    #FutGalleryPanel .fg-browser-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr)); gap:12px; }
+    #FutGalleryPanel .fg-browser-item { display:flex; flex-direction:column; gap:10px; text-align:left; padding:16px; min-width:0; position:relative; }
+    #FutGalleryPanel .fg-browser-item > .fg-icons { padding-right:48px; flex-wrap:wrap; }
+    #FutGalleryPanel .fg-remaining { position:absolute; top:12px; right:12px; width:42px; height:42px; border-radius:50%; display:grid; place-items:center; background:#171a1c; border:1px solid var(--fg-line); color:var(--fg-muted); font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
+    #FutGalleryPanel .fg-remaining.complete { --fg-medal:#b9c8ce; --fg-medal-face:#303e45; height:46px; border:0; border-radius:0; isolation:isolate; clip-path:polygon(12% 0,88% 0,100% 12%,100% 68%,50% 100%,0 68%,0 12%); background:var(--fg-medal); color:var(--fg-medal); font-size:24px; font-weight:900; line-height:1; padding-bottom:5px; text-shadow:0 2px 2px #0008; }
+    #FutGalleryPanel .fg-remaining.complete::before { content:""; position:absolute; inset:2px; z-index:-1; clip-path:polygon(12% 0,88% 0,100% 12%,100% 68%,50% 100%,0 68%,0 12%); background:linear-gradient(145deg,var(--fg-medal-face),#171a1c 75%); }
+    #FutGalleryPanel .fg-remaining.complete::after { content:""; position:absolute; bottom:9px; width:12px; height:2px; background:currentColor; opacity:.7; }
+    #FutGalleryPanel .fg-remaining[data-grade="C"] { --fg-medal:#80d4ad; --fg-medal-face:#285343; }
+    #FutGalleryPanel .fg-remaining[data-grade="B"] { --fg-medal:#85caff; --fg-medal-face:#284c69; }
+    #FutGalleryPanel .fg-remaining[data-grade="A"] { --fg-medal:#f5ce70; --fg-medal-face:#655027; }
+    #FutGalleryPanel .fg-remaining[data-grade="S"] { --fg-medal:#b7f36b; --fg-medal-face:#48652e; }
+    #FutGalleryPanel .fg-browser-item strong { font-size:16px; overflow-wrap:anywhere; }
+    #FutGalleryPanel .fg-icons { display:flex; gap:8px; align-items:center; min-height:42px; margin-bottom:6px; }
+    #FutGalleryPanel .fg-icons img { width:36px; height:42px; object-fit:contain; }
+    #FutGalleryPanel .fg-browser progress { width:100%; height:8px; accent-color:var(--fg-accent); }
+    #FutGalleryPanel .fg-overview-stats { display:flex; flex-wrap:wrap; gap:24px; padding:16px 0; border-block:1px solid var(--fg-line); margin-bottom:18px; }
+    #FutGalleryPanel .fg-overview-stats strong { display:block; font-size:24px; }
+    #FutGalleryPanel .fg-browser-search { max-width:320px; }
+    .fg-autocomplete-modal { width:100%; min-height:0; padding:24px; overflow:auto; color:#f5f7f8; background:#171a1c; font-family:inherit; font-size:14px; line-height:1.45; }
+    .fg-autocomplete-modal h2 { margin:0 0 14px; color:#f5f7f8; font-size:21px; line-height:1.2; }
+    .fg-autocomplete-modal form { display:grid; gap:14px; }
+    .fg-autocomplete-progress { display:grid; gap:7px; }
+    .fg-autocomplete-progress progress { display:block; width:100%; height:8px; border:0; border-radius:8px; overflow:hidden; background:#303638; accent-color:#b7f36b; }
+    .fg-autocomplete-progress progress::-webkit-progress-bar { border-radius:8px; background:#303638; }
+    .fg-autocomplete-progress progress::-webkit-progress-value { border-radius:8px; background:#b7f36b; transition:width .2s ease; }
+    .fg-autocomplete-progress progress::-moz-progress-bar { border-radius:8px; background:#b7f36b; }
+    .fg-autocomplete-modal [role="status"] { min-height:18px; margin:0; color:#aeb9bc; font-size:12px; }
+    .fg-autocomplete-choice { display:grid; gap:6px; }
+    .fg-autocomplete-choice-label { color:#c8d0d2; font-size:12px; font-weight:700; }
+    .fg-autocomplete-segmented { display:flex; width:100%; gap:4px; padding:4px; border:1px solid #3b4245; border-radius:5px; background:#111517; }
+    .fg-autocomplete-segmented button { flex:1; min-width:0; min-height:38px; padding:7px 10px; border:1px solid transparent; border-radius:3px; color:#c8d0d2; background:transparent; font:inherit; font-size:12px; font-weight:700; white-space:nowrap; cursor:pointer; }
+    .fg-autocomplete-segmented button[aria-pressed="true"] { border-color:#b7f36b; color:#17200e; background:#b7f36b; }
+    .fg-autocomplete-segmented button:focus-visible,.fg-autocomplete-actions button:focus-visible { outline:2px solid #b7f36b; outline-offset:2px; }
+    .fg-autocomplete-segmented button:disabled { opacity:.5; cursor:default; }
+    .fg-autocomplete-actions { display:flex; gap:8px; padding-top:2px; }
+    .fg-autocomplete-actions button { min-width:88px; min-height:38px; padding:8px 14px; border:1px solid #465054; border-radius:4px; color:#f5f7f8; background:#303638; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+    .fg-autocomplete-actions button[type="submit"] { border-color:#b7f36b; color:#17200e; background:#b7f36b; }
+    .fg-autocomplete-actions button:hover:not(:disabled) { filter:brightness(1.08); }
+    .fg-autocomplete-actions button:disabled { opacity:.5; cursor:default; }
+    #FutGalleryPanel .fg-rung[aria-pressed=true] { outline:2px solid var(--fg-accent); }
+    #FutGalleryPanel .fg-set-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; }
+    #FutGalleryPanel .fg-description { color:var(--fg-muted); margin-top:8px; max-width:650px; font-size:13px; }
+    #FutGalleryPanel .fg-category-label { color:var(--fg-accent); font-size:11px; text-transform:uppercase; font-weight:700; margin-bottom:6px; }
+    #FutGalleryPanel .fg-score-band { display:grid; grid-template-columns:100px repeat(3,minmax(0,1fr)); padding:18px 0; border-top:1px solid var(--fg-line); border-bottom:1px solid var(--fg-line); gap:16px; align-items:center; }
+    #FutGalleryPanel .fg-projected-grade { display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
+    #FutGalleryPanel .fg-stat strong { display:block; font-size:24px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    #FutGalleryPanel .fg-stat span { color:var(--fg-muted); font-size:12px; }
+    #FutGalleryPanel .fg-ladder { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin:18px 0 10px; }
+    #FutGalleryPanel .fg-rung { padding:10px 8px; background:#242a2c; border-top:3px solid #596164; }
+    #FutGalleryPanel .fg-rung.reached { background:#293823; border-color:var(--fg-accent); } #FutGalleryPanel .fg-rung strong { display:block; font-size:18px; }
+    #FutGalleryPanel .fg-rung span { display:block; font-size:12px; font-variant-numeric:tabular-nums; } #FutGalleryPanel .fg-rung small { color:var(--fg-muted); font-size:11px; }
+    #FutGalleryPanel .fg-rung { display:flex; align-items:center; gap:9px; text-align:left; }
+    #FutGalleryPanel .fg-grade-icon { --fg-medal:#b9c8ce; --fg-medal-face:#303e45; position:relative; isolation:isolate; display:grid; place-items:center; flex:none; width:38px; height:42px; padding:0; clip-path:polygon(14% 0,86% 0,100% 14%,100% 70%,50% 100%,0 70%,0 14%); background:var(--fg-medal); color:#f5f7f8; font-size:17px !important; font-weight:900; line-height:1; text-shadow:0 1px 2px #000a; }
+    #FutGalleryPanel .fg-grade-icon::before { content:""; position:absolute; inset:2px; z-index:-1; clip-path:polygon(14% 0,86% 0,100% 14%,100% 70%,50% 100%,0 70%,0 14%); background:linear-gradient(145deg,var(--fg-medal-face),#171a1c 75%); }
+    #FutGalleryPanel .fg-grade-icon[data-grade="D"] { --fg-medal:#c88b52; --fg-medal-face:#684426; }
+    #FutGalleryPanel .fg-grade-icon[data-grade="C"] { --fg-medal:#80d4ad; --fg-medal-face:#285343; }
+    #FutGalleryPanel .fg-grade-icon[data-grade="B"] { --fg-medal:#85caff; --fg-medal-face:#284c69; }
+    #FutGalleryPanel .fg-grade-icon[data-grade="A"] { --fg-medal:#f5ce70; --fg-medal-face:#655027; }
+    #FutGalleryPanel .fg-grade-icon[data-grade="S"] { --fg-medal:#b7f36b; --fg-medal-face:#48652e; }
+    #FutGalleryPanel .fg-rung > .fg-grade-icon { display:grid; }
+    #FutGalleryPanel .fg-rung-copy { min-width:0; }
+    #FutGalleryPanel .fg-rung-copy strong { font-size:14px; }
+    #FutGalleryPanel .fg-rung-copy span { font-size:12px; }
+    #FutGalleryPanel .fg-rung-copy small { font-size:10px; }
+    #FutGalleryPanel .fg-status { min-height:24px; color:var(--fg-muted); font-size:12px; margin:8px 0 20px; }
+    #FutGalleryPanel .fg-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:20px 0 16px; }
+    #FutGalleryPanel .fg-toolbar h3 { margin-right:auto; } #FutGalleryPanel .fg-primary { background:var(--fg-accent); border-color:var(--fg-accent); color:#17200e; font-weight:700; }
+    #FutGalleryPanel .fg-mode { display:flex; gap:0; } #FutGalleryPanel .fg-mode button { border-radius:0; font-size:12px; } #FutGalleryPanel .fg-mode button[aria-pressed=true] { background:#dbe4e6; color:#172024; }
+    #FutGalleryPanel .fg-lineup { display:grid; grid-template-columns:repeat(auto-fill,minmax(146px,1fr)); gap:10px; }
+    #FutGalleryPanel .fg-player { border:1px solid var(--fg-line); border-radius:6px; overflow:hidden; background:#24292b; min-width:0; position:relative; }
+    #FutGalleryPanel .fg-player.pristine { border-color:#d9f88c; box-shadow:0 0 12px #b7f36b8c, inset 0 0 0 1px #b7f36b66; }
+    #FutGalleryPanel .fg-player.pristine .fg-player-media::after { content:"PRISTINE"; position:absolute; left:7px; top:7px; z-index:1; padding:2px 6px; border:1px solid #e6ffc0; border-radius:2px; background:linear-gradient(110deg,#263a1d,#536d31); color:#f2ffd8; font-family:Georgia,serif; font-size:9px; font-style:italic; font-weight:700; letter-spacing:1px; text-shadow:0 0 7px #d7ff86; box-shadow:0 0 10px #b7f36bba; }
+    #FutGalleryPanel .fg-player.pristine .fg-player-media > .fg-native { filter:drop-shadow(0 0 7px #b7f36b); }
+    #FutGalleryPanel .fg-player-media { height:200px; display:flex; justify-content:center; align-items:center; overflow:hidden; position:relative; background:radial-gradient(ellipse at bottom,#414630 0,#24292b 70%); }
+    #FutGalleryPanel .fg-player-media > .fg-native { width:144px; height:200px; transform:none; pointer-events:none; flex-shrink:0; }
+    #FutGalleryPanel .fg-native .ut-item-player-state-indicator-view.loan { display:none !important; }
+    #FutGalleryPanel .fg-player-media img { width:100%; height:100%; object-fit:contain; } #FutGalleryPanel .fg-fallback-rating { position:absolute; top:8px; left:8px; font-size:22px; font-weight:700; }
+    #FutGalleryPanel .fg-player-info { padding:10px; } #FutGalleryPanel .fg-player-info strong { display:block; font-size:12px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+    #FutGalleryPanel .fg-player-info .fg-points { color:#e9d48a; font-size:16px; font-variant-numeric:tabular-nums; margin:4px 0; }
+    #FutGalleryPanel .fg-player-state { font-size:11px; color:var(--fg-muted); } #FutGalleryPanel .fg-player-state.owned { color:var(--fg-accent); }
+    #FutGalleryPanel .fg-player-action { position:absolute; top:6px; right:6px; width:30px; min-height:30px; padding:0; z-index:1; font-size:20px; background:#171a1ceb; }
+    #FutGalleryPanel .fg-slot { height:285px; border:1px dashed #535d60; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:#7f8b90; }
+    #FutGalleryPanel .fg-slot strong { font-size:28px; font-weight:400; } #FutGalleryPanel .fg-slot span { font-size:12px; }
+    #FutGalleryPanel .fg-bonuses { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:0 20px; margin-top:12px; }
+    #FutGalleryPanel .fg-bonus { padding:10px 0; border-bottom:1px solid var(--fg-line); display:flex; justify-content:space-between; gap:8px; font-size:12px; } #FutGalleryPanel .fg-bonus strong { color:var(--fg-accent); }
+    #FutGalleryPanel .fg-bonus-dialog { position:fixed; inset:0; margin:auto; width:min(1100px,calc(100vw - 24px)); max-width:calc(100vw - 24px); max-height:calc(100dvh - 32px); padding:20px; border:1px solid var(--fg-line); border-radius:6px; background:var(--fg-bg); color:#f5f7f8; overflow:auto; }
+    #FutGalleryPanel .fg-bonus-dialog::backdrop { background:#000a; }
+    #FutGalleryPanel .fg-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+    #FutGalleryPanel .fg-dialog-header button { flex:none; width:38px; height:38px; padding:0; font-size:24px; }
+    #FutGalleryPanel .fg-tag-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr)); gap:10px; }
+    #FutGalleryPanel .fg-tag-detail { display:flex; flex-direction:column; gap:7px; padding:14px; border:1px solid var(--fg-line); border-radius:4px; min-width:0; overflow-wrap:anywhere; }
+    #FutGalleryPanel .fg-tag-detail.active { border-color:#658548; background:#242d23; }
+    #FutGalleryPanel .fg-tag-detail strong { font-size:13px; font-variant-numeric:tabular-nums; color:var(--fg-accent); }
+    #FutGalleryPanel .fg-pool { margin-top:28px; padding-top:4px; border-top:1px solid var(--fg-line); } #FutGalleryPanel .fg-player-search { max-width:240px; }
+    #FutGalleryPanel .fg-empty { padding:28px 12px; color:var(--fg-muted); text-align:center; } #FutGalleryPanel .fg-error { color:#ffd099; }
+    #FutGalleryPanel .fg-load-sentinel { height:1px; } #FutGalleryPanel .fg-summary { text-align:right; }
+    #FutGalleryPanel .fg-player-sort { width:120px; }
+    #FutGalleryPanel .fg-sort-direction { width:38px; height:38px; padding:0; flex:none; font-size:22px; }
+    @container (max-width:850px) { #FutGalleryPanel .fg-layout { grid-template-columns:200px minmax(0,1fr); } #FutGalleryPanel .fg-workspace { padding:18px; } #FutGalleryPanel .fg-score-band { grid-template-columns:65px repeat(3,minmax(0,1fr)); gap:8px; } #FutGalleryPanel .fg-stat strong { font-size:19px; } }
+    @container (max-width:620px) { #FutGalleryPanel .fg-header { padding:16px; flex-wrap:wrap; } #FutGalleryPanel .fg-layout { display:block; } #FutGalleryPanel .fg-rail { border-right:0; border-bottom:1px solid var(--fg-line); padding:12px; } #FutGalleryPanel .fg-filters { grid-template-columns:1fr 1fr; padding:0 0 10px; } #FutGalleryPanel .fg-set-list { display:flex; overflow-x:auto; max-height:none; gap:6px; } #FutGalleryPanel .fg-set { min-width:150px; width:150px; flex-shrink:0; padding:8px; } #FutGalleryPanel .fg-workspace { padding:16px 12px; } #FutGalleryPanel .fg-set-heading { display:block; } #FutGalleryPanel .fg-summary { text-align:left; margin-top:8px; } #FutGalleryPanel .fg-score-band { grid-template-columns:50px repeat(3,minmax(0,1fr)); gap:6px; } #FutGalleryPanel .fg-stat strong { font-size:17px; } #FutGalleryPanel .fg-grade { font-size:36px; } #FutGalleryPanel .fg-rung { padding:8px 4px; } #FutGalleryPanel .fg-rung span { font-size:10px; } #FutGalleryPanel .fg-rung small { font-size:10px; } #FutGalleryPanel .fg-lineup { grid-template-columns:repeat(auto-fill,minmax(125px,1fr)); } #FutGalleryPanel .fg-toolbar { gap:8px; } #FutGalleryPanel .fg-player-search { max-width:none; } }
+  `;
+  style.textContent += `
+    #FutGalleryPanel .fg-score-band { grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr)); }
+    #FutGalleryPanel .fg-stat { min-width:0; }
+    #FutGalleryPanel .fg-purchase-detail { display:block; }
+    #FutGalleryPanel .fg-header { position:sticky; top:0; z-index:3; padding:10px 20px; gap:16px; flex-wrap:wrap; }
+    #FutGalleryPanel .fg-header .fg-navigation,#FutGalleryPanel .fg-browser > .fg-toolbar > .fg-navigation { padding:0; border:0; margin-right:auto; flex-shrink:0; }
+    #FutGalleryPanel .fg-header [data-summary] { font-size:11px; }
+    #FutGalleryPanel .fg-browser { padding:0 20px; min-height:100%; display:grid; grid-template-rows:auto auto 1fr auto; }
+    #FutGalleryPanel .fg-browser-grid { align-content:start; }
+    #FutGalleryPanel .fg-browser > .fg-toolbar { position:sticky; top:0; z-index:3; background:var(--fg-bg); padding:12px 0; border-bottom:1px solid var(--fg-line); margin:0 0 12px; gap:8px; }
+    #FutGalleryPanel .fg-browser-search { max-width:260px; width:220px; flex:0 1 220px; }
+    #FutGalleryPanel .fg-overview-stats { position:sticky; bottom:0; z-index:3; background:var(--fg-bg); padding:12px 0; margin:16px 0 0; border-top:1px solid var(--fg-line); border-bottom:0; gap:8px 24px; }
+    #FutGalleryPanel .fg-overview-stats > div { display:flex; align-items:baseline; gap:6px; }
+    #FutGalleryPanel .fg-overview-stats strong { font-size:18px; }
+    #FutGalleryPanel .fg-browser > .fg-status { min-height:0; margin:4px 0 12px; }
+    #CollectionBookPanel .collection-book-card > * { pointer-events:none; }
+    #FutGalleryPanel .fg-player-media[role=button] { cursor:pointer; }
+    #FutGalleryPanel .fg-player-media[role=button] > * { pointer-events:none; }
+    @container (max-width:620px) { #FutGalleryPanel .fg-lineup { grid-template-columns:repeat(auto-fill,minmax(min(146px,100%),1fr)); } }
+  `;
+  document.head.appendChild(style);
+};
+
+const futGalleryCreateNativeItem = (player, { concept = !player?.available } = {}) => {
+  const source = player?.entity || player;
+  if (!source || typeof UTItemEntity !== "function") return null;
+  const item = new UTItemEntity(source);
+  const sourceStatic = source.getStaticData?.() || source._staticData || {};
+  const existingName = value => value && value !== "---" ? value : "";
+  let staticData = sourceStatic;
+  const hasDisplayName = existingName(staticData.name) || existingName(staticData.knownAs);
+  if (!hasDisplayName && typeof UTStaticPlayerItemDataDTO === "function") {
+    staticData = new UTStaticPlayerItemDataDTO();
+    staticData.generateNameData(
+      existingName(sourceStatic.firstName),
+      existingName(sourceStatic.lastName),
+      existingName(sourceStatic.knownAs) || existingName(player?.name),
+    );
+  }
+  item.setStaticData?.(staticData);
+  item.authenticity = source.authenticity;
+  item.cosmetics = source.cosmetics;
+  item._hyperCosmeticDTOs = source._hyperCosmeticDTOs || {};
+  item.holographicType = source.holographicType || null;
+  item.concept = concept;
+  return item;
+};
+
+const futGalleryOpenPlayerDetails = (root, player) => {
+  root.__galleryCloseDetails?.();
+  const owner = root.__galleryController;
+  if (!owner) return;
+  const controller = new UTItemDetailsNavigationController();
+  const item = futGalleryCreateNativeItem(player);
+  if (!item) return;
+  controller.initWithIterator(new EAIterator([item]));
+  controller.enableSwiping(false);
+  owner.addChildViewController(controller);
+  owner.hideRightPanel(false);
+  owner.setRightController(controller);
+  controller.setNavigationStyle(UTNavigationBarView.Style.SECONDARY);
+  root.__galleryCloseDetails = () => {
+    root.__galleryCloseDetails = null;
+    owner.removeRightController();
+    owner.removeChildViewController(controller);
+    controller.dealloc();
+    owner.hideRightPanel(true);
+  };
+};
+
+const futGalleryAutoComplete = async (item, tags, candidates, source, grade, options = {}) => {
+  const requirement = futGalleryEligibility(item, tags);
+  if (!requirement.matches) throw new Error(requirement.error || "Unsupported set requirements");
+  const pool = candidates.filter(requirement.matches).filter(player => source !== "club" || player.available);
+  return futGalleryCheapest(item, tags, pool, grade, options);
+};
+
+const futGalleryShowAutoComplete = (root, grades, run, stop) => {
+  const owner = root.__galleryController;
+  if (!owner) return;
+  root.__galleryCloseAutoComplete?.();
+  const ModalView = function () { EAView.call(this); };
+  JSUtils.inherits(ModalView, EAView);
+  ModalView.prototype._generate = function () {
+    this.__root = document.createElement("section");
+    this.__root.className = "ut-content fg-autocomplete-modal";
+    this.__root.setAttribute("role", "dialog");
+    this.__root.setAttribute("aria-label", "Auto complete all");
+    this.__root.innerHTML = `<h2>Auto complete all</h2><form><div class="fg-autocomplete-progress"><progress max="1" value="0" aria-label="Sets calculated"></progress><p role="status" aria-live="polite">Ready</p></div><div class="fg-autocomplete-choice"><span class="fg-autocomplete-choice-label">Players</span><input type="hidden" name="source" value="club"><div class="fg-autocomplete-segmented" role="group" aria-label="Players"><button type="button" data-source="club" aria-pressed="true">Club</button><button type="button" data-source="concepts" aria-pressed="false">Club + concepts</button></div></div><div class="fg-autocomplete-choice"><span class="fg-autocomplete-choice-label">Target grade</span><input type="hidden" name="grade"><div class="fg-autocomplete-segmented" data-grade-options role="group" aria-label="Target grade"></div></div><div class="fg-autocomplete-actions"><button type="submit">Start</button><button type="button" data-close>Close</button></div></form>`;
+    this._generated = true;
+  };
+  const controller = new EAViewController();
+  controller._getViewInstanceFromData = () => new ModalView();
+  controller.init();
+  controller.modalDisplayStyle = "form";
+  controller.modalDisplayDimensions = { width: "480px", height: "auto", maxWidth: "calc(100vw - 32px)", maxHeight: "calc(100vh - 32px)" };
+  controller.modalCanDismissFromShield = false;
+  const view = controller.getView().getRootElement();
+  const form = view.querySelector("form");
+  const gradeInput = form.elements.grade;
+  const gradeOptions = view.querySelector("[data-grade-options]");
+  for (const grade of grades) {
+    const option = document.createElement("button"); option.type = "button"; option.dataset.grade = grade; option.textContent = grade; option.setAttribute("aria-pressed", "false"); gradeOptions.append(option);
+  }
+  gradeInput.value = grades.includes("S") ? "S" : grades[grades.length - 1];
+  const updatePressed = (group, attribute, value) => group.querySelectorAll("button").forEach(button => button.setAttribute("aria-pressed", String(button.dataset[attribute] === value)));
+  updatePressed(gradeOptions, "grade", gradeInput.value);
+  view.querySelectorAll("[data-source]").forEach(button => { button.onclick = () => { form.elements.source.value = button.dataset.source; updatePressed(view.querySelector('[aria-label="Players"]'), "source", button.dataset.source); }; });
+  gradeOptions.querySelectorAll("[data-grade]").forEach(button => { button.onclick = () => { gradeInput.value = button.dataset.grade; updatePressed(gradeOptions, "grade", button.dataset.grade); }; });
+  const close = view.querySelector("[data-close]");
+  let running = false;
+  let closed = false;
+  controller.viewWillDisappear = function () {
+    EAViewController.prototype.viewWillDisappear.call(this);
+    if (!closed) {
+      closed = true; if (running) stop(); root.__galleryCloseAutoComplete = null;
+    }
+  };
+  root.__galleryCloseAutoComplete = () => {
+    if (closed) return;
+    closed = true; if (running) stop(); root.__galleryCloseAutoComplete = null;
+    owner.dismissViewController(false, () => controller.dealloc());
+  };
+  close.onclick = () => { if (running) stop(); else root.__galleryCloseAutoComplete?.(); };
+  form.onsubmit = async event => {
+    event.preventDefault();
+    if (running) return;
+    running = true; close.textContent = "Stop";
+    form.querySelectorAll(".fg-autocomplete-segmented button,button[type=submit]").forEach(control => { control.disabled = true; });
+    const update = (completed, total, text) => {
+      if (closed) return;
+      const progress = view.querySelector("progress"); progress.max = Math.max(1, total); progress.value = completed;
+      view.querySelector('[role="status"]').textContent = text;
+    };
+    try { await run(form.elements.source.value, gradeInput.value, update); }
+    catch (error) { update(0, 1, `Calculation failed: ${error.message}`); }
+    finally {
+      running = false;
+      if (!closed) {
+        close.textContent = "Close";
+        form.querySelectorAll(".fg-autocomplete-segmented button,button[type=submit]").forEach(control => { control.disabled = false; });
+      }
+    }
+  };
+  owner.presentViewController(controller, true);
+};
+
+const futGalleryMountPage = async root => {
+  root.__galleryDispose?.();
+  futGalleryEnsureStyles();
+  const lifecycle = new AbortController();
+  const on = (target, event, handler) => target.addEventListener(event, handler, { signal: lifecycle.signal });
+  let views = [];
+  let generation = 0;
+  let disposed = false;
+  let poolObserver = null;
+  const destroyViews = () => { poolObserver?.disconnect(); poolObserver = null; views.forEach(view => view.destroy?.()); views = []; };
+  root.__galleryDispose = () => { disposed = true; generation++; lifecycle.abort(); root.__galleryCloseAutoComplete?.(); root.__galleryCloseDetails?.(); root.querySelector(".fg-bonus-dialog")?.remove(); destroyViews(); };
+  const number = value => Number(value || 0).toLocaleString();
+  root.innerHTML = `<header class="fg-header"><div class="fg-summary fg-muted" data-summary>Loading requirements...</div></header><div class="fg-layout"><aside class="fg-rail" aria-label="Gallery sets"><div class="fg-filters"><input aria-label="Search sets" placeholder="Search sets"><select aria-label="Set category"><option value="">All categories</option></select></div><div class="fg-set-list"></div></aside><main class="fg-workspace"><div class="fg-empty" role="status">Loading Gallery...</div></main></div>`;
+  const workspace = root.querySelector(".fg-workspace");
+  const layout = root.querySelector(".fg-layout");
+  const navigation = document.createElement("nav"); navigation.className = "fg-navigation"; navigation.setAttribute("aria-label", "Gallery views");
+  navigation.innerHTML = `<button type="button" data-page="overview">Overview</button><button type="button" data-page="sets">Sets</button><button type="button" data-page="categories">Categories</button>`;
+  root.querySelector("[data-summary]").before(navigation);
+  const browser = document.createElement("section"); browser.className = "fg-browser"; layout.before(browser);
+  let catalogue;
+  try { catalogue = await futGalleryLoadCatalogue(); } catch (error) {
+    if (disposed) return;
+    workspace.innerHTML = `<div class="fg-empty fg-error" role="alert">Gallery requirements could not be loaded.<br><button type="button">Retry</button></div>`;
+    root.querySelector("[data-summary]").textContent = "Connection unavailable";
+    on(workspace.querySelector("button"), "click", () => futGalleryMountPage(root));
+    return;
+  }
+  if (disposed) return;
+  let candidates = futGalleryGetCandidates();
+  const enrichVariantPrices = async () => {
+    const currentCandidates = candidates;
+    const currentSet = set;
+    const enriched = await futGalleryEnrichVariantPrices(currentCandidates, {
+      cancelled: () => disposed || candidates !== currentCandidates || set !== currentSet,
+    });
+    if (!disposed && candidates === currentCandidates && set === currentSet) {
+      const knownIds = new Set(currentCandidates.map(player => Number(player.eaId)));
+      candidates = [...currentCandidates, ...enriched.filter(player => !knownIds.has(Number(player.eaId)))];
+      renderSets();
+      renderWorkspace();
+      renderBrowser();
+    }
+  };
+  let set = catalogue.sets[0];
+  let mode = "club";
+  let selected = [];
+  let resultLabel = "";
+  let busy = false;
+  let buying = false;
+  let purchaseAction = "club";
+  const purchasedIds = new Set();
+  let playerQuery = "";
+  let playerSort = "score";
+  let playerSortAscending = false;
+  let visibleLimit = 36;
+  let page = "overview";
+  let overviewSort = "points";
+  let overviewSortAscending = false;
+  let overviewCompletedOnly = false;
+  let browserQuery = "";
+  let batchRunning = false;
+  let batchGeneration = 0;
+  let batchStatus = "";
+  let targetGrade = null;
+  let plans = {};
+  try { plans = JSON.parse(localStorage.getItem("futGallery.lineups.v1") || "{}"); if (!plans || typeof plans !== "object" || Array.isArray(plans)) plans = {}; } catch {}
+  const savePlan = (item, players, optimal, completion = null) => {
+    plans[item.id] = { ids: players.map(player => player.eaId), optimal, completion };
+    try { localStorage.setItem("futGallery.lineups.v1", JSON.stringify(plans)); } catch {}
+  };
+  const icons = item => {
+    const group = document.createElement("div"); group.className = "fg-icons";
+    for (const url of futGalleryIconUrls(item)) {
+      const image = document.createElement("img"); image.src = url; image.alt = ""; image.loading = "lazy"; image.onerror = () => { image.hidden = true; }; group.append(image);
+    }
+    return group;
+  };
+  const openSet = item => {
+    if (buying || batchRunning) return;
+    generation++; busy = false; set = item; targetGrade = null;
+    const ids = new Set(plans[item.id]?.ids || []);
+    selected = candidates.filter(player => ids.has(player.eaId));
+    resultLabel = ids.size ? "Saved lineup" : ""; playerQuery = ""; visibleLimit = 36;
+    page = "lineup"; renderSets(); renderWorkspace(); renderBrowser();
+    enrichVariantPrices();
+  };
+  const renderBrowser = () => {
+    layout.hidden = page !== "lineup";
+    browser.hidden = page === "lineup";
+    const header = root.querySelector(".fg-header");
+    header.hidden = page !== "lineup";
+    if (page === "lineup") header.prepend(navigation);
+    navigation.querySelectorAll("[data-page]").forEach(button => {
+      button.setAttribute("aria-pressed", String(button.dataset.page === (page === "lineup" ? "sets" : page)));
+      button.disabled = buying;
+    });
+    if (page === "lineup") return;
+    const summaries = catalogue.sets.map(item => {
+      const requirement = futGalleryEligibility(item, catalogue.tags);
+      const pool = requirement.matches ? candidates.filter(requirement.matches).filter(player => player.available) : [];
+      const ids = plans[item.id]?.ids;
+      const players = ids ? candidates.filter(player => ids.includes(player.eaId) && requirement.matches?.(player)).slice(0, item.requiredCards) : [...pool].sort((left, right) => (right.score || 0) - (left.score || 0)).slice(0, item.requiredCards);
+      return { item, pool, filled: players.length, outcome: futGalleryEvaluate(item, catalogue.tags, players), planned: !!ids, error: requirement.error };
+    });
+    browser.innerHTML = `<div class="fg-toolbar"><input class="fg-browser-search" aria-label="Search Gallery" placeholder="Search Gallery"><button type="button" data-complete-all>${batchRunning ? "Stop" : "Auto complete all"}</button></div><p class="fg-status" role="status" aria-live="polite"></p><div class="fg-browser-grid"></div><footer class="fg-overview-stats" aria-label="Gallery totals"></footer>`;
+    browser.setAttribute("aria-label", page === "categories" ? "Categories" : page === "sets" ? "Sets" : "Gallery overview");
+    browser.querySelector(".fg-toolbar").prepend(navigation);
+    browser.querySelector("input").value = browserQuery;
+    if (page === "overview" || page === "sets") {
+      const controls = document.createElement("div");
+      controls.innerHTML = `<select class="fg-player-sort" data-overview-sort aria-label="Sort sets"><option value="completion">% completed</option><option value="points">Points</option><option value="name">Alphabetical</option></select><button type="button" class="fg-sort-direction" data-overview-direction></button><div class="fg-mode" role="group" aria-label="Filter overview"${page === "sets" ? " hidden" : ""}><button type="button" data-overview-filter="all">All</button><button type="button" data-overview-filter="completed" title="All required slots filled with owned or previously seen players">Completed</button></div>`;
+      const sortSelect = controls.querySelector("[data-overview-sort]"); sortSelect.value = overviewSort;
+      sortSelect.onchange = () => { overviewSort = sortSelect.value; renderBrowser(); };
+      const direction = controls.querySelector("[data-overview-direction]");
+      direction.innerHTML = overviewSortAscending ? "&#8593;" : "&#8595;";
+      direction.title = `${overviewSortAscending ? "Ascending" : "Descending"}; switch to ${overviewSortAscending ? "descending" : "ascending"}`;
+      direction.setAttribute("aria-label", direction.title);
+      direction.onclick = () => { overviewSortAscending = !overviewSortAscending; renderBrowser(); };
+      controls.querySelectorAll("[data-overview-filter]").forEach(button => {
+        button.setAttribute("aria-pressed", String((button.dataset.overviewFilter === "completed") === overviewCompletedOnly));
+        button.onclick = () => { overviewCompletedOnly = button.dataset.overviewFilter === "completed"; renderBrowser(); };
+      });
+      browser.querySelector("[data-complete-all]").before(...controls.children);
+    }
+    const totalTokens = catalogue.sets.reduce((total, item) => total + Number(item.totalTokens || 0), 0);
+    browser.querySelector(".fg-overview-stats").innerHTML = `<div><strong>${summaries.filter(value => value.outcome.grade === "S").length} / ${summaries.length}</strong><span class="fg-muted">Projected S grades</span></div><div><strong>${number(summaries.reduce((total, value) => total + value.outcome.tokens, 0))} / ${number(totalTokens)}</strong><span class="fg-muted">Projected tokens</span></div><div><strong>${summaries.filter(value => value.planned).length}</strong><span class="fg-muted">Saved lineups</span></div>`;
+    browser.querySelector(".fg-status").textContent = batchStatus || "Projected from club and seen players / Unplanned sets use highest base scores";
+    const renderGrid = () => {
+      const grid = browser.querySelector(".fg-browser-grid"); grid.replaceChildren();
+      const query = browser.querySelector("input").value.toLowerCase();
+      const entries = page === "categories" ? futGalleryCategories(catalogue)
+        : futGalleryOverviewEntries(summaries, overviewSort, page === "overview" && overviewCompletedOnly, overviewSortAscending);
+      for (const entry of entries) {
+        const item = entry.item || entry;
+        if (!item.name.toLowerCase().includes(query)) continue;
+        const button = document.createElement("button"); button.type = "button"; button.className = "fg-browser-item"; button.disabled = buying || batchRunning;
+        button.append(icons(item));
+        const title = document.createElement("strong"); title.textContent = item.name; button.append(title);
+        const detail = document.createElement("span"); detail.className = "fg-muted";
+        if (page === "categories") {
+          const children = summaries.filter(value => value.item.categorySlug === item.slug);
+          detail.textContent = `${children.length} sets / ${children.filter(value => value.outcome.grade === "S").length} projected S / ${number(item.totalTokens)} tokens`;
+          button.onclick = () => { category.value = item.name; page = "sets"; renderBrowser(); };
+        } else {
+          if (page === "sets" && category.value && item.category !== category.value) continue;
+          detail.textContent = entry.error || `${entry.outcome.grade || "Ungraded"} / ${number(entry.outcome.totalScore)} pts`;
+          const completion = plans[item.id]?.completion;
+          if (completion) {
+            const cost = document.createElement("span"); cost.className = "fg-muted";
+            cost.textContent = completion.reached
+              ? `Grade ${completion.grade}: ~${number(completion.cost)} coins / ${completion.missing} to buy`
+              : `Grade ${completion.grade}: ${completion.error || "No priced solution found"}`;
+            cost.title = "Estimated from cached prices; no purchases made";
+            button.append(cost);
+          }
+          const count = document.createElement("span"); count.className = "fg-muted";
+          count.dataset.playerCount = "";
+          count.textContent = `${entry.filled}/${item.requiredCards}`;
+          count.title = "Players in the projected lineup, including planned concept purchases.";
+          button.append(count);
+          const badgeState = futGallerySetBadge(entry);
+          const badge = document.createElement("span"); badge.className = `fg-remaining${badgeState.graded ? " complete" : ""}`;
+          badge.textContent = badgeState.text;
+          if (badgeState.graded) badge.dataset.grade = badgeState.text;
+          badge.title = badgeState.graded ? `Projected grade ${badgeState.text}` : `${badgeState.text} projected lineup players`;
+          badge.setAttribute("aria-label", badge.title);
+          button.append(badge);
+          const progress = document.createElement("progress"); progress.max = Math.max(...item.grades.map(grade => grade.threshold), 1); progress.value = entry.outcome.totalScore; progress.setAttribute("aria-label", `${item.name} score toward S`); button.append(progress);
+          button.onclick = () => openSet(item);
+        }
+        button.append(detail); grid.append(button);
+      }
+      if (!grid.children.length) { const empty = document.createElement("p"); empty.className = "fg-empty"; empty.textContent = "No matching sets or categories"; grid.append(empty); }
+    };
+    browser.querySelector("input").oninput = event => { browserQuery = event.target.value; renderGrid(); }; renderGrid();
+    browser.querySelector("[data-complete-all]").onclick = () => {
+      const stop = () => { batchGeneration++; batchRunning = false; batchStatus = "Stopped"; if (!disposed) renderBrowser(); };
+      if (batchRunning) { stop(); return; }
+      const grades = [...new Set(catalogue.sets.flatMap(item => item.grades.map(grade => grade.name)))];
+      futGalleryShowAutoComplete(root, grades, async (source, grade, update) => {
+      const run = ++batchGeneration; batchRunning = true;
+      let completed = 0;
+      try {
+        for (const item of catalogue.sets) {
+          if (disposed || run !== batchGeneration) { update(completed, catalogue.sets.length, "Stopped"); return; }
+          batchStatus = `${completed} / ${catalogue.sets.length} calculated: ${item.name}`; renderBrowser();
+          update(completed, catalogue.sets.length, batchStatus);
+          try {
+            const result = await futGalleryAutoComplete(item, catalogue.tags, candidates, source, grade, { maxChecks: 10000, cancelled: () => disposed || run !== batchGeneration });
+            if (!result || disposed || run !== batchGeneration) { update(completed, catalogue.sets.length, "Stopped"); return; }
+            savePlan(item, result.players, result.optimal, { source, grade, reached: result.reached, cost: result.cost, missing: result.missing.length });
+          } catch (error) {
+            savePlan(item, [], false, { source, grade, reached: false, error: error.message });
+          }
+          completed++;
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        batchStatus = `${completed} sets calculated / Lineups saved / No purchases or rewards claimed`;
+        update(completed, catalogue.sets.length, batchStatus);
+      } catch (error) { batchStatus = `Calculation failed: ${error.message}`; }
+      finally { if (run === batchGeneration) { batchRunning = false; if (!disposed) renderBrowser(); } }
+      }, stop);
+    };
+  };
+  navigation.querySelectorAll("[data-page]").forEach(button => {
+    button.onclick = () => { generation++; busy = false; page = button.dataset.page; category.value = ""; renderBrowser(); };
+  });
+  const search = root.querySelector('[aria-label="Search sets"]');
+  const category = root.querySelector('[aria-label="Set category"]');
+  for (const name of new Set(catalogue.sets.map(item => item.category))) {
+    const option = document.createElement("option"); option.textContent = name; option.value = name; category.appendChild(option);
+  }
+  const eligible = () => {
+    const requirement = futGalleryEligibility(set, catalogue.tags);
+    return { ...requirement, players: requirement.matches ? candidates.filter(requirement.matches).filter(player => mode !== "club" || player.available) : [] };
+  };
+  const renderSets = () => {
+    const list = root.querySelector(".fg-set-list"); list.replaceChildren();
+    const filtered = catalogue.sets.filter(item => (!category.value || item.category === category.value) && item.name.toLowerCase().includes(search.value.toLowerCase()));
+    for (const item of filtered) {
+      const button = document.createElement("button"); button.type = "button"; button.className = "fg-set";
+      button.setAttribute("aria-pressed", String(item.id === set?.id));
+      const title = document.createElement("strong"); title.textContent = item.name;
+      const subtitle = document.createElement("span"); subtitle.textContent = `${item.requiredCards} players / ${number(item.totalTokens)} tokens`;
+      button.append(title, subtitle);
+      button.prepend(icons(item));
+      button.disabled = buying;
+      button.onclick = () => openSet(item);
+      list.appendChild(button);
+    }
+    if (!filtered.length) list.innerHTML = `<div class="fg-empty">No matching sets</div>`;
+  };
+  const playerTile = (player, picked) => {
+    const tile = document.createElement("article"); tile.className = `fg-player${player.holographicType === "pristine" ? " pristine" : ""}`;
+    if (player.holographicType === "pristine") tile.dataset.variant = "pristine";
+    tile.innerHTML = `<div class="fg-player-media"></div><div class="fg-player-info"><strong></strong><div class="fg-points"></div><div class="fg-player-state"></div></div><button type="button" class="fg-player-action"></button>`;
+    tile.querySelector("strong").textContent = player.name;
+    tile.querySelector("strong").title = player.name;
+    tile.querySelector(".fg-points").textContent = player.score === null ? "Score unavailable" : `${number(player.score)} pts`;
+    const state = tile.querySelector(".fg-player-state");
+    state.textContent = player.available ? player.firstOwner ? "In club / First owner" : "In club" : "Concept / Not owned";
+    state.title = player.seen && !player.inClub ? "Previously owned" : "";
+    state.classList.toggle("owned", player.available);
+    const media = tile.querySelector(".fg-player-media");
+    media.tabIndex = 0;
+    media.setAttribute("role", "button");
+    media.setAttribute("aria-label", `View ${player.name}`);
+    media.addEventListener("click", event => {
+      event.preventDefault(); event.stopImmediatePropagation();
+      futGalleryOpenPlayerDetails(root, player);
+    }, true);
+    media.addEventListener("keydown", event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      futGalleryOpenPlayerDetails(root, player);
+    }, true);
+    try {
+      const copy = futGalleryCreateNativeItem(player);
+      if (!copy) throw new Error("EA player item is unavailable");
+      const view = UTItemViewFactory.createLargeItem(copy);
+      view.init?.(); view.render(copy);
+      view._bottomLeftStatusIndicator?.reset?.();
+      const element = view.getRootElement(); element.classList.add("fg-native"); media.appendChild(element); views.push(view); tile.__galleryView = view;
+    } catch {
+      const image = document.createElement("img"); image.alt = ""; image.loading = "lazy";
+      image.src = globalThis.AssetLocationUtils?.getPortraitUri?.(player.entity) || "";
+      image.onerror = () => { image.remove(); };
+      media.appendChild(image);
+      const rating = document.createElement("span"); rating.className = "fg-fallback-rating"; rating.textContent = `${player.rating} ${player.positions[0] || ""}`; media.appendChild(rating);
+    }
+    const action = tile.querySelector("button"); action.textContent = picked ? "-" : "+";
+    action.title = `${picked ? "Remove" : "Add"} ${player.name}`; action.setAttribute("aria-label", action.title);
+    action.disabled = busy || buying || (!picked && (selected.length >= set.requiredCards || player.score === null));
+    action.onclick = () => { selected = picked ? selected.filter(item => item.eaId !== player.eaId) : [...selected, player]; resultLabel = "Manual selection"; renderWorkspace(); };
+    return tile;
+  };
+  const renderWorkspace = () => {
+    if (disposed) return;
+    destroyViews();
+    root.querySelector("[data-summary]").textContent = `${number(candidates.filter(player => player.inClub).length)} club / ${number(candidates.filter(player => player.seen && !player.inClub).length)} seen before / ${number(candidates.length)} indexed${catalogue.stale ? " / Cached requirements" : ""}`;
+    if (!set) { workspace.innerHTML = `<div class="fg-empty">No Gallery sets available</div>`; return; }
+    const pool = eligible();
+    const outcome = futGalleryEvaluate(set, catalogue.tags, selected);
+    workspace.innerHTML = `<div class="fg-set-heading"><div><div class="fg-category-label"></div><h2></h2><p class="fg-description"></p></div><div class="fg-summary"><strong class="fg-accent">${number(outcome.tokens)} / ${number(set.totalTokens)} tokens</strong><p class="fg-muted">Projected rewards</p></div></div>
+      <section class="fg-score-band" aria-label="Lineup score"><div class="fg-projected-grade"><div class="fg-grade-icon" data-projected-grade></div><div class="fg-muted">${outcome.complete ? "Projected grade" : "Incomplete"}</div></div><div class="fg-stat"><strong>${number(outcome.baseScore)}</strong><span>Base score</span></div><div class="fg-stat"><strong>+${number(outcome.bonusScore)}</strong><span>Tag bonus</span></div><div class="fg-stat"><strong class="fg-accent">${number(outcome.totalScore)}</strong><span>Total score</span></div></section><div class="fg-ladder" aria-label="Grade thresholds"></div><div class="fg-status" role="status" aria-live="polite"></div>
+      <div class="fg-toolbar"><h3>Your lineup <span class="fg-muted">${selected.length} / ${set.requiredCards}</span></h3><div class="fg-mode" role="group" aria-label="Player source"><button type="button" data-mode="club" aria-pressed="${mode === "club"}">Club + seen</button><button type="button" data-mode="all" aria-pressed="${mode === "all"}">All concepts</button></div><button type="button" class="fg-primary" data-solve>${busy ? "Stop search" : "Find best lineup"}</button><button type="button" data-reset title="Clear lineup" aria-label="Clear lineup">Reset</button></div><div class="fg-lineup" data-lineup></div>
+      <div class="fg-toolbar"><button type="button" data-bonus-tags>Bonus tags (${outcome.bonuses.filter(tag => tag.paid).length} / ${outcome.bonuses.length})</button><span class="fg-muted">+${number(outcome.bonusScore)} points</span></div>
+      <section class="fg-pool"><div class="fg-toolbar"><h3>Eligible players <span class="fg-muted">${pool.players.length}</span></h3><input class="fg-player-search" aria-label="Search eligible players" placeholder="Search players"><select class="fg-player-sort" aria-label="Sort eligible players"><option value="price">Price</option><option value="rating">Rating</option><option value="score">Score</option></select><button type="button" class="fg-sort-direction"></button></div><div class="fg-lineup" data-candidates></div><div class="fg-load-sentinel" aria-hidden="true"></div></section>`;
+    const projectedGrade = workspace.querySelector("[data-projected-grade]");
+    projectedGrade.textContent = outcome.grade || "-";
+    if (outcome.grade) projectedGrade.dataset.grade = outcome.grade;
+    projectedGrade.setAttribute(
+      "aria-label",
+      outcome.complete ? `Projected grade ${outcome.grade}` : "Incomplete grade",
+    );
+    workspace.querySelector("h2").textContent = set.name;
+    const purchase = futGalleryPurchaseCost(selected, purchasedIds);
+    const costMetric = document.createElement("div"); costMetric.className = "fg-stat";
+    costMetric.dataset.purchaseCost = "";
+    costMetric.innerHTML = `<strong class="fg-accent"></strong><span>Concept purchase cost</span><span class="fg-purchase-detail"></span>`;
+    costMetric.querySelector("strong").textContent = purchase.unpriced === purchase.count && purchase.unpriced > 0 ? "Unknown" : `${number(purchase.total)}${purchase.unpriced ? "+" : ""} coins`;
+    costMetric.querySelector(".fg-purchase-detail").textContent = `${purchase.count} to buy${purchase.unpriced ? ` / ${purchase.unpriced} unpriced` : ""}`;
+    costMetric.title = "Estimated from cached market prices; owned and previously seen players cost zero.";
+    workspace.querySelector(".fg-score-band").append(costMetric);
+    workspace.querySelector(".fg-set-heading").prepend(icons(set));
+    workspace.querySelector(".fg-category-label").textContent = set.category;
+    workspace.querySelector(".fg-description").textContent = set.description;
+    const status = workspace.querySelector(".fg-status");
+    const missingScores = pool.players.filter(player => player.score === null).length;
+    status.textContent = pool.error || (busy ? "Searching player combinations..." : [resultLabel, `${pool.players.length} eligible${missingScores ? ` / ${missingScores} missing EA scores` : ""}`, selected.length < set.requiredCards ? `${set.requiredCards - selected.length} slots remaining` : outcome.next ? `${number(outcome.next.threshold - outcome.totalScore)} to grade ${outcome.next.name}` : "Highest grade reached"].filter(Boolean).join(" / "));
+    status.classList.toggle("fg-error", !!pool.error || !!missingScores);
+    for (const grade of set.grades) {
+      const rung = document.createElement("button"); rung.type = "button"; rung.className = `fg-rung${outcome.complete && outcome.totalScore >= grade.threshold ? " reached" : ""}`;
+      rung.disabled = busy || buying; rung.title = `Find cheapest lineup for grade ${grade.name}`; rung.setAttribute("aria-pressed", String(targetGrade === grade.name));
+      rung.onclick = async () => {
+        const requirement = futGalleryEligibility(set, catalogue.tags);
+        if (!requirement.matches || busy || buying) return;
+        const run = ++generation; busy = true; targetGrade = grade.name; renderWorkspace();
+        try {
+          const result = await futGalleryCheapest(set, catalogue.tags, candidates.filter(requirement.matches), grade.name, { cancelled: () => disposed || run !== generation });
+          if (!result || disposed || run !== generation) return;
+          if (result.reached) {
+            selected = result.players; mode = "all"; savePlan(set, selected, result.optimal);
+            resultLabel = `${result.optimal ? "Cheapest priced lineup" : "Lowest cost found"} for ${grade.name}: ${number(result.cost)} coins / ${result.missing.length} to buy`;
+          } else resultLabel = `${result.optimal ? "Cannot reach" : "No solution found for"} ${grade.name} with priced players`;
+          if (result.unpriced) resultLabel += ` / ${result.unpriced} unpriced players excluded`;
+        } catch (error) { resultLabel = `Search failed: ${error.message}`; }
+        finally { if (!disposed && run === generation) { busy = false; renderWorkspace(); } }
+      };
+      const rewards = (grade.rewards || []).filter(reward => reward.type === "event_token_1").reduce((sum, reward) => sum + reward.count * reward.value, 0);
+      rung.innerHTML = `<strong class="fg-grade-icon" aria-hidden="true"></strong><div class="fg-rung-copy"><strong></strong><span>${number(grade.threshold)}</span><small>+${number(rewards)} tokens</small></div>`;
+      const gradeIcon = rung.querySelector(".fg-grade-icon");
+      gradeIcon.textContent = grade.name;
+      gradeIcon.dataset.grade = grade.name;
+      const gradeName = rung.querySelector(".fg-rung-copy strong");
+      gradeName.textContent = `${grade.name} grade`;
+      workspace.querySelector(".fg-ladder").appendChild(rung);
+    }
+    const lineup = workspace.querySelector("[data-lineup]");
+    selected.forEach(player => lineup.appendChild(playerTile(player, true)));
+    for (let index = selected.length; index < set.requiredCards; index++) {
+      const slot = document.createElement("div"); slot.className = "fg-slot"; slot.innerHTML = `<strong>+</strong><span>Slot ${index + 1}</span>`; lineup.appendChild(slot);
+    }
+    const bonusButton = workspace.querySelector("[data-bonus-tags]");
+    bonusButton.onclick = () => futGalleryShowBonuses(root, outcome, selected, bonusButton);
+    const playerSearch = workspace.querySelector(".fg-player-search"); playerSearch.value = playerQuery;
+    const sortSelect = workspace.querySelector(".fg-player-sort"); sortSelect.value = playerSort;
+    const directionButton = workspace.querySelector(".fg-sort-direction");
+    const updateDirection = () => {
+      directionButton.innerHTML = playerSortAscending ? "&#8593;" : "&#8595;";
+      directionButton.title = `${playerSortAscending ? "Ascending" : "Descending"}; switch to ${playerSortAscending ? "descending" : "ascending"}`;
+      directionButton.setAttribute("aria-label", directionButton.title);
+    };
+    updateDirection();
+    const renderPool = () => {
+      poolObserver?.disconnect();
+      const grid = workspace.querySelector("[data-candidates]");
+      for (const tile of grid.children) {
+        if (!tile.__galleryView) continue;
+        tile.__galleryView.destroy?.();
+        views = views.filter(view => view !== tile.__galleryView);
+      }
+      grid.replaceChildren();
+      const ids = new Set(selected.map(player => player.eaId));
+      const remaining = futGallerySortPlayers(pool.players.filter(player => !ids.has(player.eaId) && player.name.toLowerCase().includes(playerQuery.toLowerCase())), playerSort, playerSortAscending);
+      let rendered = 0;
+      const sentinel = workspace.querySelector(".fg-load-sentinel");
+      const appendPlayers = () => {
+        remaining.slice(rendered, visibleLimit).forEach(player => grid.appendChild(playerTile(player, false)));
+        rendered = Math.min(visibleLimit, remaining.length);
+        sentinel.hidden = rendered >= remaining.length;
+        if (sentinel.hidden) poolObserver?.disconnect();
+      };
+      appendPlayers();
+      if (!remaining.length) { const empty = document.createElement("div"); empty.className = "fg-empty"; empty.textContent = pool.error || (!candidates.length ? "Club and concepts are still loading." : "No matching players"); grid.appendChild(empty); }
+      if (!sentinel.hidden) {
+        poolObserver = new IntersectionObserver(entries => {
+          if (disposed || !sentinel.isConnected || !entries.some(entry => entry.isIntersecting)) return;
+          poolObserver.unobserve(sentinel);
+          visibleLimit += 36; appendPlayers();
+          if (!sentinel.hidden) poolObserver.observe(sentinel);
+        }, { root, rootMargin: "300px 0px" });
+        poolObserver.observe(sentinel);
+      }
+    };
+    playerSearch.oninput = () => { playerQuery = playerSearch.value; visibleLimit = 36; renderPool(); };
+    sortSelect.onchange = () => { playerSort = sortSelect.value; visibleLimit = 36; renderPool(); };
+    directionButton.onclick = () => { playerSortAscending = !playerSortAscending; updateDirection(); visibleLimit = 36; renderPool(); };
+    renderPool();
+    workspace.querySelectorAll("[data-mode]").forEach(button => { button.disabled = busy || buying; button.onclick = () => { mode = button.dataset.mode; selected = []; resultLabel = ""; renderWorkspace(); }; });
+    workspace.querySelector("[data-reset]").disabled = busy || buying || !selected.length;
+    workspace.querySelector("[data-reset]").onclick = () => { selected = []; resultLabel = ""; renderWorkspace(); };
+    const solve = workspace.querySelector("[data-solve]"); solve.disabled = !busy && (!pool.players.some(player => player.score !== null) || !!pool.error);
+    if (buying) solve.disabled = true;
+    const missing = selected.filter(player => !player.available && !purchasedIds.has(player.eaId));
+    const buy = document.createElement("button");
+    buy.type = "button";
+    buy.dataset.buyLineup = "";
+    buy.textContent = buying ? "Buying..." : `Buy All (${missing.length})`;
+    buy.title = "Buy lineup concepts";
+    buy.disabled = busy || buying || !missing.length || typeof window.autoSbcConsoleApi?.runQuickBuySquad !== "function";
+    solve.after(buy);
+    const afterBuy = document.createElement("select");
+    afterBuy.setAttribute("aria-label", "After Gallery purchase");
+    afterBuy.title = "After purchase; profit options include EA's 5% transfer tax";
+    afterBuy.style.maxWidth = "100%";
+    for (const [value, label] of [["club", "Send to club"], ["minBin", "List at lowest BIN"], ["cost", "List at purchase cost"], ["profit5", "List for 5% net profit"], ["profit10", "List for 10% net profit"]]) {
+      const option = document.createElement("option");
+      option.value = value; option.textContent = label;
+      afterBuy.appendChild(option);
+    }
+    afterBuy.value = purchaseAction;
+    afterBuy.disabled = busy || buying;
+    afterBuy.onchange = () => { purchaseAction = afterBuy.value; };
+    buy.after(afterBuy);
+    buy.onclick = async () => {
+      if (busy || buying) return;
+      const current = new Map(futGalleryGetCandidates().map(player => [player.eaId, player]));
+      const squadPlayers = Array.from(new Map(selected.map(player => [player.eaId, current.get(player.eaId) || player])).values())
+        .filter(player => !player.available && !purchasedIds.has(player.eaId))
+        .map(player => futGalleryCreateNativeItem(player, { concept: true }))
+        .filter(Boolean);
+      if (!squadPlayers.length) { refresh(); return; }
+      buying = true; renderSets(); renderWorkspace();
+      try {
+        const result = await window.autoSbcConsoleApi.runQuickBuySquad(0, 0, {
+          galleryLineup: true,
+          galleryPurchaseAction: purchaseAction,
+          squadPlayers,
+          cancelled: () => disposed,
+          onPurchased: item => purchasedIds.add(Number(item.definitionId)),
+        });
+        resultLabel = `${result.reason === "stopped" ? "Buying stopped" : "Buy All"}: ${result.purchased || 0}/${result.total || squadPlayers.length} purchased`;
+      } catch (error) { resultLabel = `Buy All failed: ${error.message}`; }
+      finally {
+        buying = false;
+        if (!disposed) {
+          candidates = futGalleryGetCandidates();
+          const fresh = new Map(candidates.map(player => [player.eaId, player]));
+          selected = selected.map(player => fresh.get(player.eaId) || player);
+          renderSets(); renderWorkspace();
+        }
+      }
+    };
+    solve.onclick = async () => {
+      if (busy) { generation++; busy = false; resultLabel = "Search stopped"; renderWorkspace(); return; }
+      const run = ++generation; busy = true; renderWorkspace();
+      try {
+        const result = await futGalleryOptimize(set, catalogue.tags, pool.players, { cancelled: () => run !== generation || disposed });
+        if (!result || run !== generation || disposed) return;
+        selected = result.players; resultLabel = result.optimal ? "Best possible for this pool" : "Best found / bonus-aware search";
+        savePlan(set, selected, result.optimal);
+      } catch (error) { resultLabel = `Search failed: ${error.message}`; }
+      if (run === generation && !disposed) { busy = false; renderWorkspace(); }
+    };
+  };
+  const refresh = () => {
+    generation++; busy = false; candidates = futGalleryGetCandidates();
+    const fresh = new Map(candidates.map(player => [player.eaId, player])); selected = selected.map(player => fresh.get(player.eaId)).filter(Boolean); resultLabel = ""; renderWorkspace(); renderBrowser();
+    enrichVariantPrices();
+  };
+  on(search, "input", renderSets); on(category, "change", renderSets);
+  on(window, "autosbc:concepts-ready", refresh); on(window, "autosbc:club-players-ready", refresh);
+  on(window, "autosbc:ownership-ready", refresh);
+  on(window, "autosbc:gallery-sets-ready", async () => { catalogue = await futGalleryLoadCatalogue(); if (disposed) return; set = catalogue.sets.find(item => item.id === set?.id) || catalogue.sets[0]; renderSets(); refresh(); });
+  renderSets(); renderWorkspace(); renderBrowser();
+  enrichVariantPrices();
+  collectionBookFetchOwnership();
+};const sbcSubmitChallengeOverride = () => {
+  installScoreSbcSubmitRefresh();
   const sbcSubmit = PopupQueueViewController.prototype.closeActivePopup;
   PopupQueueViewController.prototype.closeActivePopup = function () {
     sbcSubmit.call(this);
@@ -22370,13 +24181,16 @@ const sbcViewOverride = () => {
       typeof triggerButtonOrOptions === "object" &&
       ("squad" in triggerButtonOrOptions ||
         "squadPlayers" in triggerButtonOrOptions ||
+        "singleItem" in triggerButtonOrOptions ||
         "triggerButton" in triggerButtonOrOptions);
     const options = hasOptionsObject ? triggerButtonOrOptions : {};
+    const galleryLineup = options.galleryLineup === true && Array.isArray(options.squadPlayers);
+    const singleItem = options.singleItem || null;
     const button = hasOptionsObject
       ? options.triggerButton || null
       : triggerButtonOrOptions || null;
 
-    if (!sbcSetId || !challengeId) {
+    if (!galleryLineup && !singleItem && (!sbcSetId || !challengeId)) {
       throw new Error(
         "runQuickBuySquad requires both sbcSetId and challengeId",
       );
@@ -22410,7 +24224,11 @@ const sbcViewOverride = () => {
     statusContainer.__onClose = requestStop;
 
     const titleBlock = document.createElement("div");
-    titleBlock.textContent = "Quick Buy Squad";
+    titleBlock.textContent = galleryLineup
+      ? "Buy Gallery Lineup"
+      : singleItem
+        ? "Quick Buy"
+        : "Quick Buy Squad";
     titleBlock.style.fontWeight = "bold";
     titleBlock.style.marginBottom = "0.35rem";
     statusContent.appendChild(titleBlock);
@@ -22429,14 +24247,14 @@ const sbcViewOverride = () => {
         .filter((player) => player && player.concept);
     };
 
-    let conceptItems = extractConceptItemsFromSquad(
-      options.squadPlayers || options.squad,
-    );
+    let conceptItems = singleItem
+      ? [singleItem].filter(Boolean)
+      : extractConceptItemsFromSquad(options.squadPlayers || options.squad);
     let targetSet = null;
     let targetChallenge = null;
 
     try {
-      if (!conceptItems.length) {
+      if (!galleryLineup && !singleItem && !conceptItems.length) {
         const controller = getControllerInstance();
         if (
           controller?._challenge?.id === challengeId &&
@@ -22448,7 +24266,7 @@ const sbcViewOverride = () => {
         }
       }
 
-      if (!conceptItems.length && (!targetSet || !targetChallenge)) {
+      if (!galleryLineup && !singleItem && !conceptItems.length && (!targetSet || !targetChallenge)) {
         const allSets = await sbcSets();
         targetSet = allSets.sets.find((set) => set.id === sbcSetId);
         if (!targetSet) {
@@ -22469,7 +24287,7 @@ const sbcViewOverride = () => {
         await loadChallenge(targetChallenge);
       }
 
-      if (!conceptItems.length) {
+      if (!singleItem && !conceptItems.length) {
         const players =
           targetChallenge?.squad?._players?.map((slot) => slot?._item) || [];
         conceptItems = players.filter((player) => player && player.concept);
@@ -22533,8 +24351,9 @@ const sbcViewOverride = () => {
           Number.isFinite(maxAboveSetting) && maxAboveSetting >= 0
             ? maxAboveSetting
             : 0;
-        const permittedCap =
-          Number.isFinite(expectedPrice) && expectedPrice > 0
+        const permittedCap = singleItem
+          ? expectedPrice
+          : Number.isFinite(expectedPrice) && expectedPrice > 0
             ? Math.min(maxPerPlayer, expectedPrice + maxAbove)
             : maxPerPlayer;
         const maxBuyLabel = Number.isFinite(permittedCap)
@@ -22591,6 +24410,7 @@ const sbcViewOverride = () => {
       const runStoppableCountdown = async (ms, labelPrefix) => {
         let remaining = Math.max(0, ms);
         while (remaining > 0) {
+          if (options.cancelled?.()) stopRequested = true;
           if (stopRequested) {
             timerFooter.textContent = "Stopped";
             return false;
@@ -22625,6 +24445,7 @@ const sbcViewOverride = () => {
       };
 
       for (let i = 0; i < rowData.length; i++) {
+        if (options.cancelled?.()) stopRequested = true;
         if (stopRequested) {
           markRowsStopped(i);
           timerFooter.textContent = "Stopped";
@@ -22645,6 +24466,7 @@ const sbcViewOverride = () => {
           attempt <= QUICK_BUY_RETRY_LIMIT + 1;
           attempt += 1
         ) {
+          if (options.cancelled?.()) stopRequested = true;
           if (stopRequested) {
             break;
           }
@@ -22658,6 +24480,9 @@ const sbcViewOverride = () => {
             conceptItem,
             {
               suppressNotifications: true,
+              useGlobalSettings: galleryLineup || !!singleItem,
+              capToCurrentPrice: !!singleItem,
+              galleryPurchaseAction: galleryLineup ? options.galleryPurchaseAction : undefined,
               excludeTradeIds: Array.from(retryExcludedTradeIds),
               excludeItemIds: Array.from(retryExcludedItemIds),
             },
@@ -22667,6 +24492,7 @@ const sbcViewOverride = () => {
           );
 
           if (result?.success) {
+            options.onPurchased?.(conceptItem, result);
             break;
           }
 
@@ -22710,6 +24536,10 @@ const sbcViewOverride = () => {
           const label = result?.priceLabel || expectedLabel;
           statusSpan.textContent = label ? `Success @ ${label}` : "Success";
           statusSpan.style.color = "#07f468";
+          if (result.postPurchaseError) {
+            statusSpan.textContent += `; ${result.postPurchaseError}`;
+            statusSpan.style.color = "#f40727";
+          }
         } else {
           let reasonLabel = "Failed";
           if (result?.reason === "noCachedPrice") {
@@ -22746,7 +24576,7 @@ const sbcViewOverride = () => {
           statusSpan.style.color = "#f40727";
         }
 
-        getControllerInstance()?.applyDataChange?.();
+        if (!galleryLineup && !singleItem) getControllerInstance()?.applyDataChange?.();
 
         if (i < rowData.length - 1) {
           const delay = getInterAttemptDelayMs();
@@ -22971,6 +24801,7 @@ try {
   };
 } catch {}
 const sbcButtonOverride = () => {
+  installScoreSbcAutoSelect();
   const UTSBCSetTileView_render = UTSBCSetTileView.prototype.render;
   UTSBCSetTileView.prototype.render = function render() {
     UTSBCSetTileView_render.call(this);
@@ -23075,6 +24906,46 @@ const ensureStatusContainer = () => {
   return { container, content, footer };
 };
 
+const applyGalleryPurchaseAction = async (itemId, purchasePrice, action) => {
+  const items = await fetchUnassigned();
+  const item = items.find(entry => String(entry.id) === String(itemId));
+  if (!item) throw new Error("Purchased item is not in unassigned; action not applied");
+  const move = pile => new Promise((resolve, reject) => {
+    const observer = {};
+    services.Item.move([item], pile).observe(observer, (sender, response) => {
+      sender.unobserve(observer);
+      if (response?.success === true) resolve();
+      else reject(new Error("Could not move purchased item"));
+    });
+  });
+  if (action === "club") {
+    await move(7);
+    return;
+  }
+  if (!["minBin", "cost", "profit5", "profit10"].includes(action)) throw new Error("Unknown Gallery purchase action");
+  await ensureItemMarketData(item);
+  let price = purchasePrice;
+  if (action === "minBin") {
+    const listing = await fetchLivePlayerPrice(item, { suppressNotification: true, excludeItemIds: [item.id] });
+    price = Number(listing?._auction?.buyNowPrice);
+  } else if (action === "profit5" || action === "profit10") {
+    price = Math.ceil(purchasePrice * (action === "profit10" ? 110 : 105) / 95);
+  }
+  const minimum = Number(item._itemPriceLimits?.minimum);
+  const maximum = Number(item._itemPriceLimits?.maximum);
+  if (!Number.isFinite(price) || price <= 0 || !minimum || !maximum) throw new Error("Listing price or limits unavailable");
+  price = Math.max(price, minimum, 200);
+  const tiers = UTCurrencyInputControl.PRICE_TIERS;
+  const tier = [...tiers].sort((first, second) => first.min - second.min).filter(entry => price >= entry.min).pop();
+  if (!tier?.inc) throw new Error("Listing price increments unavailable");
+  const buyNow = Math.ceil(price / tier.inc) * tier.inc;
+  if (buyNow > maximum) throw new Error("Requested listing price exceeds EA's price limit");
+  await move(5);
+  const minPrice = Math.max(minimum, UTCurrencyInputControl.getIncrementBelowVal(buyNow));
+  const result = await quickListItem(item, { min: minPrice, max: buyNow });
+  if (!result?.success) throw new Error(`Listing failed: ${result?.reason || "unknown"}`);
+};
+
 const tryQuickBuy = async (
   context = {},
   item,
@@ -23087,7 +24958,7 @@ const tryQuickBuy = async (
   let sbcId = currentSbcId;
   let challengeId = currentChallengeId;
 
-  if (!sbcId && !challengeId) {
+  if (!options.useGlobalSettings && !sbcId && !challengeId) {
     const { _challenge } = getControllerInstance() || {};
     sbcId = _challenge?.setId ?? 0;
     challengeId = _challenge?.id ?? 0;
@@ -23137,7 +25008,7 @@ const tryQuickBuy = async (
       return { success: false, reason: "noCachedPrice" };
     }
 
-    const listing = await fetchLivePlayerPrice(item, {
+    let listing = await fetchLivePlayerPrice(item, {
       suppressNotification: true,
       excludeTradeIds: Array.from(excludedTradeIds),
       excludeItemIds: Array.from(excludedItemIds),
@@ -23159,7 +25030,9 @@ const tryQuickBuy = async (
     }
 
     const permittedCap =
-      Number.isFinite(overridePermittedCap) && overridePermittedCap > 0
+      options.capToCurrentPrice && Number.isFinite(baselinePrice) && baselinePrice > 0
+        ? baselinePrice
+        : Number.isFinite(overridePermittedCap) && overridePermittedCap > 0
         ? Math.min(maxPerPlayer, overridePermittedCap)
         : Number.isFinite(baselinePrice) && baselinePrice > 0
           ? Math.min(maxPerPlayer, baselinePrice + maxAbove)
@@ -23196,7 +25069,39 @@ const tryQuickBuy = async (
       };
     }
 
-    const bidAttempt = services.Item.bid(listing, lowestPrice);
+    const confirmedListing = await fetchLivePlayerPrice(item, {
+      suppressNotification: true,
+      excludeTradeIds: Array.from(excludedTradeIds),
+      excludeItemIds: Array.from(excludedItemIds),
+    });
+    const confirmedPrice = Number(confirmedListing?._auction?.buyNowPrice);
+    if (!Number.isFinite(confirmedPrice) || confirmedPrice <= 0) {
+      notify("Listing disappeared before purchase", UINotificationType.NEGATIVE);
+      return { success: false, reason: "listingChanged", price: lowestPrice, priceLabel };
+    }
+    if (confirmedPrice > permittedCap) {
+      const confirmedPriceLabel = confirmedPrice.toLocaleString();
+      const permittedCapLabel = permittedCap.toLocaleString();
+      notify(
+        `Quick buy skipped - ${confirmedPriceLabel} exceeds limit (${permittedCapLabel})`,
+        UINotificationType.NEGATIVE,
+      );
+      return {
+        success: false,
+        reason: "priceAboveThreshold",
+        price: confirmedPrice,
+        priceLabel: confirmedPriceLabel,
+        baseline: baselinePrice,
+        baselineLabel: baselinePrice.toLocaleString(),
+        limit: permittedCap,
+        limitLabel: permittedCapLabel,
+        tradeId: Number(confirmedListing?._auction?.tradeId ?? confirmedListing?._auction?.id) || null,
+        itemId: Number(confirmedListing?.id) || null,
+      };
+    }
+
+    listing = confirmedListing;
+    const bidAttempt = services.Item.bid(listing, confirmedPrice);
     if (bidAttempt && typeof bidAttempt.observe === "function") {
       return await new Promise((resolve) => {
         let settled = false;
@@ -23225,12 +25130,22 @@ const tryQuickBuy = async (
         }, QUICK_BUY_BID_TIMEOUT_MS);
 
         bidAttempt.observe(context, async (_obs, response) => {
+          if (settled) return;
+          clearTimeout(timeoutId);
           try {
             _obs?.unobserve?.(context);
           } catch {}
 
-          const success = response?.success !== false;
-          if (success) {
+          const success = response?.success === true;
+          let postPurchaseError = null;
+          if (success && options.galleryPurchaseAction) {
+            try {
+              await applyGalleryPurchaseAction(listingItemId, lowestPrice, options.galleryPurchaseAction);
+            } catch (error) {
+              postPurchaseError = error.message;
+              showNotification(`Bought at ${priceLabel}; ${postPurchaseError}`, UINotificationType.NEGATIVE);
+            }
+          } else if (success) {
             Promise.resolve(
               processUnassigned({ suppressNavigation: true }),
             ).catch((err) => {
@@ -23243,6 +25158,7 @@ const tryQuickBuy = async (
           );
           finish({
             success,
+            postPurchaseError,
             reason: success ? "success" : "bidFailed",
             price: lowestPrice,
             priceLabel,
@@ -23886,7 +25802,16 @@ const playerItemOverride = () => {
       quickButton.setInteractionState(true);
       quickButton.setText("Quick Buy");
       insertAfter(quickButton, this._btnBio.__root);
-      quickButton.addTarget(this, () => tryQuickBuy(this, e), EventType.TAP);
+      quickButton.addTarget(this, () => {
+        const runQuickBuy = window?.autoSbcConsoleApi?.runQuickBuySquad;
+        if (typeof runQuickBuy === "function") {
+          return runQuickBuy(0, 0, {
+            singleItem: e,
+            triggerButton: quickButton.__root,
+          });
+        }
+        return tryQuickBuy(this, e);
+      }, EventType.TAP);
       this.quickBuyButton = quickButton;
     }
 
@@ -24095,7 +26020,16 @@ const playerItemOverride = () => {
       quickButton.setInteractionState(true);
       quickButton.setText("Quick Buy");
       insertAfter(quickButton, this._bioButton.__root);
-      quickButton.addTarget(this, () => tryQuickBuy(this, e), EventType.TAP);
+      quickButton.addTarget(this, () => {
+        const runQuickBuy = window?.autoSbcConsoleApi?.runQuickBuySquad;
+        if (typeof runQuickBuy === "function") {
+          return runQuickBuy(0, 0, {
+            singleItem: e,
+            triggerButton: quickButton.__root,
+          });
+        }
+        return tryQuickBuy(this, e);
+      }, EventType.TAP);
       this.quickBuyButton = quickButton;
     }
 
@@ -24914,7 +26848,7 @@ let getPriceItems = function () {
   }
 
   getFromIndexedDB().then((idbItems) => {
-    cachedPriceItems = idbItems || {};
+    cachedPriceItems = { ...(idbItems || {}), ...cachedPriceItems };
   });
   return cachedPriceItems;
 };
@@ -25193,6 +27127,16 @@ let savePriceItems = function () {
 const FUTGG_REQUEST_TIMEOUT_MS = 20000;
 
 function makeGetRequest(url) {
+  const target = new URL(url, "https://www.fut.gg");
+  const isPriceFeed = target.hostname === "r2.fut.gg" &&
+    (target.pathname.endsWith("/manifest.json") || /\/misc-prices-[^/]+\.v1\.[^/]+\.json$/.test(target.pathname));
+  if ((["www.fut.gg", "fut.gg"].includes(target.hostname) && target.pathname.startsWith("/api/fut/player-prices/")) || isPriceFeed) {
+    return queueFutggPriceRequest(() => makeGetRequestNow(url));
+  }
+  return makeGetRequestNow(url);
+}
+
+function makeGetRequestNow(url) {
   return new Promise((resolve, reject) => {
     GM_xmlhttpRequest({
       method: "GET",
@@ -25239,6 +27183,37 @@ const FUTGG_429_MAX_BACKOFF_MS_DEFAULT = 90000;
 const FUTGG_PRICE_BLOCK_UNTIL_KEY = "futggPriceBlockUntil";
 
 let futggPriceFetchChain = Promise.resolve();
+let futggPriceRequestChain = Promise.resolve();
+let futggPriceNextRequestAt = 0;
+let futggPriceRateLimitCount = 0;
+
+const queueFutggPriceRequest = (request) => {
+  const queued = futggPriceRequestChain.then(async () => {
+    const blockedUntil = getFutggPriceBlockUntil();
+    if (blockedUntil) throw { status: 403, blockedUntil };
+    await sleepMs(Math.max(0, futggPriceNextRequestAt - Date.now()));
+    const configuredDelay = Number(typeof getSettings === "function" ? getSettings(0, 0, "futggPriceDelayMs") : 0);
+    let delay = Math.max(FUTGG_PRICE_REQUEST_DELAY_MS_DEFAULT, Number.isFinite(configuredDelay) ? configuredDelay : 0);
+    try {
+      const result = await request();
+      futggPriceRateLimitCount = 0;
+      return result;
+    } catch (error) {
+      if (Number(error?.status) === 429) {
+        futggPriceRateLimitCount += 1;
+        delay = Math.max(delay, Math.min(FUTGG_429_MAX_BACKOFF_MS_DEFAULT,
+          FUTGG_429_BASE_BACKOFF_MS_DEFAULT * 2 ** Math.min(futggPriceRateLimitCount - 1, 16)));
+      } else {
+        delay = Math.max(delay, FUTGG_PRICE_ERROR_BACKOFF_MS_DEFAULT);
+      }
+      throw error;
+    } finally {
+      futggPriceNextRequestAt = Date.now() + delay;
+    }
+  });
+  futggPriceRequestChain = queued.catch(() => {});
+  return queued;
+};
 
 const sleepMs = (ms) =>
   new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
@@ -25310,6 +27285,10 @@ function makeSignedPostRequest(url, data) {
 
 // Sign a relative fut.gg price path and fetch it, returning the parsed JSON.
 async function fetchFutggSignedJson(relativePath) {
+  return queueFutggPriceRequest(() => fetchFutggSignedJsonNow(relativePath));
+}
+
+async function fetchFutggSignedJsonNow(relativePath) {
   const signResponse = await makeSignedPostRequest(
     FUTGG_SIGN_ENDPOINT,
     JSON.stringify({ url: relativePath }),
@@ -25319,9 +27298,65 @@ async function fetchFutggSignedJson(relativePath) {
   if (!signedPath) {
     throw new Error("fut.gg price sign failed: missing signed url");
   }
-  const body = await makeGetRequest(`${FUTGG_ORIGIN}${signedPath}`);
+  const body = await makeGetRequestNow(`${FUTGG_ORIGIN}${signedPath}`);
   return JSON.parse(body);
 }
+
+const FUTGG_MISC_PRICE_CACHE_KEY = "futggMiscPriceFeedFetchedAt.v1";
+const FUTGG_MISC_PRICE_REFRESH_MS = 60 * 60 * 1000;
+let futggMiscPriceRefreshPromise = null;
+
+const refreshFutggMiscPrices = async ({ force = false, platform = "ps5" } = {}) => {
+  if (futggMiscPriceRefreshPromise) return futggMiscPriceRefreshPromise;
+  const now = Date.now();
+  const lastFetch = Number(localStorage.getItem(FUTGG_MISC_PRICE_CACHE_KEY)) || 0;
+  if (!force && lastFetch > 0 && now - lastFetch < FUTGG_MISC_PRICE_REFRESH_MS) return 0;
+
+  futggMiscPriceRefreshPromise = (async () => {
+    const manifest = JSON.parse(await makeGetRequest(`${FUTGG_ORIGIN.replace("www.", "r2.")}/${FUTGG_GAME_YEAR}/manifest.json`));
+    const feedHash = manifest?.[`misc-prices-${platform}`];
+    if (!feedHash) throw new Error(`FUT.GG misc price feed unavailable for ${platform}`);
+    const url = `https://r2.fut.gg/${FUTGG_GAME_YEAR}/misc-prices-${platform}.v1.${feedHash}.json`;
+    const feed = JSON.parse(await makeGetRequest(url));
+    const entries = {};
+    const buckets = [
+      ["manager", "STAFF"],
+      ["chemistry_style", "TRAINING"],
+      ["manager_league", "TRAINING"],
+    ];
+    for (const [bucket, type] of buckets) {
+      for (const [eaId, item] of Object.entries(feed?.items?.[bucket] || {})) {
+        const price = Number(item?.price);
+        if (!Number.isFinite(price) || price < 0) continue;
+        entries[eaId] = {
+          eaId,
+          price,
+          type,
+          name: item.name,
+          isExtinct: item.status === "extinct",
+          miscPriceCategory: bucket,
+          miscPriceUpdatedAt: item.priceUpdatedAt || null,
+        };
+      }
+    }
+    PriceItem(entries);
+    localStorage.setItem(FUTGG_MISC_PRICE_CACHE_KEY, String(Date.now()));
+    console.info(`[FUT.GG] Refreshed ${Object.keys(entries).length} non-player prices (${platform})`);
+    return Object.keys(entries).length;
+  })().finally(() => {
+    futggMiscPriceRefreshPromise = null;
+  });
+  return futggMiscPriceRefreshPromise;
+};
+
+const startFutggMiscPriceRefresh = () => {
+  if (window.__autoSbcMiscPriceRefreshStarted) return;
+  window.__autoSbcMiscPriceRefreshStarted = true;
+  refreshFutggMiscPrices().catch(error => console.warn("[FUT.GG] Non-player price refresh failed", error));
+  window.setInterval(() => {
+    refreshFutggMiscPrices({ force: true }).catch(error => console.warn("[FUT.GG] Hourly non-player price refresh failed", error));
+  }, FUTGG_MISC_PRICE_REFRESH_MS);
+};
 
 function makePostRequest(url, data) {
   return new Promise((resolve, reject) => {
@@ -25483,6 +27518,25 @@ let ensureItemMarketData = (item) =>
       resolve(item?._itemPriceLimits || null);
     }
   });
+
+let transferMarketSearchQueue = Promise.resolve();
+let transferMarketNextAllowedAt = 0;
+let transferMarketBackoffUntil = 0;
+let transferMarketFailureCount = 0;
+const TRANSFER_MARKET_MIN_INTERVAL_MS = 1200;
+const TRANSFER_MARKET_BACKOFF_MAX_MS = 60000;
+
+const runTransferMarketSearch = task => {
+  const run = transferMarketSearchQueue.then(async () => {
+    const waitUntil = Math.max(transferMarketNextAllowedAt, transferMarketBackoffUntil);
+    const delay = waitUntil - Date.now();
+    if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+    transferMarketNextAllowedAt = Date.now() + TRANSFER_MARKET_MIN_INTERVAL_MS;
+    return task();
+  });
+  transferMarketSearchQueue = run.catch(() => {});
+  return run;
+};
 
 let fetchLivePlayerPrice = async (player, options = {}) => {
   const {
@@ -25821,8 +27875,6 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
     return stepUp(base);
   };
 
-  let doSearchBackoffSeconds = 0;
-
   const doSearch = async (maxBuy, minBuy = null) =>
     new Promise((resolve) => {
       if (searchCallCount >= MAX_SEARCH_CALLS) {
@@ -25836,60 +27888,78 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
       }
 
       searchCallCount += 1;
-      services.Item.clearTransferMarketCache();
       const criteria = buildCriteria(maxBuy, minBuy);
+      void runTransferMarketSearch(() => new Promise((searchResolve, searchReject) => {
+        log("info", "search:request", {
+          minBuy: criteria.minBuy ?? null,
+          maxBuy: criteria.maxBuy ?? null,
+        });
+        try {
+          services.Item.clearTransferMarketCache();
+          services.Item.searchTransferMarket(criteria, 1).observe(
+            undefined,
+            async (_s, response) => {
+              const failed =
+                response?.success === false ||
+                (typeof response?.status === "number" &&
+                  Math.floor(response.status / 100) !== 2);
 
-      log("info", "search:request", {
-        minBuy: criteria.minBuy ?? null,
-        maxBuy: criteria.maxBuy ?? null,
+              if (failed) {
+                transferMarketFailureCount += 1;
+                const retryAfter = Number(response?.headers?.get?.("Retry-After") || response?.headers?.["Retry-After"] || 0);
+                const exponentialDelay = Math.min(
+                  TRANSFER_MARKET_BACKOFF_MAX_MS,
+                  1500 * (2 ** Math.min(transferMarketFailureCount - 1, 6)),
+                );
+                const delayMs = Math.max(exponentialDelay, retryAfter > 0 ? retryAfter * 1000 : 0);
+                transferMarketBackoffUntil = Date.now() + delayMs;
+
+                log("warn", "search:failed", {
+                  status: response?.status,
+                  success: response?.success,
+                  delayMs,
+                });
+
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+                searchResolve([]);
+                return;
+              }
+
+              transferMarketFailureCount = 0;
+              transferMarketBackoffUntil = 0;
+
+              const items = Array.isArray(response?.data?.items)
+                ? response.data.items
+                    .filter(item => item._auction && item._auction.tradeState === "active")
+                    .filter(item => !isListingExcluded(item))
+                : [];
+
+              log("info", "search:response", {
+                status: response?.status,
+                returned: Array.isArray(response?.data?.items) ? response.data.items.length : 0,
+                active: items.length,
+              });
+              searchResolve(items);
+            },
+          );
+        } catch (error) {
+          searchReject(error);
+        }
+      })).catch(error => {
+        transferMarketFailureCount += 1;
+        const delayMs = Math.min(
+          TRANSFER_MARKET_BACKOFF_MAX_MS,
+          1500 * (2 ** Math.min(transferMarketFailureCount - 1, 6)),
+        );
+        transferMarketBackoffUntil = Date.now() + delayMs;
+        log("warn", "search:throw", { delayMs, error: String(error) });
+        return new Promise(resolve => setTimeout(() => resolve([]), delayMs));
+      }).then(items => {
+        resolve(items);
+      }).catch(error => {
+        log("warn", "search:queue-failed", { error: String(error) });
+        resolve([]);
       });
-
-      services.Item.searchTransferMarket(criteria, 1).observe(
-        undefined,
-        async (_s, response) => {
-          const failed =
-            response?.success === false ||
-            (typeof response?.status === "number" &&
-              Math.floor(response.status / 100) !== 2);
-
-          if (failed) {
-            doSearchBackoffSeconds += 1;
-            const delayMs = doSearchBackoffSeconds * 1000;
-
-            log("warn", "search:failed", {
-              status: response?.status,
-              success: response?.success,
-              backoffSeconds: doSearchBackoffSeconds,
-              delayMs,
-            });
-
-            await new Promise((r) => setTimeout(r, delayMs));
-            resolve([]);
-            return;
-          }
-
-          doSearchBackoffSeconds = 0;
-
-          const items = Array.isArray(response?.data?.items)
-            ? response.data.items
-                .filter(
-                  (item) =>
-                    item._auction && item._auction.tradeState === "active",
-                )
-                .filter((item) => !isListingExcluded(item))
-            : [];
-
-          log("info", "search:response", {
-            status: response?.status,
-            returned: Array.isArray(response?.data?.items)
-              ? response.data.items.length
-              : 0,
-            active: items.length,
-          });
-
-          resolve(items);
-        },
-      );
     });
 
   const extractBuy = (item) =>
@@ -27875,45 +29945,8 @@ const createPackList = async () => {
   return packNavBtn;
 };
 
-const sbcToolbarImageUrlCache = new Map();
-const sbcToolbarImageInFlight = new Map();
-
 const getCachedSbcToolbarImageSrc = async (src) => {
-  if (!src || typeof src !== "string") {
-    return src;
-  }
-
-  if (sbcToolbarImageUrlCache.has(src)) {
-    return sbcToolbarImageUrlCache.get(src);
-  }
-
-  if (sbcToolbarImageInFlight.has(src)) {
-    return await sbcToolbarImageInFlight.get(src);
-  }
-
-  const request = fetch(src, { credentials: "include" })
-    .then((response) => {
-      if (!response?.ok) {
-        throw new Error(`Image fetch failed (${response?.status || "unknown"})`);
-      }
-      return response.blob();
-    })
-    .then((blob) => {
-      const objectUrl = URL.createObjectURL(blob);
-      sbcToolbarImageUrlCache.set(src, objectUrl);
-      return objectUrl;
-    })
-    .catch((error) => {
-      console.warn("[SBC Toolbar] image cache fetch failed", { src, error });
-      sbcToolbarImageUrlCache.set(src, src);
-      return src;
-    })
-    .finally(() => {
-      sbcToolbarImageInFlight.delete(src);
-    });
-
-  sbcToolbarImageInFlight.set(src, request);
-  return await request;
+  return src;
 };
 
 const createCategoryPicker = async () => {
@@ -28356,8 +30389,14 @@ const createSBCButtons = async () => {
           ]);
           return hoverNav;
         },
-        () => {
+        async () => {
           if (isCompleted) return;
+          try {
+            if (await openScoreSbcFromSidebar(set)) return;
+          } catch (error) {
+            showNotification(error.message || "Failed to open SBC", UINotificationType.NEGATIVE);
+            return;
+          }
           createSbc = true;
           createSBCTab();
           services.Notification.queue([
@@ -28669,7 +30708,13 @@ const createSBCHover = async (set, forceRunInBackground = false) => {
           removeChallengeNav();
         }, CHALLENGE_HOVER_CLOSE_DELAY_MS);
       });
-      rowRoot.addEventListener("click", () => {
+      rowRoot.addEventListener("click", async () => {
+        try {
+          if (await openScoreSbcFromSidebar(set, e.id)) return;
+        } catch (error) {
+          showNotification(error.message || "Failed to open SBC", UINotificationType.NEGATIVE);
+          return;
+        }
         let hoverNav = document.getElementById("hoverNav");
 
         if (hoverNav) {
@@ -33135,6 +35180,7 @@ evoHelperView.prototype._generate = function _generate() {
 // code is kept intact below.
 const ENABLE_EVO_HELPER_TAB = false;
 const ENABLE_COLLECTION_BOOK_TAB = true;
+const ENABLE_FUT_GALLERY_TAB = true;
 
 const sideBarNavOverride = () => {
   if (UTGameTabBarController.prototype.__autoSbcSidebarPatched) {
@@ -33221,6 +35267,20 @@ const sideBarNavOverride = () => {
           tabEl.classList.add("collection-book-tab-deferred");
         }
       }
+    }
+
+    const futGalleryExists = tabs.some(
+      (tab) => tab.tabBarItem?.getText?.() === "FUT Gallery",
+    );
+    if (
+      ENABLE_FUT_GALLERY_TAB &&
+      !futGalleryExists &&
+      typeof generateFutGalleryTab === "function"
+    ) {
+      const navBar = new UTGameFlowNavigationController();
+      navBar.initWithRootController(new futGalleryController());
+      navBar.tabBarItem = generateFutGalleryTab();
+      tabs.push(navBar);
     }
 
     navViewInit.call(this, tabs);
@@ -35044,6 +37104,7 @@ const init = () => {
       ["Apply unassigned preview override", unassignedPreviewOverride],
       ["Initialize default settings", initDefaultSettings],
       ["Apply FUT home override", futHomeOverride],
+      ["Refresh FUT.GG non-player prices", startFutggMiscPriceRefresh],
       [
         "Download card assets (background)",
         () => {
@@ -35058,6 +37119,14 @@ const init = () => {
           // Collection Book is ready without lazy loading. Cached ones skip.
           if (typeof collectionBookPrefetchAll === "function") {
             setTimeout(() => collectionBookPrefetchAll(), 6000);
+          }
+        },
+      ],
+      [
+        "Refresh FUT Gallery sets (background)",
+        () => {
+          if (typeof collectionBookRefreshSetIndexOnStartup === "function") {
+            setTimeout(() => collectionBookRefreshSetIndexOnStartup(), 7000);
           }
         },
       ],

@@ -76,6 +76,18 @@ const ensureNumCounterExists = () => {
       shield.appendChild(numCounter);
     }
   }
+  if (numCounter) {
+    if (!counter || counter.DOM?.scope !== numCounter) {
+      counter = new Counter(".numCounter", {
+        direction: "rtl",
+        delay: 200,
+        digits: 3,
+      });
+    }
+    if (Number.isFinite(Number(count))) {
+      counter.count(pad(count, 4));
+    }
+  }
   return numCounter;
 };
 

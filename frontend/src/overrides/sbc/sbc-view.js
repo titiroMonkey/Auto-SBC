@@ -1,4 +1,5 @@
 const sbcSubmitChallengeOverride = () => {
+  installScoreSbcSubmitRefresh();
   const sbcSubmit = PopupQueueViewController.prototype.closeActivePopup;
   PopupQueueViewController.prototype.closeActivePopup = function () {
     sbcSubmit.call(this);
@@ -69,13 +70,16 @@ const sbcViewOverride = () => {
       typeof triggerButtonOrOptions === "object" &&
       ("squad" in triggerButtonOrOptions ||
         "squadPlayers" in triggerButtonOrOptions ||
+        "singleItem" in triggerButtonOrOptions ||
         "triggerButton" in triggerButtonOrOptions);
     const options = hasOptionsObject ? triggerButtonOrOptions : {};
+    const galleryLineup = options.galleryLineup === true && Array.isArray(options.squadPlayers);
+    const singleItem = options.singleItem || null;
     const button = hasOptionsObject
       ? options.triggerButton || null
       : triggerButtonOrOptions || null;
 
-    if (!sbcSetId || !challengeId) {
+    if (!galleryLineup && !singleItem && (!sbcSetId || !challengeId)) {
       throw new Error(
         "runQuickBuySquad requires both sbcSetId and challengeId",
       );
@@ -109,7 +113,11 @@ const sbcViewOverride = () => {
     statusContainer.__onClose = requestStop;
 
     const titleBlock = document.createElement("div");
-    titleBlock.textContent = "Quick Buy Squad";
+    titleBlock.textContent = galleryLineup
+      ? "Buy Gallery Lineup"
+      : singleItem
+        ? "Quick Buy"
+        : "Quick Buy Squad";
     titleBlock.style.fontWeight = "bold";
     titleBlock.style.marginBottom = "0.35rem";
     statusContent.appendChild(titleBlock);
@@ -128,14 +136,14 @@ const sbcViewOverride = () => {
         .filter((player) => player && player.concept);
     };
 
-    let conceptItems = extractConceptItemsFromSquad(
-      options.squadPlayers || options.squad,
-    );
+    let conceptItems = singleItem
+      ? [singleItem].filter(Boolean)
+      : extractConceptItemsFromSquad(options.squadPlayers || options.squad);
     let targetSet = null;
     let targetChallenge = null;
 
     try {
-      if (!conceptItems.length) {
+      if (!galleryLineup && !singleItem && !conceptItems.length) {
         const controller = getControllerInstance();
         if (
           controller?._challenge?.id === challengeId &&
@@ -147,7 +155,7 @@ const sbcViewOverride = () => {
         }
       }
 
-      if (!conceptItems.length && (!targetSet || !targetChallenge)) {
+      if (!galleryLineup && !singleItem && !conceptItems.length && (!targetSet || !targetChallenge)) {
         const allSets = await sbcSets();
         targetSet = allSets.sets.find((set) => set.id === sbcSetId);
         if (!targetSet) {
@@ -168,7 +176,7 @@ const sbcViewOverride = () => {
         await loadChallenge(targetChallenge);
       }
 
-      if (!conceptItems.length) {
+      if (!singleItem && !conceptItems.length) {
         const players =
           targetChallenge?.squad?._players?.map((slot) => slot?._item) || [];
         conceptItems = players.filter((player) => player && player.concept);
@@ -232,8 +240,9 @@ const sbcViewOverride = () => {
           Number.isFinite(maxAboveSetting) && maxAboveSetting >= 0
             ? maxAboveSetting
             : 0;
-        const permittedCap =
-          Number.isFinite(expectedPrice) && expectedPrice > 0
+        const permittedCap = singleItem
+          ? expectedPrice
+          : Number.isFinite(expectedPrice) && expectedPrice > 0
             ? Math.min(maxPerPlayer, expectedPrice + maxAbove)
             : maxPerPlayer;
         const maxBuyLabel = Number.isFinite(permittedCap)
@@ -290,6 +299,7 @@ const sbcViewOverride = () => {
       const runStoppableCountdown = async (ms, labelPrefix) => {
         let remaining = Math.max(0, ms);
         while (remaining > 0) {
+          if (options.cancelled?.()) stopRequested = true;
           if (stopRequested) {
             timerFooter.textContent = "Stopped";
             return false;
@@ -324,6 +334,7 @@ const sbcViewOverride = () => {
       };
 
       for (let i = 0; i < rowData.length; i++) {
+        if (options.cancelled?.()) stopRequested = true;
         if (stopRequested) {
           markRowsStopped(i);
           timerFooter.textContent = "Stopped";
@@ -344,6 +355,7 @@ const sbcViewOverride = () => {
           attempt <= QUICK_BUY_RETRY_LIMIT + 1;
           attempt += 1
         ) {
+          if (options.cancelled?.()) stopRequested = true;
           if (stopRequested) {
             break;
           }
@@ -357,6 +369,9 @@ const sbcViewOverride = () => {
             conceptItem,
             {
               suppressNotifications: true,
+              useGlobalSettings: galleryLineup || !!singleItem,
+              capToCurrentPrice: !!singleItem,
+              galleryPurchaseAction: galleryLineup ? options.galleryPurchaseAction : undefined,
               excludeTradeIds: Array.from(retryExcludedTradeIds),
               excludeItemIds: Array.from(retryExcludedItemIds),
             },
@@ -366,6 +381,7 @@ const sbcViewOverride = () => {
           );
 
           if (result?.success) {
+            options.onPurchased?.(conceptItem, result);
             break;
           }
 
@@ -409,6 +425,10 @@ const sbcViewOverride = () => {
           const label = result?.priceLabel || expectedLabel;
           statusSpan.textContent = label ? `Success @ ${label}` : "Success";
           statusSpan.style.color = "#07f468";
+          if (result.postPurchaseError) {
+            statusSpan.textContent += `; ${result.postPurchaseError}`;
+            statusSpan.style.color = "#f40727";
+          }
         } else {
           let reasonLabel = "Failed";
           if (result?.reason === "noCachedPrice") {
@@ -445,7 +465,7 @@ const sbcViewOverride = () => {
           statusSpan.style.color = "#f40727";
         }
 
-        getControllerInstance()?.applyDataChange?.();
+        if (!galleryLineup && !singleItem) getControllerInstance()?.applyDataChange?.();
 
         if (i < rowData.length - 1) {
           const delay = getInterAttemptDelayMs();

@@ -61,6 +61,50 @@ const searchEaConceptEntitiesByDefIds = async (definitionIds, options = {}) => {
   return gathered;
 };
 
+const normalizeEaPosition = (position) => {
+  if (position == null || position === "") return -1;
+  if (Number.isFinite(Number(position))) return Number(position);
+  const positionIds = {
+    GK: 0,
+    RWB: 2,
+    RB: 3,
+    CB: 5,
+    LB: 7,
+    LWB: 8,
+    CDM: 10,
+    RM: 12,
+    CM: 14,
+    LM: 16,
+    CAM: 18,
+    CF: 21,
+    RW: 23,
+    ST: 25,
+    LW: 27,
+  };
+  return globalThis.PlayerPosition?.[String(position).trim().toUpperCase()] ??
+    positionIds[String(position).trim().toUpperCase()] ?? -1;
+};
+
+const normalizeEaPositions = (positions) =>
+  Array.isArray(positions)
+    ? positions.map(normalizeEaPosition).filter((position) => position >= 0)
+    : [];
+
+const conceptNamePart = value => {
+  const name = String(value || "").trim();
+  return name && name !== "---" ? name : "";
+};
+
+const getConceptStaticName = (item, staticData = item?._staticData || {}) =>
+  conceptNamePart(staticData.name) ||
+  conceptNamePart(staticData.knownAs) ||
+  conceptNamePart(staticData.getFullName?.()) ||
+  conceptNamePart(item?.getFullName?.()) ||
+  [conceptNamePart(staticData.firstName), conceptNamePart(staticData.lastName)]
+    .filter(Boolean)
+    .join(" ") ||
+  conceptNamePart(item?.displayName);
+
 const createConceptEntityFromEaSearch = (eaEntity, futggPlayer, playerName = "Unknown") => {
   if (!eaEntity) return null;
 
@@ -98,6 +142,8 @@ const getFutSbcDbVersion = () => {
   globalThis.__autoSbcDbVersion = version;
   return version;
 };
+
+const CONCEPT_CACHE_SCHEMA_VERSION = 6;
 
 const openConceptsDb = () => {
   const dbName = "futSBCDatabase";
@@ -177,20 +223,40 @@ const toSerializableConcept = (item) => {
   if (!Number.isFinite(definitionId) || definitionId <= 0) return null;
 
   const sd = item?._staticData || {};
+  const attributes =
+    (typeof item?.getAttributes === "function" && item.getAttributes()) ||
+    item?.attributeArray ||
+    item?.attributes ||
+    sd?.attributeArray ||
+    [];
+  const stats =
+    (typeof item?.getStats === "function" && item.getStats()) ||
+    item?.statsArray ||
+    item?._stats ||
+    sd?.statsArray ||
+    [];
 
   const payload = {
-    v: 4,
+    v: 6,
     // Identity
     id: Number(item?.id || item?.itemId || 0),
     resourceId: definitionId,
-    assetId: Number(item?.assetId || definitionId || 0),
+    assetId: Number(item?.databaseId || item?._metaData?.id || item?.assetId || definitionId),
+    staticName: getConceptStaticName(item, sd),
+    firstName: item?.firstName || sd.firstName || "",
+    lastName: item?.lastName || sd.lastName || "",
+    knownAs: sd.knownAs || "",
     // Item classification
-    itemType: Number(item?.itemType || globalThis.ItemType?.PLAYER || 1),
+    itemType: item?.type ?? item?.itemType ?? globalThis.ItemType?.PLAYER ?? "player",
     concept: !!item?.concept,
     untradeable: !!item?.untradeable || !!item?.untrade,
+    authenticity: !!item?.authenticity,
+    holographicType: item?.holographicType || null,
     sourceApi: item?.sourceApi || "eafc",
     // Core attributes
     rating: Number(item?.rating || sd?.rating || 0),
+    gradingScore: Number(item?.sbsScore ?? item?.gradingScore ?? 0),
+    hyperCosmeticDTOs: item?._hyperCosmeticDTOs || {},
     owners: Number(item?.owners || 0),
     rareflag: Number(item?._rareflag || item?.rareflag || sd?.rareflag || 0),
     // Card properties
@@ -201,23 +267,17 @@ const toSerializableConcept = (item) => {
     teamId: Number(item?.teamId || sd?.teamId || item?.teamIdId || 0),
     leagueId: Number(item?.leagueId || sd?.leagueId || 0),
     // Player-specific
-    firstName: item?.firstName || sd?.firstName || "",
-    lastName: item?.lastName || sd?.lastName || "",
-    preferredPosition: item?.preferredPosition || sd?.preferredPosition || "",
-    preferredfoot: Number(item?.preferredfoot || sd?.preferredfoot || 0),
-    skillmoves: Number(item?.skillmoves || sd?.skillmoves || 0),
-    weakfootabilitytypecode: Number(item?.weakfootabilitytypecode || sd?.weakfootabilitytypecode || 0),
+    preferredPosition: normalizeEaPosition(
+      item?.preferredPosition ?? sd?.preferredPosition,
+    ),
+    preferredfoot: Number(item?._preferredFoot ?? item?.preferredfoot ?? sd?.preferredfoot ?? 0),
+    skillmoves: Math.max(0, Number(item?.getSkillMoves?.() ?? item?._skillMoves ?? 1) - 1),
+    weakfootabilitytypecode: Number(item?.getWeakFoot?.() ?? item?._weakFoot ?? item?.weakfootabilitytypecode ?? 0),
     // Player stats
-    attributeArray: Array.isArray(item?.attributeArray)
-      ? item.attributeArray.map((v) => Number(v))
-      : Array.isArray(sd?.attributeArray)
-        ? sd.attributeArray.map((v) => Number(v))
-        : [],
-    statsArray: Array.isArray(item?.statsArray)
-      ? item.statsArray.map((v) => Number(v))
-      : Array.isArray(sd?.statsArray)
-        ? sd.statsArray.map((v) => Number(v))
-        : [],
+    attributeArray: Array.isArray(attributes)
+      ? attributes.map((v) => Number(v))
+      : [],
+    statsArray: Array.isArray(stats) ? stats.map((v) => Number(v)) : [],
     lifetimeStatsArray: Array.isArray(item?.lifetimeStatsArray)
       ? item.lifetimeStatsArray.map((v) => Number(v))
       : Array.isArray(sd?.lifetimeStatsArray)
@@ -238,11 +298,11 @@ const toSerializableConcept = (item) => {
       : Array.isArray(sd?.groups)
         ? sd.groups.map((v) => Number(v))
         : [],
-    possiblePositions: Array.isArray(item?.possiblePositions)
-      ? item.possiblePositions.slice()
-      : Array.isArray(sd?.possiblePositions)
-        ? sd.possiblePositions.slice()
-        : [],
+    possiblePositions: normalizeEaPositions(
+      Array.isArray(item?.possiblePositions)
+        ? item.possiblePositions
+        : sd?.possiblePositions,
+    ),
     // Consumable/injury
     contract: Number(item?.contract || sd?.contract || 0),
     injuryType: item?.injuryType || sd?.injuryType || "none",
@@ -268,7 +328,6 @@ const toSerializableConcept = (item) => {
   const compact = {};
   for (const [key, value] of Object.entries(payload)) {
     if (value === undefined || value === null) continue;
-    if (typeof value === "number" && value === 0 && key !== "id" && key !== "resourceId" && key !== "assetId") continue;
     if (typeof value === "string" && value === "") continue;
     if (Array.isArray(value) && value.length === 0) continue;
     compact[key] = value;
@@ -326,7 +385,10 @@ const rehydrateConceptEntity = (rawItem) => {
     itemType: rawItem?.itemType || globalThis.ItemType?.PLAYER || 1,
     // Full item structure from cache
     assetId: Number(rawItem?.assetId || defId || 0),
+    definitionId: defId,
+    staticName: rawItem?.staticName || "",
     rating: Number(rawItem?.rating || 0),
+    gradingScore: Number(rawItem?.gradingScore || 0),
     owners: Number(rawItem?.owners || 0),
     untradeable: !!rawItem?.untradeable,
     rareflag: Number(rawItem?.rareflag || 0),
@@ -337,7 +399,8 @@ const rehydrateConceptEntity = (rawItem) => {
     playStyle: Number(rawItem?.playStyle || 0),
     firstName: rawItem?.firstName || "",
     lastName: rawItem?.lastName || "",
-    preferredPosition: rawItem?.preferredPosition || "",
+    knownAs: rawItem?.knownAs || "",
+    preferredPosition: globalThis.PlayerPosition?.[normalizeEaPosition(rawItem?.preferredPosition)] || rawItem?.preferredPosition,
     preferredfoot: Number(rawItem?.preferredfoot || 0),
     skillmoves: Number(rawItem?.skillmoves || 0),
     weakfootabilitytypecode: Number(rawItem?.weakfootabilitytypecode || 0),
@@ -347,7 +410,7 @@ const rehydrateConceptEntity = (rawItem) => {
     baseTraits: Array.isArray(rawItem?.baseTraits) ? rawItem.baseTraits : [],
     plusRoles: Array.isArray(rawItem?.plusRoles) ? rawItem.plusRoles : [],
     groups: Array.isArray(rawItem?.groups) ? rawItem.groups : [],
-    possiblePositions: Array.isArray(rawItem?.possiblePositions) ? rawItem.possiblePositions : [],
+    possiblePositions: normalizeEaPositions(rawItem?.possiblePositions).map(position => globalThis.PlayerPosition?.[position] || position),
     contract: Number(rawItem?.contract || 0),
     injuryType: rawItem?.injuryType || "none",
     injuryGames: Number(rawItem?.injuryGames || 0),
@@ -364,6 +427,10 @@ const rehydrateConceptEntity = (rawItem) => {
     timestamp: Number(rawItem?.timestamp || 0),
     gender: Number(rawItem?.gender || 0),
     concept: !!rawItem?.concept,
+    authenticity: !!rawItem?.authenticity,
+    holographicType: rawItem?.holographicType || null,
+    hyperCosmeticDTOs: rawItem?.hyperCosmeticDTOs || {},
+    _hyperCosmeticDTOs: rawItem?.hyperCosmeticDTOs || {},
     sourceApi: rawItem?.sourceApi || "eafc",
   };
 
@@ -373,6 +440,17 @@ const rehydrateConceptEntity = (rawItem) => {
 
     // Concepts loaded from this cache path must always remain concept entities.
     entity.concept = true;
+    entity.authenticity = !!rawItem?.authenticity;
+    entity.holographicType = rawItem?.holographicType || null;
+    entity._hyperCosmeticDTOs = rawItem?.hyperCosmeticDTOs || {};
+    const staticData = entity.getStaticData?.() || entity._staticData;
+    if (staticData) {
+      staticData.firstName = rawItem?.firstName || staticData.firstName || "";
+      staticData.lastName = rawItem?.lastName || staticData.lastName || "";
+      staticData.knownAs = rawItem?.knownAs || staticData.knownAs || "";
+      staticData.name = conceptNamePart(rawItem?.staticName) || getConceptStaticName(null, staticData);
+      entity.setStaticData?.(staticData);
+    }
 
     // Ensure definitionId is set
     if (!Number(entity?.definitionId)) {
@@ -436,8 +514,13 @@ const getConceptsFromIndexedDB = () => {
       const getRequest = store.get("allConcepts");
 
       getRequest.onsuccess = function (event) {
-        if (event.target.result && event.target.result.data) {
-          const cachedRaw = event.target.result.data || [];
+        const cachedRecord = event.target.result;
+        if (
+          cachedRecord &&
+          cachedRecord.data &&
+          Number(cachedRecord.schemaVersion || 0) >= CONCEPT_CACHE_SCHEMA_VERSION
+        ) {
+          const cachedRaw = cachedRecord.data || [];
           let missingCoreCount = 0;
           const cached = cachedRaw
             .map((rawItem) => {
@@ -461,6 +544,9 @@ const getConceptsFromIndexedDB = () => {
           console.log(`[concepts-cache] Loaded ${cached.length} UTItemEntity concepts from IndexedDB`);
           resolve(cached);
         } else {
+          if (cachedRecord?.data) {
+            console.warn("[concepts-cache] Ignoring stale concept cache schema");
+          }
           resolve([]);
         }
       };
@@ -567,6 +653,7 @@ const saveConceptsToIndexedDB = (concepts) => {
       const allConcepts = {
         id: "allConcepts",
         data: serializedConcepts,
+        schemaVersion: CONCEPT_CACHE_SCHEMA_VERSION,
         savedAt: new Date().toISOString(),
       };
 

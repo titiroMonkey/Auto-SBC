@@ -1,7 +1,8 @@
 // Temporarily removed from the sidebar; flip to true to reinstate. Core tab
 // code is kept intact below.
 const ENABLE_EVO_HELPER_TAB = false;
-const ENABLE_COLLECTION_BOOK_TAB = false;
+const ENABLE_COLLECTION_BOOK_TAB = true;
+const ENABLE_FUT_GALLERY_TAB = true;
 
 const sideBarNavOverride = () => {
   if (UTGameTabBarController.prototype.__autoSbcSidebarPatched) {
@@ -88,6 +89,20 @@ const sideBarNavOverride = () => {
           tabEl.classList.add("collection-book-tab-deferred");
         }
       }
+    }
+
+    const futGalleryExists = tabs.some(
+      (tab) => tab.tabBarItem?.getText?.() === "FUT Gallery",
+    );
+    if (
+      ENABLE_FUT_GALLERY_TAB &&
+      !futGalleryExists &&
+      typeof generateFutGalleryTab === "function"
+    ) {
+      const navBar = new UTGameFlowNavigationController();
+      navBar.initWithRootController(new futGalleryController());
+      navBar.tabBarItem = generateFutGalleryTab();
+      tabs.push(navBar);
     }
 
     navViewInit.call(this, tabs);

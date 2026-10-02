@@ -103,45 +103,8 @@ const createPackList = async () => {
   return packNavBtn;
 };
 
-const sbcToolbarImageUrlCache = new Map();
-const sbcToolbarImageInFlight = new Map();
-
 const getCachedSbcToolbarImageSrc = async (src) => {
-  if (!src || typeof src !== "string") {
-    return src;
-  }
-
-  if (sbcToolbarImageUrlCache.has(src)) {
-    return sbcToolbarImageUrlCache.get(src);
-  }
-
-  if (sbcToolbarImageInFlight.has(src)) {
-    return await sbcToolbarImageInFlight.get(src);
-  }
-
-  const request = fetch(src, { credentials: "include" })
-    .then((response) => {
-      if (!response?.ok) {
-        throw new Error(`Image fetch failed (${response?.status || "unknown"})`);
-      }
-      return response.blob();
-    })
-    .then((blob) => {
-      const objectUrl = URL.createObjectURL(blob);
-      sbcToolbarImageUrlCache.set(src, objectUrl);
-      return objectUrl;
-    })
-    .catch((error) => {
-      console.warn("[SBC Toolbar] image cache fetch failed", { src, error });
-      sbcToolbarImageUrlCache.set(src, src);
-      return src;
-    })
-    .finally(() => {
-      sbcToolbarImageInFlight.delete(src);
-    });
-
-  sbcToolbarImageInFlight.set(src, request);
-  return await request;
+  return src;
 };
 
 const createCategoryPicker = async () => {
@@ -584,8 +547,14 @@ const createSBCButtons = async () => {
           ]);
           return hoverNav;
         },
-        () => {
+        async () => {
           if (isCompleted) return;
+          try {
+            if (await openScoreSbcFromSidebar(set)) return;
+          } catch (error) {
+            showNotification(error.message || "Failed to open SBC", UINotificationType.NEGATIVE);
+            return;
+          }
           createSbc = true;
           createSBCTab();
           services.Notification.queue([
@@ -897,7 +866,13 @@ const createSBCHover = async (set, forceRunInBackground = false) => {
           removeChallengeNav();
         }, CHALLENGE_HOVER_CLOSE_DELAY_MS);
       });
-      rowRoot.addEventListener("click", () => {
+      rowRoot.addEventListener("click", async () => {
+        try {
+          if (await openScoreSbcFromSidebar(set, e.id)) return;
+        } catch (error) {
+          showNotification(error.message || "Failed to open SBC", UINotificationType.NEGATIVE);
+          return;
+        }
         let hoverNav = document.getElementById("hoverNav");
 
         if (hoverNav) {

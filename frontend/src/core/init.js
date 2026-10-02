@@ -235,6 +235,7 @@ const init = () => {
       ["Apply unassigned preview override", unassignedPreviewOverride],
       ["Initialize default settings", initDefaultSettings],
       ["Apply FUT home override", futHomeOverride],
+      ["Refresh FUT.GG non-player prices", startFutggMiscPriceRefresh],
       [
         "Download card assets (background)",
         () => {
@@ -249,6 +250,14 @@ const init = () => {
           // Collection Book is ready without lazy loading. Cached ones skip.
           if (typeof collectionBookPrefetchAll === "function") {
             setTimeout(() => collectionBookPrefetchAll(), 6000);
+          }
+        },
+      ],
+      [
+        "Refresh FUT Gallery sets (background)",
+        () => {
+          if (typeof collectionBookRefreshSetIndexOnStartup === "function") {
+            setTimeout(() => collectionBookRefreshSetIndexOnStartup(), 7000);
           }
         },
       ],

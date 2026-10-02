@@ -421,16 +421,15 @@ word-wrap:breakword;
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
-  display: inline-block;
+  display: block;
   height: 1em;
-  margin-left: .25em;
-  vertical-align: middle;
+  margin: 2px auto 0;
   width: 1em;
 }
-.autosbc-auto-buy-currency-icon.currency-coins {
+.autosbc-auto-buy-currency-icon--coins {
   background-image: url(../web-app/images/coinIcon.png);
 }
-.autosbc-auto-buy-currency-icon.currency-points {
+.autosbc-auto-buy-currency-icon--points {
   background-image: url(../web-app/images/pointsIcon.png);
 }
 .choices__item, .choices__list--dropdown .choices__item {

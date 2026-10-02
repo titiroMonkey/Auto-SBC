@@ -73,6 +73,7 @@ const _collectionBookSlimPlayer = (p) => {
     [p?.firstName, p?.lastName].filter(Boolean).join(" ") ||
     String(p?.eaId);
   return {
+    ...p,
     eaId: Number(p?.eaId),
     name,
     overall: p?.overall ?? null,
@@ -144,6 +145,10 @@ const collectionBookFetchList = async ({ force = false } = {}) => {
   } finally {
     _collectionBookListInFlight = null;
   }
+};
+
+const collectionBookRefreshSetIndexOnStartup = async () => {
+  return futGalleryLoadCatalogue({ force: true });
 };
 
 // --- per-collection players (lazy) ---------------------------------------
@@ -283,8 +288,10 @@ const COLLECTION_BOOK_OWNERSHIP_API_URL =
 
 // definitionId(number) -> count(number), hydrated from the backend.
 let _collectionBookOwnershipCounts = new Map();
+let _collectionBookFirstOwnerCounts = new Map();
+const collectionBookGetFirstOwnerCounts = () => _collectionBookFirstOwnerCounts;
 
-const _collectionBookApplyOwnershipCounts = (counts) => {
+const _collectionBookApplyOwnershipCounts = (counts, firstOwnerCounts = {}) => {
   if (!counts || typeof counts !== "object") return;
   const next = new Map();
   for (const [defId, n] of Object.entries(counts)) {
@@ -295,6 +302,10 @@ const _collectionBookApplyOwnershipCounts = (counts) => {
     }
   }
   _collectionBookOwnershipCounts = next;
+  _collectionBookFirstOwnerCounts = new Map(Object.entries(firstOwnerCounts || {})
+    .filter(([id, count]) => Number(id) > 0 && Number(count) > 0)
+    .map(([id, count]) => [Number(id), Number(count)]));
+  window.dispatchEvent(new CustomEvent("autosbc:ownership-ready"));
 };
 
 // Load persisted ownership counts from the backend into memory.
@@ -305,7 +316,7 @@ const collectionBookFetchOwnership = async () => {
     });
     if (!resp.ok) return;
     const json = await resp.json();
-    _collectionBookApplyOwnershipCounts(json?.counts);
+    _collectionBookApplyOwnershipCounts(json?.counts, json?.firstOwnerCounts);
   } catch (err) {
     console.warn("[CollectionBook] ownership fetch failed", err);
   }
@@ -320,7 +331,9 @@ const _collectionBookOwnershipPairs = (items) => {
     const entityId = item?.id;
     if (!Number.isFinite(defId) || defId <= 0) continue;
     if (entityId == null) continue;
-    pairs.push({ definitionId: defId, entityId: String(entityId) });
+    if (item.concept || (typeof item.isLoan === "function" ? item.isLoan() : Number(item.loans ?? -1) >= 0)) continue;
+    const owners = Number(item.owners);
+    pairs.push({ definitionId: defId, entityId: String(entityId), firstOwner: owners > 0 ? owners === 1 : null });
   }
   return pairs;
 };
@@ -339,7 +352,7 @@ const collectionBookRecordOwnership = async (items) => {
     });
     if (!resp.ok) return;
     const json = await resp.json();
-    _collectionBookApplyOwnershipCounts(json?.counts);
+    _collectionBookApplyOwnershipCounts(json?.counts, json?.firstOwnerCounts);
     if (typeof window.__collectionBookOnClubUpdate === "function") {
       window.__collectionBookOnClubUpdate(collectionBookGetOwnedCounts());
     }
@@ -359,6 +372,8 @@ const collectionBookGetOwnedCounts = () => {
     ? window.__clubPlayersEntries
     : [];
   for (const entry of entries) {
+    const item = entry.itemAttributes || entry;
+    if (item.concept || item.isLoan?.() || Number(item.loans ?? entry.loans ?? -1) >= 0) continue;
     const defId = Number(entry?.definitionId);
     if (!Number.isFinite(defId) || defId <= 0) continue;
     counts.set(defId, (counts.get(defId) || 0) + 1);
@@ -934,6 +949,7 @@ const collectionBookUpdateFromClub = () => {
 
 try {
   window.collectionBookFetchList = collectionBookFetchList;
+  window.collectionBookRefreshSetIndexOnStartup = collectionBookRefreshSetIndexOnStartup;
   window.collectionBookFetchPlayers = collectionBookFetchPlayers;
   window.collectionBookPrefetchAll = collectionBookPrefetchAll;
   window.collectionBookGetOwnedCounts = collectionBookGetOwnedCounts;

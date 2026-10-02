@@ -726,18 +726,63 @@ async function autoApplyQuickSolutionOnPageOpen(options = {}) {
       }
     }
 
-    // Maps selectionRows index → solutionSquad index
-    const rowToSquadSlot = {};
-    for (
-      let idx = 0;
-      idx < openSlots.length && idx < selectionRows.length;
-      idx++
-    ) {
-      const selected = selectionRows[idx]?.player;
-      if (selected) {
-        solutionSquad[openSlots[idx]] = selected;
-        rowToSquadSlot[idx] = openSlots[idx];
+    const availableSlots = openSlots.filter(
+      (slotIndex) => solutionSquad[slotIndex] == undefined,
+    );
+    const getPossiblePositions = (player) => {
+      try {
+        const positions = Array.isArray(player?.possiblePositions)
+          ? player.possiblePositions
+          : player?.getBasePossiblePositions?.();
+        return Array.isArray(positions)
+          ? positions.map(Number).filter(Number.isFinite)
+          : [];
+      } catch {
+        return [];
       }
+    };
+    const rowCandidates = new Map();
+    for (let rowIndex = 0; rowIndex < selectionRows.length; rowIndex++) {
+      const player = selectionRows[rowIndex]?.player;
+      if (!player) continue;
+      const possiblePositions = getPossiblePositions(player);
+      const compatibleSlots = availableSlots.filter((slotIndex) =>
+        possiblePositions.includes(Number(sbcData.formation?.[slotIndex])),
+      );
+      rowCandidates.set(
+        rowIndex,
+        compatibleSlots.length ? compatibleSlots : availableSlots,
+      );
+    }
+
+    const rowToSquadSlot = {};
+    const slotToRow = new Map();
+    const assignRowToSlot = (rowIndex, visitedSlots) => {
+      for (const slotIndex of rowCandidates.get(rowIndex) || []) {
+        if (visitedSlots.has(slotIndex)) continue;
+        visitedSlots.add(slotIndex);
+        const assignedRow = slotToRow.get(slotIndex);
+        if (
+          assignedRow === undefined ||
+          assignRowToSlot(assignedRow, visitedSlots)
+        ) {
+          slotToRow.set(slotIndex, rowIndex);
+          return true;
+        }
+      }
+      return false;
+    };
+    const rowsToAssign = Array.from(rowCandidates.keys()).sort(
+      (left, right) =>
+        rowCandidates.get(left).length - rowCandidates.get(right).length ||
+        left - right,
+    );
+    for (const rowIndex of rowsToAssign) {
+      assignRowToSlot(rowIndex, new Set());
+    }
+    for (const [slotIndex, rowIndex] of slotToRow) {
+      solutionSquad[slotIndex] = selectionRows[rowIndex].player;
+      rowToSquadSlot[rowIndex] = slotIndex;
     }
 
     // ── Concept-to-club swap using EA's own chemistry calculator ─────────

@@ -1,4 +1,5 @@
 const sbcButtonOverride = () => {
+  installScoreSbcAutoSelect();
   const UTSBCSetTileView_render = UTSBCSetTileView.prototype.render;
   UTSBCSetTileView.prototype.render = function render() {
     UTSBCSetTileView_render.call(this);
@@ -103,6 +104,46 @@ const ensureStatusContainer = () => {
   return { container, content, footer };
 };
 
+const applyGalleryPurchaseAction = async (itemId, purchasePrice, action) => {
+  const items = await fetchUnassigned();
+  const item = items.find(entry => String(entry.id) === String(itemId));
+  if (!item) throw new Error("Purchased item is not in unassigned; action not applied");
+  const move = pile => new Promise((resolve, reject) => {
+    const observer = {};
+    services.Item.move([item], pile).observe(observer, (sender, response) => {
+      sender.unobserve(observer);
+      if (response?.success === true) resolve();
+      else reject(new Error("Could not move purchased item"));
+    });
+  });
+  if (action === "club") {
+    await move(7);
+    return;
+  }
+  if (!["minBin", "cost", "profit5", "profit10"].includes(action)) throw new Error("Unknown Gallery purchase action");
+  await ensureItemMarketData(item);
+  let price = purchasePrice;
+  if (action === "minBin") {
+    const listing = await fetchLivePlayerPrice(item, { suppressNotification: true, excludeItemIds: [item.id] });
+    price = Number(listing?._auction?.buyNowPrice);
+  } else if (action === "profit5" || action === "profit10") {
+    price = Math.ceil(purchasePrice * (action === "profit10" ? 110 : 105) / 95);
+  }
+  const minimum = Number(item._itemPriceLimits?.minimum);
+  const maximum = Number(item._itemPriceLimits?.maximum);
+  if (!Number.isFinite(price) || price <= 0 || !minimum || !maximum) throw new Error("Listing price or limits unavailable");
+  price = Math.max(price, minimum, 200);
+  const tiers = UTCurrencyInputControl.PRICE_TIERS;
+  const tier = [...tiers].sort((first, second) => first.min - second.min).filter(entry => price >= entry.min).pop();
+  if (!tier?.inc) throw new Error("Listing price increments unavailable");
+  const buyNow = Math.ceil(price / tier.inc) * tier.inc;
+  if (buyNow > maximum) throw new Error("Requested listing price exceeds EA's price limit");
+  await move(5);
+  const minPrice = Math.max(minimum, UTCurrencyInputControl.getIncrementBelowVal(buyNow));
+  const result = await quickListItem(item, { min: minPrice, max: buyNow });
+  if (!result?.success) throw new Error(`Listing failed: ${result?.reason || "unknown"}`);
+};
+
 const tryQuickBuy = async (
   context = {},
   item,
@@ -115,7 +156,7 @@ const tryQuickBuy = async (
   let sbcId = currentSbcId;
   let challengeId = currentChallengeId;
 
-  if (!sbcId && !challengeId) {
+  if (!options.useGlobalSettings && !sbcId && !challengeId) {
     const { _challenge } = getControllerInstance() || {};
     sbcId = _challenge?.setId ?? 0;
     challengeId = _challenge?.id ?? 0;
@@ -165,7 +206,7 @@ const tryQuickBuy = async (
       return { success: false, reason: "noCachedPrice" };
     }
 
-    const listing = await fetchLivePlayerPrice(item, {
+    let listing = await fetchLivePlayerPrice(item, {
       suppressNotification: true,
       excludeTradeIds: Array.from(excludedTradeIds),
       excludeItemIds: Array.from(excludedItemIds),
@@ -187,7 +228,9 @@ const tryQuickBuy = async (
     }
 
     const permittedCap =
-      Number.isFinite(overridePermittedCap) && overridePermittedCap > 0
+      options.capToCurrentPrice && Number.isFinite(baselinePrice) && baselinePrice > 0
+        ? baselinePrice
+        : Number.isFinite(overridePermittedCap) && overridePermittedCap > 0
         ? Math.min(maxPerPlayer, overridePermittedCap)
         : Number.isFinite(baselinePrice) && baselinePrice > 0
           ? Math.min(maxPerPlayer, baselinePrice + maxAbove)
@@ -224,7 +267,39 @@ const tryQuickBuy = async (
       };
     }
 
-    const bidAttempt = services.Item.bid(listing, lowestPrice);
+    const confirmedListing = await fetchLivePlayerPrice(item, {
+      suppressNotification: true,
+      excludeTradeIds: Array.from(excludedTradeIds),
+      excludeItemIds: Array.from(excludedItemIds),
+    });
+    const confirmedPrice = Number(confirmedListing?._auction?.buyNowPrice);
+    if (!Number.isFinite(confirmedPrice) || confirmedPrice <= 0) {
+      notify("Listing disappeared before purchase", UINotificationType.NEGATIVE);
+      return { success: false, reason: "listingChanged", price: lowestPrice, priceLabel };
+    }
+    if (confirmedPrice > permittedCap) {
+      const confirmedPriceLabel = confirmedPrice.toLocaleString();
+      const permittedCapLabel = permittedCap.toLocaleString();
+      notify(
+        `Quick buy skipped - ${confirmedPriceLabel} exceeds limit (${permittedCapLabel})`,
+        UINotificationType.NEGATIVE,
+      );
+      return {
+        success: false,
+        reason: "priceAboveThreshold",
+        price: confirmedPrice,
+        priceLabel: confirmedPriceLabel,
+        baseline: baselinePrice,
+        baselineLabel: baselinePrice.toLocaleString(),
+        limit: permittedCap,
+        limitLabel: permittedCapLabel,
+        tradeId: Number(confirmedListing?._auction?.tradeId ?? confirmedListing?._auction?.id) || null,
+        itemId: Number(confirmedListing?.id) || null,
+      };
+    }
+
+    listing = confirmedListing;
+    const bidAttempt = services.Item.bid(listing, confirmedPrice);
     if (bidAttempt && typeof bidAttempt.observe === "function") {
       return await new Promise((resolve) => {
         let settled = false;
@@ -253,12 +328,22 @@ const tryQuickBuy = async (
         }, QUICK_BUY_BID_TIMEOUT_MS);
 
         bidAttempt.observe(context, async (_obs, response) => {
+          if (settled) return;
+          clearTimeout(timeoutId);
           try {
             _obs?.unobserve?.(context);
           } catch {}
 
-          const success = response?.success !== false;
-          if (success) {
+          const success = response?.success === true;
+          let postPurchaseError = null;
+          if (success && options.galleryPurchaseAction) {
+            try {
+              await applyGalleryPurchaseAction(listingItemId, lowestPrice, options.galleryPurchaseAction);
+            } catch (error) {
+              postPurchaseError = error.message;
+              showNotification(`Bought at ${priceLabel}; ${postPurchaseError}`, UINotificationType.NEGATIVE);
+            }
+          } else if (success) {
             Promise.resolve(
               processUnassigned({ suppressNavigation: true }),
             ).catch((err) => {
@@ -271,6 +356,7 @@ const tryQuickBuy = async (
           );
           finish({
             success,
+            postPurchaseError,
             reason: success ? "success" : "bidFailed",
             price: lowestPrice,
             priceLabel,

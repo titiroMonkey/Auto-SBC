@@ -59,7 +59,16 @@ const playerItemOverride = () => {
       quickButton.setInteractionState(true);
       quickButton.setText("Quick Buy");
       insertAfter(quickButton, this._btnBio.__root);
-      quickButton.addTarget(this, () => tryQuickBuy(this, e), EventType.TAP);
+      quickButton.addTarget(this, () => {
+        const runQuickBuy = window?.autoSbcConsoleApi?.runQuickBuySquad;
+        if (typeof runQuickBuy === "function") {
+          return runQuickBuy(0, 0, {
+            singleItem: e,
+            triggerButton: quickButton.__root,
+          });
+        }
+        return tryQuickBuy(this, e);
+      }, EventType.TAP);
       this.quickBuyButton = quickButton;
     }
 
@@ -268,7 +277,16 @@ const playerItemOverride = () => {
       quickButton.setInteractionState(true);
       quickButton.setText("Quick Buy");
       insertAfter(quickButton, this._bioButton.__root);
-      quickButton.addTarget(this, () => tryQuickBuy(this, e), EventType.TAP);
+      quickButton.addTarget(this, () => {
+        const runQuickBuy = window?.autoSbcConsoleApi?.runQuickBuySquad;
+        if (typeof runQuickBuy === "function") {
+          return runQuickBuy(0, 0, {
+            singleItem: e,
+            triggerButton: quickButton.__root,
+          });
+        }
+        return tryQuickBuy(this, e);
+      }, EventType.TAP);
       this.quickBuyButton = quickButton;
     }
 

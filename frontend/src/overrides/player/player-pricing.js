@@ -373,7 +373,7 @@ let getPriceItems = function () {
   }
 
   getFromIndexedDB().then((idbItems) => {
-    cachedPriceItems = idbItems || {};
+    cachedPriceItems = { ...(idbItems || {}), ...cachedPriceItems };
   });
   return cachedPriceItems;
 };
@@ -652,6 +652,16 @@ let savePriceItems = function () {
 const FUTGG_REQUEST_TIMEOUT_MS = 20000;
 
 function makeGetRequest(url) {
+  const target = new URL(url, "https://www.fut.gg");
+  const isPriceFeed = target.hostname === "r2.fut.gg" &&
+    (target.pathname.endsWith("/manifest.json") || /\/misc-prices-[^/]+\.v1\.[^/]+\.json$/.test(target.pathname));
+  if ((["www.fut.gg", "fut.gg"].includes(target.hostname) && target.pathname.startsWith("/api/fut/player-prices/")) || isPriceFeed) {
+    return queueFutggPriceRequest(() => makeGetRequestNow(url));
+  }
+  return makeGetRequestNow(url);
+}
+
+function makeGetRequestNow(url) {
   return new Promise((resolve, reject) => {
     GM_xmlhttpRequest({
       method: "GET",
@@ -698,6 +708,37 @@ const FUTGG_429_MAX_BACKOFF_MS_DEFAULT = 90000;
 const FUTGG_PRICE_BLOCK_UNTIL_KEY = "futggPriceBlockUntil";
 
 let futggPriceFetchChain = Promise.resolve();
+let futggPriceRequestChain = Promise.resolve();
+let futggPriceNextRequestAt = 0;
+let futggPriceRateLimitCount = 0;
+
+const queueFutggPriceRequest = (request) => {
+  const queued = futggPriceRequestChain.then(async () => {
+    const blockedUntil = getFutggPriceBlockUntil();
+    if (blockedUntil) throw { status: 403, blockedUntil };
+    await sleepMs(Math.max(0, futggPriceNextRequestAt - Date.now()));
+    const configuredDelay = Number(typeof getSettings === "function" ? getSettings(0, 0, "futggPriceDelayMs") : 0);
+    let delay = Math.max(FUTGG_PRICE_REQUEST_DELAY_MS_DEFAULT, Number.isFinite(configuredDelay) ? configuredDelay : 0);
+    try {
+      const result = await request();
+      futggPriceRateLimitCount = 0;
+      return result;
+    } catch (error) {
+      if (Number(error?.status) === 429) {
+        futggPriceRateLimitCount += 1;
+        delay = Math.max(delay, Math.min(FUTGG_429_MAX_BACKOFF_MS_DEFAULT,
+          FUTGG_429_BASE_BACKOFF_MS_DEFAULT * 2 ** Math.min(futggPriceRateLimitCount - 1, 16)));
+      } else {
+        delay = Math.max(delay, FUTGG_PRICE_ERROR_BACKOFF_MS_DEFAULT);
+      }
+      throw error;
+    } finally {
+      futggPriceNextRequestAt = Date.now() + delay;
+    }
+  });
+  futggPriceRequestChain = queued.catch(() => {});
+  return queued;
+};
 
 const sleepMs = (ms) =>
   new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
@@ -769,6 +810,10 @@ function makeSignedPostRequest(url, data) {
 
 // Sign a relative fut.gg price path and fetch it, returning the parsed JSON.
 async function fetchFutggSignedJson(relativePath) {
+  return queueFutggPriceRequest(() => fetchFutggSignedJsonNow(relativePath));
+}
+
+async function fetchFutggSignedJsonNow(relativePath) {
   const signResponse = await makeSignedPostRequest(
     FUTGG_SIGN_ENDPOINT,
     JSON.stringify({ url: relativePath }),
@@ -778,9 +823,65 @@ async function fetchFutggSignedJson(relativePath) {
   if (!signedPath) {
     throw new Error("fut.gg price sign failed: missing signed url");
   }
-  const body = await makeGetRequest(`${FUTGG_ORIGIN}${signedPath}`);
+  const body = await makeGetRequestNow(`${FUTGG_ORIGIN}${signedPath}`);
   return JSON.parse(body);
 }
+
+const FUTGG_MISC_PRICE_CACHE_KEY = "futggMiscPriceFeedFetchedAt.v1";
+const FUTGG_MISC_PRICE_REFRESH_MS = 60 * 60 * 1000;
+let futggMiscPriceRefreshPromise = null;
+
+const refreshFutggMiscPrices = async ({ force = false, platform = "ps5" } = {}) => {
+  if (futggMiscPriceRefreshPromise) return futggMiscPriceRefreshPromise;
+  const now = Date.now();
+  const lastFetch = Number(localStorage.getItem(FUTGG_MISC_PRICE_CACHE_KEY)) || 0;
+  if (!force && lastFetch > 0 && now - lastFetch < FUTGG_MISC_PRICE_REFRESH_MS) return 0;
+
+  futggMiscPriceRefreshPromise = (async () => {
+    const manifest = JSON.parse(await makeGetRequest(`${FUTGG_ORIGIN.replace("www.", "r2.")}/${FUTGG_GAME_YEAR}/manifest.json`));
+    const feedHash = manifest?.[`misc-prices-${platform}`];
+    if (!feedHash) throw new Error(`FUT.GG misc price feed unavailable for ${platform}`);
+    const url = `https://r2.fut.gg/${FUTGG_GAME_YEAR}/misc-prices-${platform}.v1.${feedHash}.json`;
+    const feed = JSON.parse(await makeGetRequest(url));
+    const entries = {};
+    const buckets = [
+      ["manager", "STAFF"],
+      ["chemistry_style", "TRAINING"],
+      ["manager_league", "TRAINING"],
+    ];
+    for (const [bucket, type] of buckets) {
+      for (const [eaId, item] of Object.entries(feed?.items?.[bucket] || {})) {
+        const price = Number(item?.price);
+        if (!Number.isFinite(price) || price < 0) continue;
+        entries[eaId] = {
+          eaId,
+          price,
+          type,
+          name: item.name,
+          isExtinct: item.status === "extinct",
+          miscPriceCategory: bucket,
+          miscPriceUpdatedAt: item.priceUpdatedAt || null,
+        };
+      }
+    }
+    PriceItem(entries);
+    localStorage.setItem(FUTGG_MISC_PRICE_CACHE_KEY, String(Date.now()));
+    console.info(`[FUT.GG] Refreshed ${Object.keys(entries).length} non-player prices (${platform})`);
+    return Object.keys(entries).length;
+  })().finally(() => {
+    futggMiscPriceRefreshPromise = null;
+  });
+  return futggMiscPriceRefreshPromise;
+};
+
+const startFutggMiscPriceRefresh = () => {
+  if (window.__autoSbcMiscPriceRefreshStarted) return;
+  window.__autoSbcMiscPriceRefreshStarted = true;
+  refreshFutggMiscPrices().catch(error => console.warn("[FUT.GG] Non-player price refresh failed", error));
+  window.setInterval(() => {
+    refreshFutggMiscPrices({ force: true }).catch(error => console.warn("[FUT.GG] Hourly non-player price refresh failed", error));
+  }, FUTGG_MISC_PRICE_REFRESH_MS);
+};
 
 function makePostRequest(url, data) {
   return new Promise((resolve, reject) => {
@@ -942,6 +1043,25 @@ let ensureItemMarketData = (item) =>
       resolve(item?._itemPriceLimits || null);
     }
   });
+
+let transferMarketSearchQueue = Promise.resolve();
+let transferMarketNextAllowedAt = 0;
+let transferMarketBackoffUntil = 0;
+let transferMarketFailureCount = 0;
+const TRANSFER_MARKET_MIN_INTERVAL_MS = 1200;
+const TRANSFER_MARKET_BACKOFF_MAX_MS = 60000;
+
+const runTransferMarketSearch = task => {
+  const run = transferMarketSearchQueue.then(async () => {
+    const waitUntil = Math.max(transferMarketNextAllowedAt, transferMarketBackoffUntil);
+    const delay = waitUntil - Date.now();
+    if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+    transferMarketNextAllowedAt = Date.now() + TRANSFER_MARKET_MIN_INTERVAL_MS;
+    return task();
+  });
+  transferMarketSearchQueue = run.catch(() => {});
+  return run;
+};
 
 let fetchLivePlayerPrice = async (player, options = {}) => {
   const {
@@ -1280,8 +1400,6 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
     return stepUp(base);
   };
 
-  let doSearchBackoffSeconds = 0;
-
   const doSearch = async (maxBuy, minBuy = null) =>
     new Promise((resolve) => {
       if (searchCallCount >= MAX_SEARCH_CALLS) {
@@ -1295,60 +1413,78 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
       }
 
       searchCallCount += 1;
-      services.Item.clearTransferMarketCache();
       const criteria = buildCriteria(maxBuy, minBuy);
+      void runTransferMarketSearch(() => new Promise((searchResolve, searchReject) => {
+        log("info", "search:request", {
+          minBuy: criteria.minBuy ?? null,
+          maxBuy: criteria.maxBuy ?? null,
+        });
+        try {
+          services.Item.clearTransferMarketCache();
+          services.Item.searchTransferMarket(criteria, 1).observe(
+            undefined,
+            async (_s, response) => {
+              const failed =
+                response?.success === false ||
+                (typeof response?.status === "number" &&
+                  Math.floor(response.status / 100) !== 2);
 
-      log("info", "search:request", {
-        minBuy: criteria.minBuy ?? null,
-        maxBuy: criteria.maxBuy ?? null,
+              if (failed) {
+                transferMarketFailureCount += 1;
+                const retryAfter = Number(response?.headers?.get?.("Retry-After") || response?.headers?.["Retry-After"] || 0);
+                const exponentialDelay = Math.min(
+                  TRANSFER_MARKET_BACKOFF_MAX_MS,
+                  1500 * (2 ** Math.min(transferMarketFailureCount - 1, 6)),
+                );
+                const delayMs = Math.max(exponentialDelay, retryAfter > 0 ? retryAfter * 1000 : 0);
+                transferMarketBackoffUntil = Date.now() + delayMs;
+
+                log("warn", "search:failed", {
+                  status: response?.status,
+                  success: response?.success,
+                  delayMs,
+                });
+
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+                searchResolve([]);
+                return;
+              }
+
+              transferMarketFailureCount = 0;
+              transferMarketBackoffUntil = 0;
+
+              const items = Array.isArray(response?.data?.items)
+                ? response.data.items
+                    .filter(item => item._auction && item._auction.tradeState === "active")
+                    .filter(item => !isListingExcluded(item))
+                : [];
+
+              log("info", "search:response", {
+                status: response?.status,
+                returned: Array.isArray(response?.data?.items) ? response.data.items.length : 0,
+                active: items.length,
+              });
+              searchResolve(items);
+            },
+          );
+        } catch (error) {
+          searchReject(error);
+        }
+      })).catch(error => {
+        transferMarketFailureCount += 1;
+        const delayMs = Math.min(
+          TRANSFER_MARKET_BACKOFF_MAX_MS,
+          1500 * (2 ** Math.min(transferMarketFailureCount - 1, 6)),
+        );
+        transferMarketBackoffUntil = Date.now() + delayMs;
+        log("warn", "search:throw", { delayMs, error: String(error) });
+        return new Promise(resolve => setTimeout(() => resolve([]), delayMs));
+      }).then(items => {
+        resolve(items);
+      }).catch(error => {
+        log("warn", "search:queue-failed", { error: String(error) });
+        resolve([]);
       });
-
-      services.Item.searchTransferMarket(criteria, 1).observe(
-        undefined,
-        async (_s, response) => {
-          const failed =
-            response?.success === false ||
-            (typeof response?.status === "number" &&
-              Math.floor(response.status / 100) !== 2);
-
-          if (failed) {
-            doSearchBackoffSeconds += 1;
-            const delayMs = doSearchBackoffSeconds * 1000;
-
-            log("warn", "search:failed", {
-              status: response?.status,
-              success: response?.success,
-              backoffSeconds: doSearchBackoffSeconds,
-              delayMs,
-            });
-
-            await new Promise((r) => setTimeout(r, delayMs));
-            resolve([]);
-            return;
-          }
-
-          doSearchBackoffSeconds = 0;
-
-          const items = Array.isArray(response?.data?.items)
-            ? response.data.items
-                .filter(
-                  (item) =>
-                    item._auction && item._auction.tradeState === "active",
-                )
-                .filter((item) => !isListingExcluded(item))
-            : [];
-
-          log("info", "search:response", {
-            status: response?.status,
-            returned: Array.isArray(response?.data?.items)
-              ? response.data.items.length
-              : 0,
-            active: items.length,
-          });
-
-          resolve(items);
-        },
-      );
     });
 
   const extractBuy = (item) =>

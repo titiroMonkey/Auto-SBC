@@ -9,13 +9,23 @@
 // greyed out like a concept card, with a copy counter badge.
 
 const COLLECTION_BOOK_TAB_TAG = 109;
+const FUT_GALLERY_TAB_TAG = 110;
 
 const generateCollectionBookTab = () => {
   const tab = new UTTabBarItemView();
   tab.init();
   tab.setTag(COLLECTION_BOOK_TAB_TAG);
   tab.setText("Collection Book");
-  tab.addClass("icon-players"); // reuse an existing nav glyph
+  tab.addClass("icon-club");
+  return tab;
+};
+
+const generateFutGalleryTab = () => {
+  const tab = new UTTabBarItemView();
+  tab.init();
+  tab.setTag(FUT_GALLERY_TAB_TAG);
+  tab.setText("FUT Gallery");
+  tab.addClass("icon-squad");
   return tab;
 };
 
@@ -26,12 +36,15 @@ const collectionBookEnsureStyles = () => {
   const style = document.createElement("style");
   style.id = "collection-book-styles";
   style.textContent = `
+    .ut-split-view > .ut-content:has(.collection-book-container) { max-width: none; }
     .collection-book-container { padding: 16px; overflow-y: auto; height: 100%; }
     .collection-book-topbar { position:sticky; top:0; z-index:30; display:flex; align-items:center; justify-content:space-between; gap:12px; margin:-16px -16px 12px; padding:16px; background:rgba(18,22,30,.96); backdrop-filter:blur(8px); box-shadow:0 2px 8px rgba(0,0,0,.35); }
     .collection-book-topbar h1 { font-size:22px; margin:0; }
     .collection-book-topbar .cb-overall { opacity:.85; font-size:14px; }
     .collection-book-toggle { display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer; user-select:none; white-space:nowrap; }
     .collection-book-toggle input { cursor:pointer; margin:0; }
+    .collection-book-status-select { cursor:pointer; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:inherit; font-size:14px; }
+    .collection-book-status-select option { color:#111; }
     .collection-book-batch-select { cursor:pointer; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:inherit; font-size:14px; max-width:260px; }
     .collection-book-batch-select option, .collection-book-batch-select optgroup { color:#111; }
     .collection-book-refresh { cursor:pointer; padding:6px 12px; border-radius:6px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:inherit; }
@@ -50,6 +63,23 @@ const collectionBookEnsureStyles = () => {
     .collection-book-card .cb-placeholder { width:80%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; border-radius:8px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); font-size:13px; }
     .collection-book-card { cursor:pointer; }
     .collection-book-card:hover { filter:brightness(1.12); }
+    .collection-book-card .cb-state { align-self:stretch; text-align:center; margin-top:3px; font-size:11px; opacity:.9; }
+    .collection-book-card.cb-current .cb-state { color:#38c172; }
+    .collection-book-card.cb-seen .cb-state { color:#f0ad4e; }
+    .collection-book-card.cb-never .cb-state { color:#aab2bf; }
+    .fut-gallery-grid { grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
+    .fut-gallery-grid .collection-book-card { min-height:210px; }
+    .fut-gallery-sets { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+    .fut-gallery-set-card { padding:14px; border:1px solid rgba(255,255,255,.14); border-radius:8px; background:rgba(255,255,255,.07); }
+    .fut-gallery-set-card h2 { margin:0 0 10px; font-size:17px; }
+    .fut-gallery-set-meta { display:flex; justify-content:space-between; gap:8px; opacity:.85; }
+    .fut-gallery-set-card p { margin:8px 0; opacity:.8; font-size:13px; }
+    .fut-gallery-set-card button { width:100%; padding:8px; border:0; border-radius:5px; cursor:pointer; background:#38c172; color:#04150c; font-weight:600; }
+    .fut-gallery-set-detail { position:fixed; inset:5%; z-index:1001; overflow:auto; padding:18px; background:#12161e; border:1px solid rgba(255,255,255,.2); border-radius:8px; }
+    .fut-gallery-set-detail h2 { margin:0 0 12px; }
+    .fut-gallery-close { float:right; padding:6px 10px; cursor:pointer; }
+    .fut-gallery-set-players { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+    .collection-book-container.cb-status-current .collection-book-card:not(.cb-current), .collection-book-container.cb-status-seen .collection-book-card:not(.cb-seen), .collection-book-container.cb-status-never .collection-book-card:not(.cb-never) { display:none; }
     /* Recolour EA's native loan counter when reused as the copy counter:
        green when the player is in the club, red when only seen before. */
     .collection-book-card .ut-item-player-state-indicator-view.loan { background:#38c172; color:#04150c; }
@@ -140,13 +170,18 @@ const collectionBookRenderCard = (row) => {
   card.classList.add("collection-book-card");
   card.classList.add(owned ? "cb-owned" : "cb-unowned");
   card.classList.toggle("cb-in-club", !!inClub);
+  card.classList.add(inClub ? "cb-current" : copies > 0 ? "cb-seen" : "cb-never");
   card.dataset.eaId = String(player.eaId);
   card.__cbPlayer = player;
   // Stashed so the lazy mount can drive EA's native loan counter (see
   // collectionBookApplyCopyCounter) for duplicate copies, coloured by club state.
   card.__cbCopies = copies;
   card.__cbInClub = inClub;
-  card.addEventListener("click", () => collectionBookOpenNativeSidebar(row));
+  card.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    collectionBookOpenNativeSidebar(row);
+  }, true);
 
   // Media area starts as a lightweight placeholder; upgraded to an EA card on
   // scroll via the IntersectionObserver.
@@ -157,6 +192,10 @@ const collectionBookRenderCard = (row) => {
   ph.textContent = `${player.overall ?? ""} ${player.position ?? ""}`.trim();
   media.appendChild(ph);
   card.appendChild(media);
+  const state = document.createElement("div");
+  state.className = "cb-state";
+  state.textContent = inClub ? "Current" : copies > 0 ? "Seen before" : "Not seen";
+  card.appendChild(state);
 
   const obs = collectionBookGetCardObserver();
   if (obs) obs.observe(card);
@@ -182,18 +221,33 @@ JSUtils.inherits(collectionBookItemsController, collectionBookItemsBase);
 const collectionBookOpenNativeSidebar = (row) => {
   const entity = collectionBookGetItemEntity(row?.player?.eaId);
   if (!entity) return;
-  const current = getCurrentViewController?.();
-  const navigation = current?.rootController?.getRootNavigationController?.();
-  if (!navigation) return;
-  const viewController = new collectionBookItemsController();
+  const root = document.getElementById("CollectionBookPanel");
+  if (!root?.__galleryController) return;
   try {
-    viewController.init();
-    viewController.initWithItems([entity]);
-    navigation.pushViewController(viewController);
+    futGalleryEnsureStyles();
+    futGalleryOpenPlayerDetails(root, { entity });
   } catch (error) {
     console.warn("[CollectionBook] could not open native item controller", error);
-    viewController.dealloc?.();
+    root.__galleryCloseDetails?.();
   }
+};
+
+const collectionBookEnsureNativePlayerName = (entity, player, conceptEntity) => {
+  const current = entity?.getStaticData?.() || entity?._staticData;
+  const hasName = current?.hasNameData?.() ?? !!(current?.firstName || current?.lastName || current?.name);
+  if (hasName && current?.name && current.name !== "---") return;
+  if (typeof UTStaticPlayerItemDataDTO !== "function") return;
+
+  const source = conceptEntity?.getStaticData?.() || {};
+  const usable = value => value && value !== "---" ? value : "";
+  const firstName = usable(current?.firstName) || usable(source.firstName) || usable(player.firstName);
+  const lastName = usable(current?.lastName) || usable(source.lastName) || usable(player.lastName);
+  const knownAs = usable(current?.knownAs) || usable(source.knownAs) || usable(player.nickname) || usable(player.name);
+  if (!firstName && !lastName && !knownAs) return;
+
+  const staticData = new UTStaticPlayerItemDataDTO();
+  staticData.generateNameData(firstName, lastName, knownAs);
+  entity.setStaticData?.(staticData);
 };
 
 // Build a live EA item view (UTItemViewFactory) from the collection metadata,
@@ -204,56 +258,87 @@ const collectionBookCreateEaCardElement = (player, owned, copies, inClub) => {
   if (!Factory || typeof createUtItemEntity !== "function") return null;
 
   const defId = Number(player.eaId);
+  const conceptEntity = collectionBookGetConceptIndex().get(defId);
 
   // Prefer a REAL EA item entity (owned club copy, else concept-pool item) so
   // the card renders the game's own rating + face stats. The fut.gg metadata
   // often has overall == null, which is what produced the 0-rating / 0-stat
   // cards; only fall back to the synthetic payload when no entity exists.
-  let entity =
-    typeof window.collectionBookGetItemEntity === "function"
-      ? window.collectionBookGetItemEntity(defId)
-      : null;
+  let entity = owned && typeof window.collectionBookGetItemEntity === "function"
+    ? window.collectionBookGetItemEntity(defId)
+    : null;
 
   if (entity) {
     // Reuse the real entity, but reflect this collection slot's ownership:
     // greyed concept card when unowned, full-colour when owned.
     try {
-      entity.concept = !owned;
-      entity.owners = owned ? 1 : 0;
+      const sourceEntity = entity;
+      entity = new UTItemEntity(sourceEntity);
+      entity.setStaticData?.(sourceEntity.getStaticData?.() || conceptEntity?.getStaticData?.());
+      entity.authenticity = sourceEntity.authenticity || conceptEntity?.authenticity;
+      entity.cosmetics = sourceEntity.cosmetics || conceptEntity?.cosmetics;
+      entity._hyperCosmeticDTOs = sourceEntity._hyperCosmeticDTOs || conceptEntity?._hyperCosmeticDTOs || {};
+      entity.holographicType = sourceEntity.holographicType || conceptEntity?.holographicType || null;
+      entity.concept = false;
       if (entity.definitionId == null) entity.definitionId = defId;
     } catch {}
   } else {
     // Real EA face stats from the concept pool, so cards don't render 0s.
     const attributeArray =
-      typeof window.collectionBookGetFaceStats === "function"
+      conceptEntity && typeof conceptEntity.getAttributes === "function"
+        ? conceptEntity.getAttributes()
+        : typeof window.collectionBookGetFaceStats === "function"
         ? window.collectionBookGetFaceStats(defId)
         : [];
     const payload = {
-      id: 0,
+      id: Number(conceptEntity?.id || 0),
       resourceId: defId,
+      definitionId: defId,
       itemType: globalThis.ItemType?.PLAYER || 1,
-      assetId: defId,
-      rating: Number(player.overall || 0),
-      rareflag: Number(player.rarityEaId || 0),
-      owners: owned ? 1 : 0,
-      nation: Number(player.nationEaId || 0),
-      leagueId: Number(player.leagueEaId || 0),
-      teamId: Number(player.clubEaId || 0),
-      preferredPosition: player.position || "",
+      assetId: Number(conceptEntity?.databaseId || conceptEntity?._metaData?.id || defId),
+      rating: Number(conceptEntity?.rating || player.overall || 0),
+      rareflag: Number(conceptEntity?.rareflag || player.rarityEaId || 0),
+      owners: Number(conceptEntity?.owners || 0),
+      nation: Number(conceptEntity?.nationId || player.nationEaId || 0),
+      leagueId: Number(conceptEntity?.leagueId || player.leagueEaId || 0),
+      teamId: Number(conceptEntity?.teamId || player.clubEaId || 0),
+      preferredPosition: conceptEntity?.getStaticData?.()?.preferredPosition != null
+        ? PlayerPosition?.[conceptEntity.getStaticData().preferredPosition] || conceptEntity.getStaticData().preferredPosition
+        : PlayerPosition?.[normalizeEaPosition(player.position)] || player.position,
       attributeArray,
-      statsArray: [],
+      statsArray: Array.isArray(conceptEntity?.getStats?.())
+        ? conceptEntity.getStats().map((value) => Number(value))
+        : [],
       baseTraits: [],
       plusRoles: [],
       groups: [],
-      possiblePositions: [],
+      possiblePositions: (conceptEntity?.getBasePossiblePositions?.() || [normalizeEaPosition(player.position)])
+        .map(position => PlayerPosition?.[position] || position),
+      loans: -1,
+      limitedUseType: globalThis.LimitedUseType?.NONE ?? 0,
+      firstName: conceptEntity?.getStaticData?.()?.firstName || player.firstName || "",
+      lastName: conceptEntity?.getStaticData?.()?.lastName || player.lastName || player.name || "",
+      knownAs: conceptEntity?.getStaticData?.()?.knownAs || player.nickname || "",
+      authenticity: !!conceptEntity?.authenticity,
+      holographicType: conceptEntity?.holographicType || null,
+      hyperCosmeticDTOs: conceptEntity?._hyperCosmeticDTOs || {},
+      _hyperCosmeticDTOs: conceptEntity?._hyperCosmeticDTOs || {},
       concept: !owned,
     };
 
     entity = createUtItemEntity(payload);
     if (!entity) return null;
-    entity.concept = !owned;
+    entity.concept = true;
     entity.definitionId = defId;
+    if (conceptEntity) {
+      entity.setStaticData?.(conceptEntity.getStaticData?.());
+      entity.authenticity = conceptEntity.authenticity;
+      entity.cosmetics = conceptEntity.cosmetics;
+      entity._hyperCosmeticDTOs = conceptEntity._hyperCosmeticDTOs || {};
+      entity.holographicType = conceptEntity.holographicType || null;
+    }
   }
+  collectionBookEnsureNativePlayerName(entity, player, conceptEntity);
 
   const view =
     typeof Factory.createLargeItem === "function"
@@ -453,6 +538,8 @@ const collectionBookApplySelectedBatch = (root, value) => {
 };
 
 const collectionBookBuildPage = async (root, { force = false } = {}) => {
+  const build = {};
+  root.__collectionBookBuild = build;
   collectionBookEnsureStyles();
   _collectionBookSections.clear();
   root.innerHTML = "";
@@ -462,6 +549,7 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   if (typeof collectionBookFetchOwnership === "function") {
     await collectionBookFetchOwnership();
   }
+  if (root.__collectionBookBuild !== build) return;
 
   const topbar = document.createElement("div");
   topbar.classList.add("collection-book-topbar");
@@ -494,6 +582,14 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
     } catch {}
   });
 
+  const statusSelect = document.createElement("select");
+  statusSelect.className = "collection-book-status-select";
+  statusSelect.innerHTML = '<option value="all">All players</option><option value="current">Current in club</option><option value="seen">Seen before</option><option value="never">Not seen</option>';
+  statusSelect.addEventListener("change", () => {
+    root.classList.remove("cb-status-current", "cb-status-seen", "cb-status-never");
+    if (statusSelect.value !== "all") root.classList.add(`cb-status-${statusSelect.value}`);
+  });
+
   const refresh = document.createElement("button");
   refresh.classList.add("collection-book-refresh");
   refresh.textContent = "Refresh";
@@ -513,6 +609,7 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   topbar.appendChild(heading);
   topbar.appendChild(select);
   topbar.appendChild(onlyClubLabel);
+  topbar.appendChild(statusSelect);
   topbar.appendChild(refresh);
   root.appendChild(topbar);
 
@@ -525,10 +622,12 @@ const collectionBookBuildPage = async (root, { force = false } = {}) => {
   try {
     collections = await collectionBookFetchList({ force });
   } catch {
+    if (root.__collectionBookBuild !== build) return;
     loading.textContent =
       "Failed to load collections from fut.gg. Try Refresh.";
     return;
   }
+  if (root.__collectionBookBuild !== build) return;
   loading.remove();
 
   if (!collections.length) {
@@ -670,14 +769,29 @@ const collectionBookLoadSection = async (slug, force = false) => {
 // --- EA controller / view -------------------------------------------------
 
 const collectionBookController = function () {
-  UTHomeHubViewController.call(this);
+  UTSplitViewController.call(this);
 };
-JSUtils.inherits(collectionBookController, UTHomeHubViewController);
+JSUtils.inherits(collectionBookController, UTSplitViewController);
 
-collectionBookController.prototype._getViewInstanceFromData = function () {
+const collectionBookMountNativeContent = (owner) => {
+  if (!owner.collectionContentController) {
+    const content = new EAViewController();
+    content._getViewInstanceFromData = () => owner.createCollectionContentView();
+    content.init();
+    owner.addChildViewController(content);
+    owner.collectionContentController = content;
+  }
+  owner.collectionContentController.getView().addClass(enums.UILayout.LEFT);
+  owner.setLeftController(owner.collectionContentController);
+  owner.hideRightPanel(!owner.rightController);
+  return owner.collectionContentController.getView().getRootElement();
+};
+
+collectionBookController.prototype.createCollectionContentView = function () {
   return new collectionBookView();
 };
 collectionBookController.prototype.viewDidAppear = function () {
+  UTSplitViewController.prototype.viewDidAppear.call(this);
   this.getNavigationController().setNavigationVisibility(true, true);
   // Ownership comes only from the club, so pull it on every visit — otherwise a
   // first-of-session open (or a club changed since the last fetch) shows owned
@@ -685,10 +799,8 @@ collectionBookController.prototype.viewDidAppear = function () {
   // collectionBookUpdateFromClub() when it resolves, flipping owned cards in.
   collectionBookEnsureClubLoaded();
   // Build (or rebuild) on every visit so club-based progress stays current.
-  const view = this.getView && this.getView();
-  const root =
-    (view && view.getRootElement && view.getRootElement()) ||
-    document.getElementById("CollectionBookPanel");
+  const root = collectionBookMountNativeContent(this);
+  if (root) root.__galleryController = this;
   if (root && !root.dataset.cbBuilt) {
     root.dataset.cbBuilt = "1";
     collectionBookBuildPage(root);
@@ -698,6 +810,7 @@ collectionBookController.prototype.viewDidAppear = function () {
   }
 };
 collectionBookController.prototype.viewWillDisappear = function () {
+  UTSplitViewController.prototype.viewWillDisappear.call(this);
   this.getNavigationController().setNavigationVisibility(false, false);
 };
 collectionBookController.prototype.getNavigationTitle = function () {
@@ -705,19 +818,19 @@ collectionBookController.prototype.getNavigationTitle = function () {
 };
 
 const collectionBookView = function () {
-  UTHomeHubView.call(this);
+  EAView.call(this);
 };
-JSUtils.inherits(collectionBookView, UTHomeHubView);
+JSUtils.inherits(collectionBookView, EAView);
 
 collectionBookView.prototype.destroyGeneratedElements =
   function destroyGeneratedElements() {
+    this.__root?.__galleryCloseDetails?.();
     DOMKit.remove(this.__root);
     this.__root = null;
   };
 
 collectionBookView.prototype._generate = function _generate() {
   const wrap = document.createElement("div");
-  wrap.classList.add("ut-market-search-filters-view", "floating");
   wrap.classList.add("collection-book-container");
   wrap.setAttribute("id", "CollectionBookPanel");
   this.__root = wrap;
@@ -726,6 +839,63 @@ collectionBookView.prototype._generate = function _generate() {
 
 try {
   window.generateCollectionBookTab = generateCollectionBookTab;
+  window.generateFutGalleryTab = generateFutGalleryTab;
   window.collectionBookController = collectionBookController;
   window.collectionBookView = collectionBookView;
+} catch {}
+
+const futGalleryController = function () {
+  UTSplitViewController.call(this);
+};
+JSUtils.inherits(futGalleryController, UTSplitViewController);
+
+const futGalleryView = function () {
+  EAView.call(this);
+};
+JSUtils.inherits(futGalleryView, EAView);
+
+futGalleryController.prototype.createCollectionContentView = function () {
+  return new futGalleryView();
+};
+futGalleryController.prototype.viewDidAppear = function () {
+  UTSplitViewController.prototype.viewDidAppear.call(this);
+  this.getNavigationController().setNavigationVisibility(true, true);
+  collectionBookEnsureClubLoaded();
+  ensureConceptCacheInit();
+  const root = collectionBookMountNativeContent(this);
+  if (root) root.__galleryController = this;
+  if (root && !root.dataset.galleryBuilt) {
+    root.dataset.galleryBuilt = "1";
+    futGalleryBuildPage(root);
+  }
+};
+futGalleryController.prototype.viewWillDisappear = function () {
+  UTSplitViewController.prototype.viewWillDisappear.call(this);
+  this.getNavigationController().setNavigationVisibility(false, false);
+};
+futGalleryController.prototype.getNavigationTitle = function () {
+  return "FUT Gallery";
+};
+
+futGalleryView.prototype.destroyGeneratedElements = function () {
+  this.__root?.__galleryDispose?.();
+  DOMKit.remove(this.__root);
+  this.__root = null;
+};
+futGalleryView.prototype._generate = function () {
+  const root = document.createElement("div");
+  root.className = "collection-book-container fut-gallery-container";
+  root.id = "FutGalleryPanel";
+  this.__root = root;
+  this._generated = true;
+};
+
+const futGalleryBuildPage = (root) => {
+  collectionBookEnsureStyles();
+  return futGalleryMountPage(root);
+};
+
+try {
+  window.futGalleryController = futGalleryController;
+  window.futGalleryView = futGalleryView;
 } catch {}

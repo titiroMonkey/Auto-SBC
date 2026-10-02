@@ -168,6 +168,9 @@ let getUserSquads = async function () {
 };
 
 let loadChallenge = async function (currentChallenge, count = 0) {
+  if (currentChallenge.type === "ONE_CLICK_CHALLENGE") {
+    return;
+  }
   if (currentChallenge.status == "COMPLETED") {
     return;
   }
