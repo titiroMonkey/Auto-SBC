@@ -21,12 +21,20 @@ let getSBCPrice = (item, sbcId = 0, challengeId = 0) => {
     100,
   );
 
+    const applyUnseenDiscount = price => {
+      if (typeof collectionBookGetOwnedCounts !== "function") return price;
+      const ownedCounts = collectionBookGetOwnedCounts();
+      return ownedCounts instanceof Map && !ownedCounts.has(Number(item.definitionId))
+        ? price - 1
+        : price;
+    };
+
   if (!isExtinct && getPrice(item) == -1) {
-    return sbcPrice * 1.5;
+      return applyUnseenDiscount(sbcPrice * 1.5);
   }
 
   if (item.concept) {
-    return getSettings(0, 0, "conceptPremium") * sbcPrice;
+      return applyUnseenDiscount(getSettings(sbcId, challengeId, "conceptPremium") * sbcPrice);
   }
   if (
     (
@@ -38,7 +46,7 @@ let getSBCPrice = (item, sbcId = 0, challengeId = 0) => {
       services.Localization.localize("item.raretype" + item.rareflag)
     ).includes("volution")
   ) {
-    return getSettings(0, 0, "evoPremium") * sbcPrice;
+      return applyUnseenDiscount(getSettings(0, 0, "evoPremium") * sbcPrice);
   }
   sbcPrice = sbcPrice - (100 - item.rating); //Rating Discount
 
@@ -59,5 +67,5 @@ let getSBCPrice = (item, sbcId = 0, challengeId = 0) => {
       ? getSettings(sbcId, challengeId, "untradeableDiscount") / 100
       : 1);
 
-  return sbcPrice;
+    return applyUnseenDiscount(sbcPrice);
 };

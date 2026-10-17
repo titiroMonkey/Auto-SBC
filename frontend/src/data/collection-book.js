@@ -287,11 +287,41 @@ const COLLECTION_BOOK_OWNERSHIP_API_URL =
   "http://127.0.0.1:8000/api/collection-book-ownership";
 
 // definitionId(number) -> count(number), hydrated from the backend.
+const COLLECTION_BOOK_MANUAL_SEEN_KEY = "collectionBook.manualSeen.v1";
+const collectionBookGetManualSeen = definitionId => {
+  try { return JSON.parse(localStorage.getItem(COLLECTION_BOOK_MANUAL_SEEN_KEY) || "{}")[definitionId] ?? null; }
+  catch { return null; }
+};
+const collectionBookApplyManualSeenCounts = (counts, firstOwner = false) => {
+  try {
+    const overrides = JSON.parse(localStorage.getItem(COLLECTION_BOOK_MANUAL_SEEN_KEY) || "{}");
+    for (const [id, state] of Object.entries(overrides)) {
+      if (!["unseen", "seen", "firstOwner"].includes(state)) continue;
+      if (state === "unseen" || (firstOwner && state !== "firstOwner")) counts.delete(Number(id));
+      else counts.set(Number(id), Math.max(1, counts.get(Number(id)) || 0));
+    }
+  } catch {}
+  return counts;
+};
+const collectionBookSetManualSeen = (definitionId, state) => {
+  if (!(Number(definitionId) > 0) || !["unseen", "seen", "firstOwner"].includes(state)) return;
+  const overrides = JSON.parse(localStorage.getItem(COLLECTION_BOOK_MANUAL_SEEN_KEY) || "{}");
+  overrides[definitionId] = state;
+  localStorage.setItem(COLLECTION_BOOK_MANUAL_SEEN_KEY, JSON.stringify(overrides));
+  window.dispatchEvent(new CustomEvent("autosbc:ownership-ready", { detail: { manual: true, definitionId: Number(definitionId) } }));
+  window.__collectionBookOnClubUpdate?.(collectionBookGetOwnedCounts(), { rebuild: true });
+};
+
 let _collectionBookOwnershipCounts = new Map();
 let _collectionBookFirstOwnerCounts = new Map();
-const collectionBookGetFirstOwnerCounts = () => _collectionBookFirstOwnerCounts;
+let _collectionBookFirstOwnerItems = new Map();
+const collectionBookGetFirstOwnerCounts = () => collectionBookApplyManualSeenCounts(new Map(_collectionBookFirstOwnerCounts), true);
+const collectionBookIsFirstOwner = (entityId, owners) => {
+  const recorded = _collectionBookFirstOwnerItems.get(String(entityId));
+  return typeof recorded === "boolean" ? recorded : Number(owners) === 1;
+};
 
-const _collectionBookApplyOwnershipCounts = (counts, firstOwnerCounts = {}) => {
+const _collectionBookApplyOwnershipCounts = (counts, firstOwnerCounts = {}, firstOwnerItems = {}) => {
   if (!counts || typeof counts !== "object") return;
   const next = new Map();
   for (const [defId, n] of Object.entries(counts)) {
@@ -305,6 +335,8 @@ const _collectionBookApplyOwnershipCounts = (counts, firstOwnerCounts = {}) => {
   _collectionBookFirstOwnerCounts = new Map(Object.entries(firstOwnerCounts || {})
     .filter(([id, count]) => Number(id) > 0 && Number(count) > 0)
     .map(([id, count]) => [Number(id), Number(count)]));
+  _collectionBookFirstOwnerItems = new Map(Object.entries(firstOwnerItems || {})
+    .filter(([, firstOwner]) => typeof firstOwner === "boolean"));
   window.dispatchEvent(new CustomEvent("autosbc:ownership-ready"));
 };
 
@@ -316,7 +348,7 @@ const collectionBookFetchOwnership = async () => {
     });
     if (!resp.ok) return;
     const json = await resp.json();
-    _collectionBookApplyOwnershipCounts(json?.counts, json?.firstOwnerCounts);
+    _collectionBookApplyOwnershipCounts(json?.counts, json?.firstOwnerCounts, json?.firstOwnerItems);
   } catch (err) {
     console.warn("[CollectionBook] ownership fetch failed", err);
   }
@@ -324,6 +356,8 @@ const collectionBookFetchOwnership = async () => {
 
 // Extract {definitionId, entityId} pairs from raw EA items. entityId is the
 // unique instance id (item.id), which persists as a player moves between piles.
+const collectionBookIsTimeLimited = item => typeof item?.isTimeLimited === "function" ? item.isTimeLimited() : item?.isTimeLimited === true;
+
 const _collectionBookOwnershipPairs = (items) => {
   const pairs = [];
   for (const item of items || []) {
@@ -331,7 +365,7 @@ const _collectionBookOwnershipPairs = (items) => {
     const entityId = item?.id;
     if (!Number.isFinite(defId) || defId <= 0) continue;
     if (entityId == null) continue;
-    if (item.concept || (typeof item.isLoan === "function" ? item.isLoan() : Number(item.loans ?? -1) >= 0)) continue;
+    if (item.concept || collectionBookIsTimeLimited(item) || (typeof item.isLoan === "function" ? item.isLoan() : Number(item.loans ?? -1) >= 0)) continue;
     const owners = Number(item.owners);
     pairs.push({ definitionId: defId, entityId: String(entityId), firstOwner: owners > 0 ? owners === 1 : null });
   }
@@ -341,6 +375,11 @@ const _collectionBookOwnershipPairs = (items) => {
 // Record ownership for a batch of EA items (club search / unassigned search),
 // then refresh the Collection Book counters with the merged counts. The backend
 // dedupes by entity id, so repeated searches never inflate the count.
+const collectionBookRecordTransferPlayers = items => collectionBookRecordOwnership(
+  (items || []).filter(item => typeof item?.isPlayer === "function"
+    ? item.isPlayer() : String(item?.getSearchType?.() || "").toUpperCase() === "PLAYER"),
+);
+
 const collectionBookRecordOwnership = async (items) => {
   try {
     const pairs = _collectionBookOwnershipPairs(items);
@@ -352,7 +391,7 @@ const collectionBookRecordOwnership = async (items) => {
     });
     if (!resp.ok) return;
     const json = await resp.json();
-    _collectionBookApplyOwnershipCounts(json?.counts, json?.firstOwnerCounts);
+    _collectionBookApplyOwnershipCounts(json?.counts, json?.firstOwnerCounts, json?.firstOwnerItems);
     if (typeof window.__collectionBookOnClubUpdate === "function") {
       window.__collectionBookOnClubUpdate(collectionBookGetOwnedCounts());
     }
@@ -373,7 +412,7 @@ const collectionBookGetOwnedCounts = () => {
     : [];
   for (const entry of entries) {
     const item = entry.itemAttributes || entry;
-    if (item.concept || item.isLoan?.() || Number(item.loans ?? entry.loans ?? -1) >= 0) continue;
+    if (item.concept || collectionBookIsTimeLimited(item) || item.isLoan?.() || Number(item.loans ?? entry.loans ?? -1) >= 0) continue;
     const defId = Number(entry?.definitionId);
     if (!Number.isFinite(defId) || defId <= 0) continue;
     counts.set(defId, (counts.get(defId) || 0) + 1);
@@ -383,7 +422,7 @@ const collectionBookGetOwnedCounts = () => {
       counts.set(defId, Math.max(counts.get(defId) || 0, cached));
     }
   }
-  return counts;
+  return typeof collectionBookApplyManualSeenCounts === "function" ? collectionBookApplyManualSeenCounts(counts) : counts;
 };
 
 // Map definitionId -> copies currently in the *club* (live __clubPlayersEntries
@@ -395,6 +434,8 @@ const collectionBookGetClubCounts = () => {
     ? window.__clubPlayersEntries
     : [];
   for (const entry of entries) {
+    const item = entry.itemAttributes || entry;
+    if (collectionBookIsTimeLimited(item) || collectionBookIsTimeLimited(entry)) continue;
     const defId = Number(entry?.definitionId);
     if (!Number.isFinite(defId) || defId <= 0) continue;
     counts.set(defId, (counts.get(defId) || 0) + 1);
@@ -514,7 +555,13 @@ const collectionBookGetPrice = (player) => {
   const defId = Number(player?.eaId);
   if (!Number.isFinite(defId) || defId <= 0) return null;
   try {
+    const priceItems = typeof getPriceItems === "function" ? getPriceItems() || {} : {};
+    const priceEntry = priceItems[defId] || priceItems[String(defId)];
     const concept = collectionBookGetConceptIndex().get(defId);
+    if (priceEntry?.isExtinct) {
+      const extinctMax = Number(concept?._itemPriceLimits?.maximum ?? priceEntry.priceLimitMax);
+      return Number.isFinite(extinctMax) && extinctMax > 0 ? extinctMax : null;
+    }
     if (concept) {
       if (typeof getPrice === "function") {
         const p = getPrice(concept);
@@ -563,19 +610,34 @@ const _collectionBookPriceRequested = new Set();
 // shared fetchPlayerPrices pipeline (which populates the EA price cache that
 // collectionBookGetPrice reads). Returns the number of players queued.
 const collectionBookFetchMissingPrices = async (players) => {
-  if (typeof fetchPlayerPrices !== "function") return 0;
   const index = collectionBookGetConceptIndex();
+  let extinctPricesLoaded = 0;
+  if (typeof ensureExtinctPlayerMaxPrice === "function") {
+    await Promise.all((players || []).map(async player => {
+      const defId = Number(player?.eaId);
+      const prices = typeof getPriceItems === "function" ? getPriceItems() || {} : {};
+      const entry = prices[defId] || prices[String(defId)];
+      if (!entry?.isExtinct) return;
+      const maxPrice = await ensureExtinctPlayerMaxPrice(index.get(defId));
+      if (maxPrice == null) return;
+      player.price = maxPrice;
+      extinctPricesLoaded += 1;
+    }));
+  }
+  if (typeof fetchPlayerPrices !== "function") return extinctPricesLoaded;
   const toFetch = [];
   for (const p of players || []) {
     const defId = Number(p?.eaId);
     if (!Number.isFinite(defId) || defId <= 0) continue;
+    const cachedPrices = typeof getPriceItems === "function" ? getPriceItems() || {} : {};
+    if ((cachedPrices[defId] || cachedPrices[String(defId)])?.isExtinct) continue;
     if (_collectionBookPriceRequested.has(defId)) continue;
     if (collectionBookGetPrice(p) != null) continue;
     _collectionBookPriceRequested.add(defId);
     const concept = index.get(defId);
     toFetch.push(concept || { definitionId: defId, concept: true });
   }
-  if (!toFetch.length) return 0;
+  if (!toFetch.length) return extinctPricesLoaded;
   try {
     await fetchPlayerPrices(toFetch, {
       throttleProfile: "concept",
@@ -585,7 +647,7 @@ const collectionBookFetchMissingPrices = async (players) => {
   } catch (err) {
     console.warn("[CollectionBook] fut.gg price fetch failed", err);
   }
-  return toFetch.length;
+  return toFetch.length + extinctPricesLoaded;
 };
 
 // EA-native face stats (6 values, FUT card order) for a collection player,

@@ -180,7 +180,17 @@ const collectionBookRenderCard = (row) => {
   card.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
+    const scrollPositions = [];
+    for (let container = card.parentElement; container; container = container.parentElement) {
+      scrollPositions.push({ container, top: container.scrollTop, left: container.scrollLeft });
+    }
     collectionBookOpenNativeSidebar(row);
+    const restoreScroll = () => scrollPositions.forEach(({ container, top, left }) => {
+      container.scrollTop = top;
+      container.scrollLeft = left;
+    });
+    restoreScroll();
+    globalThis.requestAnimationFrame?.(restoreScroll);
   }, true);
 
   // Media area starts as a lightweight placeholder; upgraded to an EA card on
@@ -338,6 +348,11 @@ const collectionBookCreateEaCardElement = (player, owned, copies, inClub) => {
       entity.holographicType = conceptEntity.holographicType || null;
     }
   }
+  if ((!(Number(entity.loans) >= 0) || entity.loans == null) && !(Number(entity.limitedUseType) > 1)) {
+    entity.loans = -1;
+    entity.limitedUseType = globalThis.LimitedUseType?.NONE ?? 0;
+    entity.endTime = -1;
+  }
   collectionBookEnsureNativePlayerName(entity, player, conceptEntity);
 
   const view =
@@ -429,7 +444,7 @@ const collectionBookEnsureClubLoaded = () => {
 };
 
 // Re-apply club-derived ownership to already rendered sections (no re-fetch).
-window.__collectionBookOnClubUpdate = (ownedCounts) => {
+window.__collectionBookOnClubUpdate = (ownedCounts, { rebuild = false } = {}) => {
   let grandOwned = 0;
   let grandTotal = 0;
   for (const [slug, section] of _collectionBookSections.entries()) {
@@ -440,6 +455,10 @@ window.__collectionBookOnClubUpdate = (ownedCounts) => {
     );
     grandOwned += owned;
     grandTotal += total;
+    if (rebuild) {
+      collectionBookRenderSectionGrid(slug, section.players);
+      continue;
+    }
     // Re-render cards whose ownership changed (concept flag is baked into the
     // EA item view, so a class toggle isn't enough — rebuild the card).
     for (const row of rows) {

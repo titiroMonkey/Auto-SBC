@@ -74,6 +74,9 @@ const sbcViewOverride = () => {
         "triggerButton" in triggerButtonOrOptions);
     const options = hasOptionsObject ? triggerButtonOrOptions : {};
     const galleryLineup = options.galleryLineup === true && Array.isArray(options.squadPlayers);
+    const scoreLineup = options.scoreSbcLineup === true && Array.isArray(options.squadPlayers);
+    const settingsSbc = options.settingsScope?.sbc ?? sbcSetId;
+    const settingsChallenge = options.settingsScope?.challenge ?? challengeId;
     const singleItem = options.singleItem || null;
     const button = hasOptionsObject
       ? options.triggerButton || null
@@ -115,6 +118,8 @@ const sbcViewOverride = () => {
     const titleBlock = document.createElement("div");
     titleBlock.textContent = galleryLineup
       ? "Buy Gallery Lineup"
+      : scoreLineup
+        ? "Buy Score SBC Concepts"
       : singleItem
         ? "Quick Buy"
         : "Quick Buy Squad";
@@ -143,7 +148,7 @@ const sbcViewOverride = () => {
     let targetChallenge = null;
 
     try {
-      if (!galleryLineup && !singleItem && !conceptItems.length) {
+      if (!galleryLineup && !scoreLineup && !singleItem && !conceptItems.length) {
         const controller = getControllerInstance();
         if (
           controller?._challenge?.id === challengeId &&
@@ -155,7 +160,7 @@ const sbcViewOverride = () => {
         }
       }
 
-      if (!galleryLineup && !singleItem && !conceptItems.length && (!targetSet || !targetChallenge)) {
+      if (!galleryLineup && !scoreLineup && !singleItem && !conceptItems.length && (!targetSet || !targetChallenge)) {
         const allSets = await sbcSets();
         targetSet = allSets.sets.find((set) => set.id === sbcSetId);
         if (!targetSet) {
@@ -194,13 +199,14 @@ const sbcViewOverride = () => {
       }
 
       const maxPerPlayerSetting = Number(
-        getSettings(sbcSetId, challengeId, "sbcBuyConceptsMaxPrice"),
+        getSettings(settingsSbc, settingsChallenge, "sbcBuyConceptsMaxPrice"),
       );
       const maxAboveSetting = Number(
-        getSettings(sbcSetId, challengeId, "sbcBuyConceptsPriceAbove"),
+        getSettings(settingsSbc, settingsChallenge, "sbcBuyConceptsPriceAbove"),
       );
 
       let successCount = 0;
+      let firstReplacementFailure = null;
 
       const headerRow = document.createElement("div");
       headerRow.className = "quick-buy-squad-row quick-buy-squad-header";
@@ -221,7 +227,9 @@ const sbcViewOverride = () => {
       const rowData = conceptItems.map((conceptItem) => {
         
         const name = formatPlayerName(conceptItem);
-        const rawExpectedPrice = getPrice(conceptItem);
+        const rawExpectedPrice = galleryLineup && options.playerPrices
+          ? options.playerPrices[conceptItem.definitionId]
+          : getPrice(conceptItem);
         const expectedPrice =
           typeof rawExpectedPrice === "number" &&
           Number.isFinite(rawExpectedPrice) &&
@@ -240,10 +248,11 @@ const sbcViewOverride = () => {
           Number.isFinite(maxAboveSetting) && maxAboveSetting >= 0
             ? maxAboveSetting
             : 0;
-        const permittedCap = singleItem
+        const scorePriceCap = scoreLineup ? Number(getSettings(settingsSbc, settingsChallenge, "maxPlayerPrice")) : NaN;
+        const permittedCap = singleItem || galleryLineup
           ? expectedPrice
           : Number.isFinite(expectedPrice) && expectedPrice > 0
-            ? Math.min(maxPerPlayer, expectedPrice + maxAbove)
+            ? Math.min(maxPerPlayer, expectedPrice + maxAbove, scorePriceCap > 0 ? scorePriceCap : Infinity)
             : maxPerPlayer;
         const maxBuyLabel = Number.isFinite(permittedCap)
           ? permittedCap.toLocaleString()
@@ -281,6 +290,16 @@ const sbcViewOverride = () => {
         };
       });
 
+      const processLog = singleItem ? document.createElement("div") : null;
+      if (processLog) {
+        processLog.className = "quick-buy-process-log";
+        processLog.style.marginTop = "0.5rem";
+        processLog.style.fontSize = "12px";
+        processLog.setAttribute?.("role", "log");
+        processLog.setAttribute?.("aria-live", "polite");
+        processLog.textContent = "Preparing Quick Buy...";
+        statusContent.appendChild(processLog);
+      }
       statusContent.scrollTop = statusContent.scrollHeight;
 
       const markRowsStopped = (startIndex = 0) => {
@@ -321,9 +340,10 @@ const sbcViewOverride = () => {
         if (!result || result?.success) return false;
         const reason = String(result?.reason || "");
 
-        // Don't retry deterministic failures where a re-attempt won't help.
+        // A fresh market search can find a listing even if the previous one was empty.
         if (
           reason === "noCachedPrice" ||
+          reason === "excludedBySettings" ||
           reason === "priceAboveThreshold" ||
           reason === "priceAboveBaseline"
         ) {
@@ -341,8 +361,14 @@ const sbcViewOverride = () => {
           break;
         }
 
-        const { conceptItem, expectedLabel, statusSpan, permittedCap } =
+        const { conceptItem, expectedPrice, expectedLabel, statusSpan, permittedCap } =
           rowData[i];
+
+        if (galleryLineup && (!Number.isFinite(expectedPrice) || expectedPrice <= 0)) {
+          statusSpan.textContent = "No current price";
+          statusSpan.style.color = "#f40727";
+          continue;
+        }
 
         statusSpan.textContent = "Buying...";
         statusSpan.style.color = "";
@@ -362,6 +388,7 @@ const sbcViewOverride = () => {
 
           if (attempt > 1) {
             statusSpan.textContent = `Retrying (${attempt - 1}/${QUICK_BUY_RETRY_LIMIT})...`;
+            if (processLog) processLog.textContent = statusSpan.textContent;
           }
 
           result = await tryQuickBuy(
@@ -369,9 +396,16 @@ const sbcViewOverride = () => {
             conceptItem,
             {
               suppressNotifications: true,
+              cancelled: () => stopRequested || options.cancelled?.(),
+              validateItem: options.validateItem,
+              scoreSbcLineup: scoreLineup,
+              settingsScope: options.settingsScope,
+              onProgress: processLog ? message => { processLog.textContent = message; } : undefined,
               useGlobalSettings: galleryLineup || !!singleItem,
-              capToCurrentPrice: !!singleItem,
-              galleryPurchaseAction: galleryLineup ? options.galleryPurchaseAction : undefined,
+              capToCurrentPrice: galleryLineup || !!singleItem,
+              currentPrice: galleryLineup ? expectedPrice : undefined,
+              maxBuyPrice: galleryLineup ? permittedCap : undefined,
+              galleryPurchaseAction: galleryLineup || options.scoreSbcLineup ? options.galleryPurchaseAction : undefined,
               excludeTradeIds: Array.from(retryExcludedTradeIds),
               excludeItemIds: Array.from(retryExcludedItemIds),
             },
@@ -381,13 +415,12 @@ const sbcViewOverride = () => {
           );
 
           if (result?.success) {
-            options.onPurchased?.(conceptItem, result);
+            await options.onPurchased?.(conceptItem, result);
             break;
           }
 
           const hasRetriesRemaining = attempt <= QUICK_BUY_RETRY_LIMIT;
-          const shouldRetry =
-            hasRetriesRemaining && isRetryableQuickBuyFailure(result);
+          const shouldRetry = hasRetriesRemaining && isRetryableQuickBuyFailure(result);
 
           const failedTradeId = Number(result?.tradeId);
           if (Number.isFinite(failedTradeId) && failedTradeId > 0) {
@@ -433,8 +466,10 @@ const sbcViewOverride = () => {
           let reasonLabel = "Failed";
           if (result?.reason === "noCachedPrice") {
             reasonLabel = "Missing cached price";
+          } else if (result?.reason === "excludedBySettings") {
+            reasonLabel = "Excluded by SBC settings";
           } else if (result?.reason === "noListing") {
-            reasonLabel = "No active listing";
+            reasonLabel = "No listing within cap";
           } else if (result?.reason === "priceAboveBaseline") {
             const baselineLabel =
               result?.baselineLabel ||
@@ -463,9 +498,12 @@ const sbcViewOverride = () => {
           }
           statusSpan.textContent = reasonLabel;
           statusSpan.style.color = "#f40727";
+          if (scoreLineup && options.replaceFailedConcept && result?.reason !== "stopped" && !firstReplacementFailure) {
+            firstReplacementFailure = { failedConcept: conceptItem, failure: result };
+          }
         }
 
-        if (!galleryLineup && !singleItem) getControllerInstance()?.applyDataChange?.();
+        if (!galleryLineup && !scoreLineup && !singleItem) getControllerInstance()?.applyDataChange?.();
 
         if (i < rowData.length - 1) {
           const delay = getInterAttemptDelayMs();
@@ -504,6 +542,15 @@ const sbcViewOverride = () => {
       statusContainer.style.display = "none";
       statusContent.innerHTML = "";
       timerFooter.textContent = "";
+      if (firstReplacementFailure) {
+        return {
+          success: false,
+          reason: "conceptBuyFailed",
+          ...firstReplacementFailure,
+          purchased: successCount,
+          total,
+        };
+      }
       return { success: true, purchased: successCount, total };
     } catch (error) {
       console.error("Quick buy squad error", error);

@@ -1004,26 +1004,39 @@ let createSBCTab = async () => {
   const autoBuyGameCurrency =
     autoBuyCurrency === "POINTS" ? GameCurrency.POINTS : GameCurrency.COINS;
 
-  const purchasePackById = async (packId, currency) => {
-    const packsResponse = await getPacks(true);
-    const savedName = localStorage.getItem(AUTO_BUY_PACK_NAME_KEY) || "";
-    const packName = autoBuyPackName(packId);
-    const packs = packsResponse?.packs || [];
-    const pack = packs.find(
-      (candidate) =>
-        !candidate?.isMyPack &&
-        services.Localization.localize(candidate?.packName) ===
-          (savedName || packName),
-    ) || packs.find(
-      (candidate) =>
-        !candidate?.isMyPack && String(candidate?.id) === String(packId),
-    );
-    if (!pack || pack.isMyPack) {
-      throw new Error(`Purchasable pack ${packId} is no longer available`);
+  const waitForAutoBuyPack = async (packId, currency) => {
+    let announced = false;
+    while (window.__autoBuyRunning && String(window.__autoBuyPackId) === String(packId)) {
+      try {
+        const packsResponse = await getPacks(true);
+        const pack = (packsResponse?.packs || []).find(
+          candidate => !candidate?.isMyPack && String(candidate?.id) === String(packId),
+        );
+        const price = Number(pack?.prices?._collection?.[currency]?.amount);
+        if (pack && pack.packType === "CARDPACK" && price > 0) {
+          window.__autoBuyWaitingForPack = false;
+          return pack;
+        }
+      } catch (error) {
+        console.warn("Auto Buy pack availability check failed; retrying", error);
+      }
+      if (!announced) {
+        announced = true;
+        window.__autoBuyWaitingForPack = true;
+        showNotification("Waiting for the selected pack to become available...", UINotificationType.NEUTRAL);
+      }
+      await sleep(5000);
     }
+    window.__autoBuyWaitingForPack = false;
+    return null;
+  };
 
-    window.__autoBuyPackId = pack.id;
-
+  const purchasePack = async (pack, currency) => {
+    if (!pack || pack.isMyPack || !(Number(pack?.prices?._collection?.[currency]?.amount) > 0)) {
+      throw new Error(`Pack ${pack?.id ?? "unknown"} is not currently purchasable`);
+    }
+    const packId = pack.id;
+    window.__autoBuyPackId = packId;
     const observer = new UTStoreViewController();
     await new Promise((resolve, reject) => {
       try {
@@ -1321,7 +1334,18 @@ let createSBCTab = async () => {
             break;
           }
           await processUnassigned();
-          await purchasePackById(packId, autoBuyGameCurrency);
+          const pack = await waitForAutoBuyPack(packId, autoBuyCurrency);
+          if (!pack || !window.__autoBuyRunning) break;
+          try {
+            await purchasePack(pack, autoBuyGameCurrency);
+          } catch (error) {
+            const status = Number(error?.status ?? error?.code ?? 0);
+            if (status !== 404) throw error;
+            window.__autoBuyWaitingForPack = true;
+            showNotification("EA pack unavailable; waiting for the selected pack to return...", UINotificationType.NEUTRAL);
+            await sleep(5000);
+            continue;
+          }
           updateAutoBuyLabel();
 
           try {

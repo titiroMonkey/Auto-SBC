@@ -173,6 +173,65 @@ def analyze_failure_reasons(sbc, before_df: pd.DataFrame, after_df: pd.DataFrame
 SOLVE_DIAGNOSTICS_FILE = os.path.join(
     os.path.dirname(__file__), "logs", "solve_diagnostics.json"
 )
+FAILED_SOLVE_SNAPSHOT_DIR = os.path.join(os.path.dirname(__file__), "logs")
+
+
+def write_failed_solve_snapshot(run_id: str, sbc: dict, input_df: pd.DataFrame, filtered_df: pd.DataFrame, status: str, status_code):
+    """Preserve the exact player candidates and requirements seen by a failed solve."""
+    try:
+        player_columns = [
+            column
+            for column in (
+                "id",
+                "assetId",
+                "definitionId",
+                "name",
+                "concept",
+                "rating",
+                "ratingTier",
+                "teamId",
+                "leagueId",
+                "nationId",
+                "rarityId",
+                "groups",
+                "possiblePositions",
+                "maxChem",
+                "teamChem.contribution",
+                "leagueChem.contribution",
+                "nationChem.contribution",
+                "price",
+                "futggPrice",
+                "__currentSolutionHint",
+            )
+            if column in filtered_df.columns
+        ]
+        hinted_rows = input_df[
+            input_df.get("__currentSolutionHint", pd.Series(False, index=input_df.index))
+            .fillna(False)
+            .astype(bool)
+        ]
+        snapshot = {
+            "runId": run_id,
+            "status": status,
+            "statusCode": status_code,
+            "sbc": sbc,
+            "hintedSquadAudit": _audit_hinted_squad(sbc, input_df),
+            "inputPlayerCount": int(len(input_df)),
+            "filteredPlayerCount": int(len(filtered_df)),
+            "hintedPlayers": hinted_rows[
+                [column for column in player_columns if column in hinted_rows.columns]
+            ].to_dict(orient="records"),
+            "filteredPlayers": filtered_df[player_columns].to_dict(orient="records"),
+        }
+        os.makedirs(FAILED_SOLVE_SNAPSHOT_DIR, exist_ok=True)
+        snapshot_path = os.path.join(
+            FAILED_SOLVE_SNAPSHOT_DIR, f"failed_solve_{run_id}.json"
+        )
+        with open(snapshot_path, "w", encoding="utf-8") as snapshot_file:
+            json.dump(snapshot, snapshot_file, indent=2, default=str)
+        add_log(f"[diagnostics] failed solve player snapshot written: {snapshot_path}")
+    except Exception as exc:
+        add_log(f"[diagnostics] failed to write failed solve player snapshot: {exc}")
 
 
 def _rating_histogram(df: pd.DataFrame) -> dict:
@@ -194,6 +253,190 @@ def _rating_histogram(df: pd.DataFrame) -> dict:
             "owned": int((~cmask).sum()),
         }
     return dict(sorted(hist.items()))
+
+
+def _scope_matches(actual: int, expected: int, scope: str) -> bool:
+    if scope == "LOWER":
+        return actual <= expected
+    if scope == "EXACT":
+        return actual == expected
+    return actual >= expected
+
+
+def _audit_hinted_squad(sbc: dict, players_df: pd.DataFrame) -> dict:
+    def plain_value(value):
+        if isinstance(value, dict):
+            return {key: plain_value(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [plain_value(item) for item in value]
+        if hasattr(value, "item"):
+            return plain_value(value.item())
+        return value
+
+    formation = sbc.get("formation") or []
+    current_solution = sbc.get("currentSolution") or []
+    hinted_players = []
+    for slot_index, raw_id in enumerate(current_solution):
+        if raw_id in (None, "", 0):
+            continue
+        try:
+            player_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+
+        matches = pd.Series(False, index=players_df.index)
+        for column in ("assetId", "definitionId"):
+            if column in players_df.columns:
+                matches |= pd.to_numeric(players_df[column], errors="coerce").eq(player_id)
+        candidates = players_df[matches]
+        if candidates.empty:
+            hinted_players.append({"slotIndex": slot_index, "id": player_id, "found": False})
+            continue
+
+        row = candidates.iloc[0]
+        possible_positions = row.get("possiblePositions", [])
+        if not isinstance(possible_positions, list):
+            possible_positions = [possible_positions]
+        position = formation[slot_index] if slot_index < len(formation) else None
+        hinted_players.append(
+            {
+                "slotIndex": slot_index,
+                "formationPosition": position,
+                "id": player_id,
+                "found": True,
+                "positionCompatible": position in possible_positions,
+                "name": row.get("name"),
+                "definitionId": row.get("definitionId"),
+                "assetId": row.get("assetId"),
+                "concept": bool(row.get("concept", False)),
+                "rating": row.get("rating"),
+                "ratingTier": row.get("ratingTier"),
+                "teamId": row.get("teamId"),
+                "leagueId": row.get("leagueId"),
+                "nationId": row.get("nationId"),
+                "rarityId": row.get("rarityId"),
+                "groups": row.get("groups"),
+                "possiblePositions": possible_positions,
+                "maxChem": row.get("maxChem"),
+                "teamChemContribution": row.get("teamChem.contribution"),
+                "leagueChemContribution": row.get("leagueChem.contribution"),
+                "nationChemContribution": row.get("nationChem.contribution"),
+            }
+        )
+
+    found_players = [player for player in hinted_players if player.get("found")]
+    expected_players = 11 - len(sbc.get("brickIndices") or [])
+    audits = []
+    for requirement in sbc.get("constraints", []):
+        key = requirement.get("requirementKey")
+        scope = str(requirement.get("scope") or "GREATER").upper()
+        values = requirement.get("eligibilityValues") or []
+        if not values:
+            continue
+        expected = int(values[0])
+        actual = None
+        required_count = int(requirement.get("count") or expected_players)
+        if key == "LEAGUE_COUNT":
+            actual = len({player.get("leagueId") for player in found_players})
+        elif key == "NATION_COUNT":
+            actual = len({player.get("nationId") for player in found_players})
+        elif key == "CLUB_COUNT":
+            actual = len({player.get("teamId") for player in found_players})
+        elif key in {"SAME_LEAGUE_COUNT", "SAME_NATION_COUNT", "SAME_CLUB_COUNT"}:
+            field = {
+                "SAME_LEAGUE_COUNT": "leagueId",
+                "SAME_NATION_COUNT": "nationId",
+                "SAME_CLUB_COUNT": "teamId",
+            }[key]
+            counts = pd.Series([player.get(field) for player in found_players]).value_counts()
+            actual = int(counts.max()) if not counts.empty else 0
+        elif key == "PLAYER_QUALITY":
+            actual = sum(player.get("ratingTier") == expected for player in found_players)
+            required_count = expected_players if required_count <= 0 else required_count
+        elif key == "PLAYER_LEVEL":
+            actual = sum(player.get("ratingTier") in values for player in found_players)
+        elif key == "PLAYER_EXACT_OVR":
+            actual = sum(player.get("rating") == expected for player in found_players)
+        elif key == "PLAYER_RARITY":
+            actual = sum(player.get("rarityId") in values for player in found_players)
+        elif key == "CHEMISTRY_POINTS":
+            continue
+        if actual is not None:
+            audits.append(
+                {
+                    "requirementKey": key,
+                    "scope": scope,
+                    "expected": expected,
+                    "actual": actual,
+                    "requiredCount": required_count,
+                    "passes": _scope_matches(actual, expected, scope)
+                    if key in {"LEAGUE_COUNT", "NATION_COUNT", "CLUB_COUNT", "SAME_LEAGUE_COUNT", "SAME_NATION_COUNT", "SAME_CLUB_COUNT"}
+                    else bool(actual >= required_count),
+                }
+            )
+
+    club_tier_thresholds = {0: 0, 2: 1, 4: 2, 7: 3}
+    league_tier_thresholds = {0: 0, 3: 1, 5: 2, 8: 3}
+    nation_tier_thresholds = {0: 0, 2: 1, 5: 2, 8: 3}
+    contributions = {"teamId": {}, "leagueId": {}, "nationId": {}}
+    for player in found_players:
+        for entity, field in (
+            ("teamId", "teamChemContribution"),
+            ("leagueId", "leagueChemContribution"),
+            ("nationId", "nationChemContribution"),
+        ):
+            value = player.get(field)
+            value = 1 if value is None else int(value)
+            group_key = player.get(entity)
+            contributions[entity][group_key] = contributions[entity].get(group_key, 0) + value
+
+    def get_tier(total: int, thresholds: dict) -> int:
+        return max(tier for threshold, tier in thresholds.items() if total >= threshold)
+
+    estimated_chemistry = 0
+    for player in found_players:
+        if player.get("maxChem"):
+            estimated_chemistry += 3
+        else:
+            estimated_chemistry += min(
+                3,
+                get_tier(contributions["teamId"].get(player.get("teamId"), 0), club_tier_thresholds)
+                + get_tier(contributions["leagueId"].get(player.get("leagueId"), 0), league_tier_thresholds)
+                + get_tier(contributions["nationId"].get(player.get("nationId"), 0), nation_tier_thresholds),
+            )
+
+    for requirement in sbc.get("constraints", []):
+        if requirement.get("requirementKey") != "CHEMISTRY_POINTS":
+            continue
+        values = requirement.get("eligibilityValues") or []
+        if values:
+            target = int(values[0])
+            audits.append(
+                {
+                    "requirementKey": "CHEMISTRY_POINTS",
+                    "scope": str(requirement.get("scope") or "GREATER").upper(),
+                    "expected": target,
+                    "actual": estimated_chemistry,
+                    "passes": bool(
+                        _scope_matches(
+                            estimated_chemistry,
+                            target,
+                            str(requirement.get("scope") or "GREATER").upper(),
+                        )
+                    ),
+                }
+            )
+
+    return plain_value({
+        "expectedPlayerCount": expected_players,
+        "foundHintedPlayerCount": len(found_players),
+        "positionCompatibleCount": sum(
+            bool(player.get("positionCompatible")) for player in found_players
+        ),
+        "estimatedChemistry": estimated_chemistry,
+        "hintedPlayers": hinted_players,
+        "constraintAudit": audits,
+    })
 
 
 def write_solve_diagnostics(
@@ -224,6 +467,8 @@ def write_solve_diagnostics(
                 "setId": sbc.get("setId"),
                 "challengeId": sbc.get("challengeId"),
                 "formation": sbc.get("formation"),
+                "constraints": sbc.get("constraints", []),
+                "currentSolution": sbc.get("currentSolution", []),
                 "constraintCount": len(sbc.get("constraints", [])),
             },
             "solutionFound": bool(solution_found),
@@ -539,7 +784,15 @@ def preprocess_data(df: pd.DataFrame, sbc, run_id: str = "unknown"):
         candidate_rows = candidate_rows.head(limit_per_signature)
 
     combined_df = pd.concat([candidate_rows, forced_rows], axis=0)
-    df = combined_df[~combined_df.index.duplicated(keep="first")].reset_index(drop=True)
+    combined_df["__candidate_row_index"] = combined_df.index
+    duplicate_fields = ["__candidate_row_index", "possiblePositions"]
+    if expPR:
+        duplicate_fields.append("groups")
+    df = (
+        combined_df.drop_duplicates(subset=duplicate_fields, keep="first")
+        .drop(columns="__candidate_row_index")
+        .reset_index(drop=True)
+    )
 
     removed = before_prune - len(df)
     log_filter_step(
@@ -582,7 +835,6 @@ def runAutoSBC(sbc, players, maxSolveTime, debug_failure_analysis=False):
             add_log(f"  {key}: {value}")
     print(f"Processing SBC: {sbc['name'] if 'name' in sbc else 'Unknown SBC'}")
     df = pd.json_normalize(players)
-    before_preprocess_df = df.copy()
     force_col = "__currentSolutionHint"
     if force_col not in df.columns:
         df[force_col] = False
@@ -614,6 +866,7 @@ def runAutoSBC(sbc, players, maxSolveTime, debug_failure_analysis=False):
     add_log(
         f"Current-solution hinted players preserved: {int(df[force_col].sum())}"
     )
+    before_preprocess_df = df.copy()
     # Remove All Players not matching quality first
     before_df = df
     df = df[(df["price"] > 0) | df[force_col]]
@@ -734,6 +987,15 @@ def runAutoSBC(sbc, players, maxSolveTime, debug_failure_analysis=False):
                 }
             ],
         )
+        if status_code == 3:
+            write_failed_solve_snapshot(
+                run_id,
+                sbc,
+                before_preprocess_df,
+                df,
+                status,
+                status_code,
+            )
     write_solve_diagnostics(
         run_id,
         sbc,

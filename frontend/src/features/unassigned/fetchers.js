@@ -45,6 +45,9 @@ let fetchTransferList = () => {
       async (sender, response) => {
         result = [...response.response.items];
 
+        if (typeof collectionBookRecordTransferPlayers === "function") {
+          await collectionBookRecordTransferPlayers(result);
+        }
         resolve(result);
       },
     );

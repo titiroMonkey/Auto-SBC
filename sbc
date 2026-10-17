@@ -2,11 +2,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 PYTHON=".venv/Scripts/python.exe"
-if [ ! -f "$PYTHON" ]; then
+if [ -f "$PYTHON" ]; then
+    PYTHON="../$PYTHON"
+else
     PYTHON=".venv/bin/python"
-fi
-if [ ! -f "$PYTHON" ]; then
-    PYTHON="python"
+    if [ -f "$PYTHON" ]; then
+        PYTHON="../$PYTHON"
+    else
+        PYTHON="$(command -v python || command -v python3)"
+    fi
 fi
 cd backend;
-"../$PYTHON" -m uvicorn main:app --reload --reload-dir ../backend --reload-dir ../frontend
+"$PYTHON" -m uvicorn main:app --reload --reload-dir ../backend --reload-dir ../frontend

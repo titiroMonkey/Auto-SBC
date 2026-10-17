@@ -424,26 +424,35 @@ const resolveFutGgSetSlug = async (setId) => {
 };
 
 const fetchFutGgSolution = async (setId, challengeId) => {
-  const result = { definitionIds: [], solutionUrl: null };
+  const result = { definitionIds: [], positions: [], solutionUrl: null, challengeId: null };
   const slug = await resolveFutGgSetSlug(setId);
   if (!slug) return result;
 
   const detail = await futGgGetJson(`https://www.fut.gg/api/fut/sbc/${slug}/`);
   const challenges = detail?.data?.challenges || [];
-  const challenge =
-    challenges.find((c) => Number(c.eaId) === Number(challengeId)) ||
-    challenges[0];
+  const challenge = challenges.find((candidate) =>
+    Number(candidate.eaId) === Number(challengeId),
+  );
+  if (!challenge) {
+    console.warn("[Auto-SBC][QuickSolution] fut.gg challenge ID not found", {
+      setId,
+      challengeId,
+      availableChallengeIds: challenges.map((candidate) => Number(candidate.eaId)).filter(Number.isFinite),
+    });
+    return result;
+  }
   const solutionPath =
     challenge?.cheapestSolutionUrl || challenge?.cheapestSolutionPcUrl || "";
   const uuid = String(solutionPath).match(/squad-builder\/([0-9a-f-]{36})/i)?.[1];
   if (!uuid) return result;
-  result.solutionUrl = `https://www.fut.gg${solutionPath}`;
+  result.solutionUrl = new URL(solutionPath, "https://www.fut.gg").href;
+  result.challengeId = Number(challenge.eaId);
 
   const squad = await futGgGetJson(`https://www.fut.gg/api/squads/${uuid}/`);
   const positions = squad?.data?.data?.activeGroupPositions || [];
-  result.definitionIds = positions
-    .map((p) => Number(p.playerEaId))
-    .filter((n) => Number.isFinite(n) && n > 0);
+  result.positions = positions.filter((position) => position.group === "FIELD" && Number(position.playerEaId) > 0)
+    .map((position) => ({ playerEaId: Number(position.playerEaId), positionIdx: Number(position.positionIdx) }));
+  result.definitionIds = result.positions.map((position) => position.playerEaId);
   return result;
 };
 
@@ -496,9 +505,11 @@ async function autoApplyQuickSolutionOnPageOpen(options = {}) {
 
     const state = window.__autoSbcQuickSolutionApplyState;
     const key = `${challenge.setId}:${challenge.id}`;
-    const lsKey = `autosbc_futgg_cache_${key}`;
+    const lsKey = `autosbc_futgg_cache_v3_${key}`;
     const now = Date.now();
     const lastRunAt = Number(state.lastRunAt[key] || 0);
+    let solutionSource = "cache";
+    let solutionUrl = null;
 
     if (state.running.has(key)) {
       return;
@@ -513,26 +524,33 @@ async function autoApplyQuickSolutionOnPageOpen(options = {}) {
     // Resolve the cheapest fut.gg solution's player definition IDs for this
     // SBC challenge (fut.gg "View Solution" → squad-builder → /api/squads).
     let definitionIds = [];
+    let solutionPositions = [];
     try {
       const cached = localStorage.getItem(lsKey);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed?.definitionIds)) {
           definitionIds = parsed.definitionIds;
+          solutionPositions = parsed.positions || [];
+          solutionUrl = parsed.solutionUrl || null;
         }
       }
     } catch {}
 
     if (!definitionIds.length) {
       const resolved = await fetchFutGgSolution(challenge.setId, challenge.id);
+      solutionSource = "fut.gg";
       definitionIds = resolved.definitionIds;
-      window.__autoSbcLastQuickSolutionUrl = resolved.solutionUrl;
+      solutionPositions = resolved.positions;
+      solutionUrl = resolved.solutionUrl;
+      window.__autoSbcLastQuickSolutionUrl = solutionUrl;
       if (definitionIds.length) {
         try {
           localStorage.setItem(
             lsKey,
             JSON.stringify({
               definitionIds,
+              positions: solutionPositions,
               fetchedAt: now,
               solutionUrl: resolved.solutionUrl,
             }),
@@ -547,6 +565,7 @@ async function autoApplyQuickSolutionOnPageOpen(options = {}) {
     const QuickSolutionEntries = definitionIds.map((rawId, index) => ({
       index,
       playerEaId: Number(rawId),
+      positionIdx: solutionPositions[index]?.positionIdx ?? null,
       definitionId: toBaseDefinitionId(rawId),
       clubId: null,
       leagueId: null,
@@ -705,6 +724,30 @@ async function autoApplyQuickSolutionOnPageOpen(options = {}) {
       },
     );
 
+    const solutionIds = new Set(uniqueDefinitionIds.map(Number));
+    const matchingIds = (items) => [...new Set((items || [])
+      .map((item) => toBaseDefinitionId(item?.definitionId))
+      .filter((id) => solutionIds.has(id)))];
+    const lookupDiagnostics = {
+      setId: challenge.setId,
+      challengeId: challenge.id,
+      solutionSource,
+      solutionUrl,
+      resolvedChallengeId: solutionSource === "fut.gg" ? Number(challenge.id) : null,
+      futggDefinitionIds: QuickSolutionEntries.map((row) => row.definitionId),
+      clubMatches: matchingIds(clubPlayersPool),
+      conceptMatches: matchingIds(searchedConceptPlayers),
+      rows: selectionRows.map((row) => ({
+        index: row.index,
+        definitionId: row.definitionId,
+        source: row.source,
+        positionIdx: row.QuickSolutionEntry.positionIdx,
+        itemId: Number(row.player?.id) || null,
+      })),
+    };
+    window.__autoSbcLastQuickSolutionDiagnostics = lookupDiagnostics;
+    console.info("[Auto-SBC][QuickSolution] player lookup", lookupDiagnostics);
+
     const selectedPlayers = selectionRows
       .map((row) => row.player)
       .filter(Boolean);
@@ -745,13 +788,18 @@ async function autoApplyQuickSolutionOnPageOpen(options = {}) {
     for (let rowIndex = 0; rowIndex < selectionRows.length; rowIndex++) {
       const player = selectionRows[rowIndex]?.player;
       if (!player) continue;
+      const solutionSlot = selectionRows[rowIndex].QuickSolutionEntry.positionIdx;
+      if (Number.isInteger(solutionSlot) && availableSlots.includes(solutionSlot)) {
+        rowCandidates.set(rowIndex, [solutionSlot]);
+        continue;
+      }
       const possiblePositions = getPossiblePositions(player);
       const compatibleSlots = availableSlots.filter((slotIndex) =>
         possiblePositions.includes(Number(sbcData.formation?.[slotIndex])),
       );
       rowCandidates.set(
         rowIndex,
-        compatibleSlots.length ? compatibleSlots : availableSlots,
+        [...compatibleSlots, ...availableSlots.filter((slotIndex) => !compatibleSlots.includes(slotIndex))],
       );
     }
 
@@ -783,6 +831,19 @@ async function autoApplyQuickSolutionOnPageOpen(options = {}) {
     for (const [slotIndex, rowIndex] of slotToRow) {
       solutionSquad[slotIndex] = selectionRows[rowIndex].player;
       rowToSquadSlot[rowIndex] = slotIndex;
+    }
+    const unassignedRows = selectionRows
+      .filter((row) => row.player && rowToSquadSlot[row.index] == null)
+      .map((row) => ({ index: row.index, definitionId: row.definitionId, source: row.source }));
+    lookupDiagnostics.openSlotCount = availableSlots.length;
+    lookupDiagnostics.assignedCount = slotToRow.size;
+    lookupDiagnostics.unassignedRows = unassignedRows;
+    if (unassignedRows.length) {
+      console.warn("[Auto-SBC][QuickSolution] matched players not assigned to slots", {
+        openSlotCount: availableSlots.length,
+        assignedCount: slotToRow.size,
+        unassignedRows,
+      });
     }
 
     // ── Concept-to-club swap using EA's own chemistry calculator ─────────

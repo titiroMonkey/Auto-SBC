@@ -208,6 +208,31 @@ const resetPatchFlags = () => {
   }
 };
 
+const refreshConceptPricesOnStartup = async () => {
+  try {
+    await ensureConceptCacheInit();
+    let players = window.getAutoSbcConceptPlayers?.() || window.autoSbcConceptPlayers || [];
+    if (!players.length) players = await getConceptPlayers();
+    if (players.length) {
+      await fetchPlayerPrices(players, {
+        throttleProfile: "concept",
+        waitForCompletion: false,
+        suppressNotification: true,
+      });
+    }
+  } catch (error) {
+    console.warn("[concepts] Startup price refresh failed", error);
+  }
+};
+
+const refreshTransferListSeenOnStartup = async () => {
+  try {
+    if (typeof fetchTransferList === "function") await fetchTransferList();
+  } catch (error) {
+    console.warn("[CollectionBook] Startup transfer-list seen refresh failed", error);
+  }
+};
+
 const init = () => {
   if (sbcSolverInitialized) {
     return;
@@ -236,6 +261,8 @@ const init = () => {
       ["Initialize default settings", initDefaultSettings],
       ["Apply FUT home override", futHomeOverride],
       ["Refresh FUT.GG non-player prices", startFutggMiscPriceRefresh],
+      ["Fetch all concept prices (background)", refreshConceptPricesOnStartup],
+      ["Record transfer-list players as seen (background)", refreshTransferListSeenOnStartup],
       [
         "Download card assets (background)",
         () => {

@@ -4,6 +4,35 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
+test("SBC price is one coin lower for a player never seen before", () => {
+  const ownership = new Map();
+  const context = vm.createContext({
+    Map,
+    isItemFixed: () => false,
+    getPrice: item => item.definitionId === 77 ? 500 : 100,
+    getPriceItems: () => ({}),
+    getSettings: (_set, _challenge, key) => key === "conceptPremium" ? 1 : 100,
+    collectionBookGetOwnedCounts: () => ownership,
+    services: { Localization: { localize: value => value } },
+  });
+  const source = fs.readFileSync(path.join(__dirname, "../src/features/solver/pricing.js"), "utf8");
+  vm.runInContext(`${source};globalThis.price=getSBCPrice;`, context);
+
+  const player = {
+    definitionId: 77, rating: 80, rareflag: 1, duplicateId: 0,
+    isSpecial: () => false, getTier: () => 1, isTradeable: () => true,
+  };
+  assert.equal(context.price(player), 479);
+  ownership.set(77, 1);
+  assert.equal(context.price(player), 480);
+
+  const concept = { ...player, concept: true };
+  ownership.clear();
+  assert.equal(context.price(concept), 499);
+  ownership.set(77, 1);
+  assert.equal(context.price(concept), 500);
+});
+
 test("FUT.GG prices share a throttle across signed, direct and failed requests", async () => {
   let now = 0;
   let fail = false;
@@ -68,6 +97,203 @@ test("transfer-market search queue serializes concurrent searches and spaces sta
 
   assert.equal(maximumActive, 1);
   assert.deepEqual(starts, [0, 1200, 2400, 3600]);
+});
+
+test("startup prices the full concept pool after cache initialization", async () => {
+  let finishCache;
+  const players = Array.from({ length: 120 }, (_, index) => ({ definitionId: index + 1, concept: true }));
+  const calls = [];
+  const context = vm.createContext({
+    ensureConceptCacheInit: () => new Promise(resolve => { finishCache = resolve; }),
+    window: { getAutoSbcConceptPlayers: () => players },
+    getConceptPlayers: () => { throw new Error("Cache is already populated"); },
+    fetchPlayerPrices: async (items, options) => calls.push({ items, options }),
+    console,
+  });
+  const source = fs.readFileSync(path.join(__dirname, "../src/core/init.js"), "utf8");
+  vm.runInContext(source.slice(source.indexOf("const refreshConceptPricesOnStartup ="), source.indexOf("const refreshTransferListSeenOnStartup =")) + ";globalThis.refresh=refreshConceptPricesOnStartup;", context);
+  const request = context.refresh();
+  assert.equal(calls.length, 0);
+  finishCache();
+  await request;
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].items, players);
+  assert.equal(calls[0].items.length, 120);
+  assert.equal(calls[0].options.throttleProfile, "concept");
+  assert.equal(calls[0].options.waitForCompletion, false);
+  assert.match(source, /\["Fetch all concept prices \(background\)", refreshConceptPricesOnStartup\]/);
+});
+
+test("startup concept pricing fetches players when the cache is empty", async () => {
+  const players = [{ definitionId: 77, concept: true }];
+  let priced;
+  const context = vm.createContext({
+    ensureConceptCacheInit: async () => {},
+    window: { autoSbcConceptPlayers: [] },
+    getConceptPlayers: async () => players,
+    fetchPlayerPrices: async items => { priced = items; },
+    console,
+  });
+  const source = fs.readFileSync(path.join(__dirname, "../src/core/init.js"), "utf8");
+  vm.runInContext(source.slice(source.indexOf("const refreshConceptPricesOnStartup ="), source.indexOf("const refreshTransferListSeenOnStartup =")) + ";globalThis.refresh=refreshConceptPricesOnStartup;", context);
+  await context.refresh();
+  assert.equal(priced, players);
+});
+
+test("extinct price resolver requests EA market limits and caches the maximum", async () => {
+  const cache = { 77: { eaId: 77, price: 0, priceLimitMin: 0, priceLimitMax: 0, isExtinct: true } };
+  let requests = 0;
+  const context = vm.createContext({
+    setTimeout: callback => { callback(); return 0; },
+    console: { log() {}, warn() {} },
+    getPriceItems: () => cache,
+    PriceItem: values => Object.assign(cache, values),
+    getAutoSbcItemDisplayName: () => "Extinct Player",
+    services: { Item: { requestMarketData(item) {
+      requests += 1;
+      return { observe(_context, callback) {
+        item._itemPriceLimits = { minimum: 150, maximum: 15000000 };
+        callback(null, { success: true });
+      } };
+    } } },
+  });
+  const source = fs.readFileSync(path.join(__dirname, "../src/overrides/player/player-pricing.js"), "utf8");
+  const start = source.indexOf("const ITEM_PRICE_LIMITS_CACHE_MS");
+  const end = source.indexOf("let transferMarketSearchQueue = Promise.resolve();", start);
+  vm.runInContext(`${source.slice(start, end)};globalThis.resolveMax=ensureExtinctPlayerMaxPrice;globalThis.ensureLimits=ensureItemMarketData;`, context);
+
+  assert.equal(await context.ensureLimits({ definitionId: 88 }), null);
+  assert.equal(requests, 0);
+  cache[88] = { price: 1000, isExtinct: false };
+  assert.equal(await context.ensureLimits({ definitionId: 88 }), null);
+  assert.equal(requests, 0);
+
+  const item = { definitionId: 77, _itemPriceLimits: { minimum: null, maximum: null }, getStaticData() { return {}; } };
+  assert.equal(await context.resolveMax(item), 15000000);
+  assert.equal(requests, 1);
+  assert.equal(cache[77].price, 15000000);
+  assert.equal(cache[77].type, "PLAYER");
+  assert.equal(cache[77].priceLimitMax, 15000000);
+  assert.equal(cache[77].priceLimitMin, 150);
+  assert.equal(await context.resolveMax(item), 15000000);
+  assert.equal(requests, 1);
+});
+
+test("EA 404 price limits are deduplicated and negatively cached", async () => {
+  let now = 1000;
+  let requests = 0;
+  const item = { id: 900077, definitionId: 77, _itemPriceLimits: null };
+  const cache = { 77: { isExtinct: true } };
+  const context = vm.createContext({
+    Date: { now: () => now },
+    setTimeout: callback => { callback(); return 0; },
+    console: { log() {}, warn() {} },
+    getPriceItems: () => cache,
+    getAutoSbcItemDisplayName: () => "Missing limits item",
+    services: { Item: { requestMarketData() {
+      requests++;
+      return { observe(_observer, callback) { callback(null, { success: false, status: 404 }); } };
+    } } },
+  });
+  const source = fs.readFileSync(path.join(__dirname, "../src/overrides/player/player-pricing.js"), "utf8");
+  const start = source.indexOf("const ITEM_PRICE_LIMITS_CACHE_MS");
+  const end = source.indexOf("let transferMarketSearchQueue = Promise.resolve();", start);
+  vm.runInContext(`${source.slice(start, end)};globalThis.ensure=ensureItemMarketData;`, context);
+  const results = await Promise.all([context.ensure(item), context.ensure(item), context.ensure(item)]);
+  assert.deepEqual(results, [null, null, null]);
+  assert.equal(requests, 1);
+  await context.ensure(item);
+  assert.equal(requests, 1);
+  now += 7 * 24 * 60 * 60 * 1000;
+  await context.ensure(item);
+  assert.equal(requests, 2);
+});
+
+test("EA market price limits skip concepts keyed by definition ID", async () => {
+  let requests = 0;
+  const context = vm.createContext({
+    Date,
+    setTimeout: callback => { callback(); return 0; },
+    console: { log() {}, warn() {} },
+    getPriceItems: () => ({ 170249: { isExtinct: true } }),
+    getAutoSbcItemDisplayName: () => "Concept Player",
+    services: { Item: { requestMarketData() { requests++; throw new Error("must not request concept limits"); } } },
+  });
+  const source = fs.readFileSync(path.join(__dirname, "../src/overrides/player/player-pricing.js"), "utf8");
+  const start = source.indexOf("const ITEM_PRICE_LIMITS_CACHE_MS");
+  const end = source.indexOf("let transferMarketSearchQueue = Promise.resolve();", start);
+  vm.runInContext(`${source.slice(start, end)};globalThis.ensure=ensureItemMarketData;`, context);
+  assert.equal(await context.ensure({ id: 170249, definitionId: 170249, concept: true }), null);
+  assert.equal(await context.ensure({ id: 170250, definitionId: 170250, owners: 0 }), null);
+  assert.equal(requests, 0);
+});
+
+test("Gallery listing can force market limits for a newly bought non-extinct concept", async () => {
+  const cache = { 77: { isExtinct: false } };
+  const item = { id: 900077, definitionId: 77, concept: true, owners: 0, _itemPriceLimits: null };
+  let requests = 0;
+  const context = vm.createContext({
+    Date,
+    setTimeout: callback => { callback(); return 0; },
+    console: { log() {}, warn() {} },
+    getPriceItems: () => cache,
+    getAutoSbcItemDisplayName: () => "Recently bought player",
+    PriceItem: values => Object.assign(cache, values),
+    services: { Item: { requestMarketData(requestItem) {
+      requests++;
+      return { observe(_observer, callback) {
+        requestItem._itemPriceLimits = { minimum: 150, maximum: 15000000 };
+        callback(null, { success: true });
+      } };
+    } } },
+  });
+  const source = fs.readFileSync(path.join(__dirname, "../src/overrides/player/player-pricing.js"), "utf8");
+  const start = source.indexOf("const ITEM_PRICE_LIMITS_CACHE_MS");
+  const end = source.indexOf("let transferMarketSearchQueue = Promise.resolve();", start);
+  vm.runInContext(`${source.slice(start, end)};globalThis.ensure=ensureItemMarketData;`, context);
+
+  assert.equal(await context.ensure(item), null);
+  assert.equal(requests, 0);
+  const limits = await context.ensure(item, { force: true });
+  assert.equal(limits.minimum, 150);
+  assert.equal(limits.maximum, 15000000);
+  assert.equal(requests, 1);
+});
+
+test("EA market limits persist in shared item-price cache for seven days", async () => {
+  let now = 1000;
+  let requests = 0;
+  const cache = { 88: { isExtinct: true, type: "PLAYER" } };
+  const item = { id: 900088, definitionId: 88, _itemPriceLimits: null, getSearchType: () => "player" };
+  const context = vm.createContext({
+    Date: { now: () => now },
+    setTimeout: callback => { callback(); return 0; },
+    localStorage: { getItem: () => null, setItem() {} },
+    console: { log() {}, warn() {} },
+    getPriceItems: () => cache,
+    PriceItem: items => Object.assign(cache, items),
+    getAutoSbcItemDisplayName: () => "Marketable Player",
+    services: { Item: { requestMarketData(requestItem) {
+      requests++;
+      return { observe(_observer, callback) {
+        requestItem._itemPriceLimits = { minimum: 150, maximum: 15000000 };
+        callback(null, { success: true });
+      } };
+    } } },
+  });
+  const source = fs.readFileSync(path.join(__dirname, "../src/overrides/player/player-pricing.js"), "utf8");
+  const start = source.indexOf("const ITEM_PRICE_LIMITS_CACHE_MS");
+  const end = source.indexOf("let transferMarketSearchQueue = Promise.resolve();", start);
+  vm.runInContext(`${source.slice(start, end)};globalThis.ensure=ensureItemMarketData;`, context);
+  await context.ensure(item);
+  assert.equal(cache[88].priceLimitMin, 150);
+  assert.equal(cache[88].priceLimitMax, 15000000);
+  assert.equal(cache[88].priceLimitsFetchedAt, now);
+  await context.ensure({ id: 900088, definitionId: 88, _itemPriceLimits: null });
+  assert.equal(requests, 1);
+  now += 7 * 24 * 60 * 60 * 1000 + 1;
+  await context.ensure(item);
+  assert.equal(requests, 2);
 });
 
 test("misc price feed populates non-player cache at hourly cadence", async () => {

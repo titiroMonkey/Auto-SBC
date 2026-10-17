@@ -214,14 +214,11 @@ def create_var(model, df, map_idx, num_cnts, sbc):
         if normalized_value in definition_ids:
             hinted_definitions_from_solution.setdefault(normalized_value, solution_position)
 
-    force_hint_col = "__currentSolutionHint"
-    force_hint_present = force_hint_col in df.columns
     hinted_rows = 0
     for i in range(num_players):
         boolVar = model.NewBoolVar(f"player{i}")
         player.append(boolVar)
 
-        has_current_solution = bool(hinted_assets_from_solution or hinted_definitions_from_solution)
         player_asset_id = df.at[i, "assetId"] if "assetId" in df.columns else None
         player_definition_id = (
             df.at[i, "definitionId"] if "definitionId" in df.columns else None
@@ -233,13 +230,6 @@ def create_var(model, df, map_idx, num_cnts, sbc):
             hinted_solution_position = hinted_assets_from_solution[player_asset_id]
         elif player_definition_id in hinted_definitions_from_solution:
             hinted_solution_position = hinted_definitions_from_solution[player_definition_id]
-
-        is_force_hinted = False
-        if force_hint_present:
-            try:
-                is_force_hinted = bool(df.at[i, force_hint_col])
-            except Exception:
-                is_force_hinted = False
 
         # Check if player's position is compatible with the hinted solution position
         # More flexible check: if hinted position is in player's possible positions
@@ -265,33 +255,11 @@ def create_var(model, df, map_idx, num_cnts, sbc):
         ):
             should_hint_on = True
             playerHintsDefinition.add(player_definition_id)
-        elif (
-            is_force_hinted
-            and player_asset_id not in playerHintsAsset
-            and player_definition_id not in playerHintsDefinition
-        ):
-            should_hint_on = True
-            if player_asset_id is not None:
-                playerHintsAsset.add(player_asset_id)
-            if player_definition_id is not None:
-                playerHintsDefinition.add(player_definition_id)
+        if should_hint_on:
+            model.AddHint(boolVar, 1)
+            hinted_rows += 1
 
-        # If currentSolution exists, only hint matching players to avoid infeasible
-        # complete hints; otherwise provide a full 0/1 hint set.
-        if has_current_solution:
-            if should_hint_on:
-                model.AddHint(boolVar, 1)
-                hinted_rows += 1
-        else:
-            # Provide complete hints: hint matching players to 1, non-matching to 0
-            if should_hint_on:
-                model.AddHint(boolVar, 1)
-                hinted_rows += 1
-            else:
-                model.AddHint(boolVar, 0)
-                hinted_rows += 1
-
-        chem.append(model.NewIntVar(0, 3, f"chem{i}"))
+        chem.append(None)
         players_grouped["teamId"][map_idx["teamId"][df.at[i, "teamId"]]] = (
             players_grouped["teamId"].get(map_idx["teamId"][df.at[i, "teamId"]], [])
             + [player[i]]
@@ -340,21 +308,13 @@ def create_var(model, df, map_idx, num_cnts, sbc):
     if hinted_rows > 0:
         add_log(f"Applied current-solution hints to {hinted_rows} player rows")
 
-    # These variables are basically chemistry of each teamId, leagueId and nation
-    z_teamId = [model.NewIntVar(0, 3, f"z_teamId{i}") for i in range(num_teamIds)]
-    z_leagueId = [model.NewIntVar(0, 3, f"z_leagueId{i}") for i in range(num_leagueId)]
-    z_nation = [model.NewIntVar(0, 3, f"z_nation{i}") for i in range(num_nationId)]
-
-    # Needed for chemistry constraint
-    b_c = [
-        [model.NewBoolVar(f"b_c{j}{i}") for i in range(4)] for j in range(num_teamIds)
-    ]
-    b_l = [
-        [model.NewBoolVar(f"b_l{j}{i}") for i in range(4)] for j in range(num_leagueId)
-    ]
-    b_n = [
-        [model.NewBoolVar(f"b_n{j}{i}") for i in range(4)] for j in range(num_nationId)
-    ]
+    # The grouped chemistry model creates only the tier variables it uses.
+    z_teamId = []
+    z_leagueId = []
+    z_nation = []
+    b_c = []
+    b_l = []
+    b_n = []
 
     # These variables represent whether a particular teamId, leagueId or nation is
     # considered in the final solution or not
@@ -616,14 +576,12 @@ def create_squad_rating_constraint_3(
 
     # S = sum of selected ratings (no scaling).
     total_var = model.NewIntVar(0, max_rating * num_players, "total_rating")
-    model.AddHint(total_var, 0)
     model.Add(
         total_var
         == cp_model.LinearExpr.WeightedSum(
             player, df["rating"].astype(int).tolist()
         )
     )
-
     # 11 * E, accumulated only over rating groups that actually have players.
     excess = []
     for rating in df["rating"].unique().tolist():
@@ -636,19 +594,16 @@ def create_squad_rating_constraint_3(
 
         # R_r = count of selected players at this rating (<= squad size).
         R = model.NewIntVar(0, num_players, f"R{rating_idx}")
-        model.AddHint(R, 0)
         model.Add(R == cp_model.LinearExpr.Sum(expr))
 
         # excess_r = max(0, 11*r - S)  -- integer, small domain.
         excess_var = model.NewIntVar(0, max_rating * 11, f"excess_{rating}")
-        model.AddHint(excess_var, 0)
         model.AddMaxEquality(excess_var, [r11 - total_var, 0])
 
         # tre_r = R_r * excess_r  (small * small -> fast multiplication).
         total_rating_excess = model.NewIntVar(
             0, num_players * max_rating * 11, f"tre{rating}"
         )
-        model.AddHint(total_rating_excess, 0)
         model.AddMultiplicationEquality(total_rating_excess, [R, excess_var])
         excess.append(total_rating_excess)
 
@@ -691,8 +646,6 @@ def create_squad_rating_constraint(
     # excess  (each player's rating - total avg rating)
 
     excess = [model.NewIntVar(0, 99, f"excess{i}") for i in range(len(ratings))]
-    for var in excess:
-        model.AddHint(var, 0)
     [
         model.AddMaxEquality(
             excess[i], [(player[i] * (ratings[i] - average_rating)), 0]
@@ -827,12 +780,10 @@ def create_chemistry_constraint(
     Algorithm:
     1. Partition rows into in-formation vs out-of-formation (static).
     2. Formation slot limits: sum(player[i]) per position <= slot count.
-    3. Group tier variables: weighted sum of player[i] -> bucket -> tier
-       (only for groups with in-formation rows).
-    4. Per in-formation player: chem[i] = min(club_tier + league_tier +
-       nation_tier, 3) when selected, 0 otherwise.  maxChem players
-       always get 3 when selected.
-    5. sum(chem) >= CHEMISTRY.
+     3. Derive club, league, and nation tiers from selected-player totals.
+     4. Score each unique chemistry signature once, then count selected players
+         at each of its three chemistry thresholds.
+     5. Sum those grouped threshold counts against the chemistry requirement.
     """
     add_log(
         f"Creating chemistry constraint with target: {CHEMISTRY}, "
@@ -882,11 +833,12 @@ def create_chemistry_constraint(
     league_grp = {}       # league_id -> [(player_var, weight)]
     nation_grp = {}       # nation_id -> [(player_var, weight)]
     in_pos_rows = []      # (index, club, league, nation, maxChem)
+    chemistry_groups = {}
 
     for i in range(num_players):
         p = pos_col[i]
         if p not in formation_set:
-            model.Add(chem[i] == 0)
+            chem[i] = model.NewIntVar(0, 0, f"chem{i}")
             continue
 
         c, l, n = club_col[i], league_col[i], nation_col[i]
@@ -894,6 +846,8 @@ def create_chemistry_constraint(
         by_slot.setdefault(p, []).append(i)
 
         tc, lc, nc = int(tc_col[i]), int(lc_col[i]), int(nc_col[i])
+        chemistry_key = (c, l, n, bool(maxchem_col[i]), tc, lc, nc)
+        chemistry_groups.setdefault(chemistry_key, []).append(i)
         if tc > 0:
             club_grp.setdefault(c, []).append((player[i], tc))
         if lc > 0:
@@ -915,16 +869,19 @@ def create_chemistry_constraint(
 
     # --- Tier variables (only for populated groups) ---
     buckets = {
-        "club":   [[0, 1], [2, 3], [4, 6], [7, NUM_PLAYERS]],
-        "league": [[0, 2], [3, 4], [5, 7], [8, NUM_PLAYERS]],
-        "nation": [[0, 1], [2, 4], [5, 7], [8, NUM_PLAYERS]],
+        "club":   [[0, 1], [2, 3], [4, 6], [7, None]],
+        "league": [[0, 2], [3, 4], [5, 7], [8, None]],
+        "nation": [[0, 1], [2, 4], [5, 7], [8, None]],
     }
-
     def _build_tiers(grp, bkts, tag):
         tiers = {}
+        oversized_weighted_groups = []
         for gid, members in grp.items():
             z = model.NewIntVar(0, 3, f"z_{tag}_{gid}")
             tiers[gid] = z
+            max_total = sum(weight for _, weight in members)
+            if max_total > NUM_PLAYERS and not all(w == 1 for _, w in members):
+                oversized_weighted_groups.append((gid, max_total))
             if all(w == 1 for _, w in members):
                 total = cp_model.LinearExpr.Sum([v for v, _ in members])
             else:
@@ -932,10 +889,17 @@ def create_chemistry_constraint(
                     [v for v, _ in members], [w for _, w in members]
                 )
             bs = [model.NewBoolVar(f"b_{tag}_{gid}_{k}") for k in range(4)]
-            for k, (lo, hi) in enumerate(bkts):
+            for k, (lo, configured_hi) in enumerate(bkts):
+                hi = max(lo, max_total) if configured_hi is None else configured_hi
                 model.AddLinearConstraint(total, lo, hi).OnlyEnforceIf(bs[k])
                 model.Add(z == k).OnlyEnforceIf(bs[k])
             model.AddExactlyOne(bs)
+        if oversized_weighted_groups:
+            examples = sorted(oversized_weighted_groups, key=lambda entry: entry[1], reverse=True)[:10]
+            add_log(
+                f"[chem tiers] {tag}: {len(oversized_weighted_groups)} weighted groups "
+                f"have candidate contribution above {NUM_PLAYERS}; highest={examples}"
+            )
         return tiers
 
     ct = _build_tiers(club_grp, buckets["club"], "c")
@@ -946,40 +910,79 @@ def create_chemistry_constraint(
         f"Chemistry groups: {len(ct)} clubs, {len(lt)} leagues, {len(nt)} nations"
     )
 
-    # --- Per-player chemistry (in-formation rows only) ---
-    for i, c, l, n, is_max in in_pos_rows:
-        if is_max:
-            model.Add(chem[i] == 3).OnlyEnforceIf(player[i])
-            model.Add(chem[i] == 0).OnlyEnforceIf(player[i].Not())
-        else:
-            parts = []
-            if c in ct:
-                parts.append(ct[c])
-            if l in lt:
-                parts.append(lt[l])
-            if n in nt:
-                parts.append(nt[n])
+    # Chemistry depends on group tiers, not a candidate's identity. Score one
+    # shared chemistry signature and multiply it by the number selected from it.
+    chemistry_totals = []
+    for group_index, (key, indices) in enumerate(chemistry_groups.items()):
+        c, l, n, is_max, tc, lc, nc = key
+        max_selected = min(NUM_PLAYERS, len(indices))
+        selected_count = model.NewIntVar(
+            0, max_selected, f"chem_selected_{group_index}"
+        )
+        model.Add(
+            selected_count
+            == cp_model.LinearExpr.Sum([player[i] for i in indices])
+        )
 
-            if not parts:
-                model.Add(chem[i] == 0)
+        if is_max:
+            group_chem = model.NewIntVar(3, 3, f"chem_score_{group_index}")
+            chemistry_totals.append(3 * selected_count)
+        else:
+            tiers = []
+            if tc > 0 and c in ct:
+                tiers.append(ct[c])
+            if lc > 0 and l in lt:
+                tiers.append(lt[l])
+            if nc > 0 and n in nt:
+                tiers.append(nt[n])
+
+            if tiers:
+                tier_sum = model.NewIntVar(0, 9, f"chem_tier_sum_{group_index}")
+                model.Add(tier_sum == cp_model.LinearExpr.Sum(tiers))
             else:
-                s = cp_model.LinearExpr.Sum(parts)
-                b = model.NewBoolVar(f"cap_{i}")
-                model.Add(s <= 3).OnlyEnforceIf([b, player[i]])
-                model.Add(s > 3).OnlyEnforceIf([b.Not(), player[i]])
-                model.Add(chem[i] == s).OnlyEnforceIf([b, player[i]])
-                model.Add(chem[i] == 3).OnlyEnforceIf([b.Not(), player[i]])
-                model.Add(chem[i] == 0).OnlyEnforceIf(player[i].Not())
+                tier_sum = model.NewIntVar(0, 0, f"chem_tier_sum_{group_index}")
+
+            score_thresholds = []
+            selected_threshold_counts = []
+            for threshold in range(1, 4):
+                reaches_threshold = model.NewBoolVar(
+                    f"chem_reaches_{group_index}_{threshold}"
+                )
+                model.Add(tier_sum >= threshold).OnlyEnforceIf(reaches_threshold)
+                model.Add(tier_sum < threshold).OnlyEnforceIf(
+                    reaches_threshold.Not()
+                )
+                score_thresholds.append(reaches_threshold)
+
+                selected_at_threshold = model.NewIntVar(
+                    0, max_selected, f"chem_selected_{group_index}_{threshold}"
+                )
+                model.Add(selected_at_threshold == selected_count).OnlyEnforceIf(
+                    reaches_threshold
+                )
+                model.Add(selected_at_threshold == 0).OnlyEnforceIf(
+                    reaches_threshold.Not()
+                )
+                selected_threshold_counts.append(selected_at_threshold)
+
+            group_chem = model.NewIntVar(0, 3, f"chem_score_{group_index}")
+            model.Add(group_chem == cp_model.LinearExpr.Sum(score_thresholds))
+            chemistry_totals.extend(selected_threshold_counts)
+
+        for i in indices:
+            chem[i] = group_chem
+
+        if CHEM_PER_PLAYER > 0:
+            active = model.NewBoolVar(f"chem_active_{group_index}")
+            model.Add(selected_count >= 1).OnlyEnforceIf(active)
+            model.Add(selected_count == 0).OnlyEnforceIf(active.Not())
+            model.Add(group_chem >= CHEM_PER_PLAYER).OnlyEnforceIf(active)
 
     # --- Total chemistry ---
     if CHEMISTRY > 0:
-        model.Add(cp_model.LinearExpr.Sum(chem) >= CHEMISTRY)
+        model.Add(cp_model.LinearExpr.Sum(chemistry_totals) >= CHEMISTRY)
         add_log(f"Added constraint for total chemistry >= {CHEMISTRY}")
-
-    # --- Per-player minimum chemistry ---
     if CHEM_PER_PLAYER > 0:
-        for i in range(num_players):
-            model.Add(chem[i] >= CHEM_PER_PLAYER).OnlyEnforceIf(player[i])
         add_log(f"Each selected player must have chemistry >= {CHEM_PER_PLAYER}")
 
     return model, None, chem
@@ -1028,8 +1031,6 @@ def create_min_teamId_constraint(
     """Same teamId Count: Min X / Min X Players from the Same teamId (>=)"""
     num_teamIds = num_cnts[1]
     B_C = [model.NewBoolVar(f"B_C{i}") for i in range(num_teamIds)]
-    for var in B_C:
-        model.AddHint(var, 0)
     for i in range(num_teamIds):
         expr = players_grouped["teamId"].get(i, [])
         model.Add(cp_model.LinearExpr.Sum(expr) >= MIN_NUM_teamId).OnlyEnforceIf(B_C[i])
@@ -1047,8 +1048,6 @@ def create_min_leagueId_constraint(
     """Same leagueId Count: Min X / Min X Players from the Same leagueId (>=)"""
     num_leagueId = num_cnts[2]
     B_L = [model.NewBoolVar(f"B_L{i}") for i in range(num_leagueId)]
-    for var in B_L:
-        model.AddHint(var, 0)
     for i in range(num_leagueId):
         expr = players_grouped["leagueId"].get(i, [])
         model.Add(cp_model.LinearExpr.Sum(expr) >= MIN_NUM_leagueId).OnlyEnforceIf(
@@ -1068,8 +1067,6 @@ def create_min_nationId_constraint(
     """Same Nation Count: Min X / Min X Players from the Same Nation (>=)"""
     num_nationId = num_cnts[3]
     B_N = [model.NewBoolVar(f"B_N{i}") for i in range(num_nationId)]
-    for var in B_N:
-        model.AddHint(var, 0)
     for i in range(num_nationId):
         expr = players_grouped["nationId"].get(i, [])
         model.Add(cp_model.LinearExpr.Sum(expr) >= MIN_NUM_nationId).OnlyEnforceIf(
@@ -1159,7 +1156,6 @@ def set_objective(df, model, player):
     if MINIMIZE_MAX_COST:
         print("**MINIMIZE_MAX_COST**")
         max_cost = model.NewIntVar(0, df["price"].max(), "max_cost")
-        model.AddHint(max_cost, 0)
         play_cost = [player[i] * cost[i] for i in range(len(cost))]
         model.AddMaxEquality(max_cost, play_cost)
         model.Minimize(max_cost)
@@ -1198,104 +1194,7 @@ def add_comprehensive_hints(
     df,
     num_cnts,
 ):
-    """
-    Add comprehensive warm-start hints for ALL decision variables.
-    This maximizes hint coverage to improve solver performance.
-    Note: Player selection hints are already handled in create_var() based on currentSolution.
-    """
-    hint_count = 0
-    num_players = num_cnts[0]
-    num_teamIds = num_cnts[1]
-    num_leagueId = num_cnts[2]
-    num_nationId = num_cnts[3]
-
-    # Skip player selection hints - already handled in create_var() from currentSolution
-    # This avoids overwriting the current solution hints with generic fallback hints
-
-    # Hint chemistry variables (default to 0, will be updated by solver)
-    for i in range(num_players):
-        try:
-            model.AddHint(chem[i], 0)
-            hint_count += 1
-        except Exception:
-            pass
-
-    # Hint team chemistry tier variables (default to 0)
-    for j in range(num_teamIds):
-        try:
-            model.AddHint(z_teamId[j], 0)
-            hint_count += 1
-        except Exception:
-            pass
-
-    # Hint league chemistry tier variables (default to 0)
-    for j in range(num_leagueId):
-        try:
-            model.AddHint(z_leagueId[j], 0)
-            hint_count += 1
-        except Exception:
-            pass
-
-    # Hint nation chemistry tier variables (default to 0)
-    for j in range(num_nationId):
-        try:
-            model.AddHint(z_nation[j], 0)
-            hint_count += 1
-        except Exception:
-            pass
-
-    # Hint chemistry tier selection booleans for teams (all false initially)
-    for j in range(num_teamIds):
-        try:
-            for idx in range(4):
-                model.AddHint(b_c[j][idx], 0 if idx > 0 else 1)
-                hint_count += 1
-        except Exception:
-            pass
-
-    # Hint chemistry tier selection booleans for leagues (all false initially)
-    for j in range(num_leagueId):
-        try:
-            for idx in range(4):
-                model.AddHint(b_l[j][idx], 0 if idx > 0 else 1)
-                hint_count += 1
-        except Exception:
-            pass
-
-    # Hint chemistry tier selection booleans for nations (all false initially)
-    for j in range(num_nationId):
-        try:
-            for idx in range(4):
-                model.AddHint(b_n[j][idx], 0 if idx > 0 else 1)
-                hint_count += 1
-        except Exception:
-            pass
-
-    # Hint unique count variables (default to 0/False)
-    for i in range(num_teamIds):
-        try:
-            model.AddHint(teamId[i], 0)
-            hint_count += 1
-        except Exception:
-            pass
-
-    for i in range(num_leagueId):
-        try:
-            model.AddHint(leagueId[i], 0)
-            hint_count += 1
-        except Exception:
-            pass
-
-    for i in range(num_nationId):
-        try:
-            model.AddHint(nationId[i], 0)
-            hint_count += 1
-        except Exception:
-            pass
-
-    if hint_count > 0:
-        add_log(f"Added {hint_count} auxiliary variable hints (chemistry tiers, position vars, unique counts)")
-    
+    """Retain only meaningful player hints created from the current squad."""
     return model
 
 
@@ -1685,13 +1584,8 @@ def SBC(df, sbc, maxSolveTime):
     # solver.parameters.stop_after_first_solution = True
     """Solver Parameters"""
     # Ensure all variables have hints to avoid "incomplete hint" warnings.
-    # Variables already hinted in create_var keep their values; any remaining
-    # variables (created by constraint helpers) get a default hint of 0.
-    hinted_var_indices = set(model.Proto().solution_hint.vars)
-    for var_idx in range(len(model.Proto().variables)):
-        if var_idx not in hinted_var_indices:
-            model.Proto().solution_hint.vars.append(var_idx)
-            model.Proto().solution_hint.values.append(0)
+    # OR-Tools supports partial solution hints; do not fabricate zero values
+    # for chemistry and rating variables that are constrained to nonzero values.
 
     # Create callback instance
     callback = SolutionCallback(
@@ -1715,6 +1609,16 @@ def SBC(df, sbc, maxSolveTime):
     except Exception:
         # Fallback: keep a string representation to avoid FastAPI json encoding errors.
         status_code = str(raw_status)
+
+    if status_code in (1, 3):
+        add_log(
+            "[cp-sat diagnostics] "
+            f"status={solver.StatusName(raw_status)}, "
+            f"model_validation={model.Validate() or 'valid'}, "
+            f"wall_time={solver.WallTime():.3f}s, "
+            f"conflicts={solver.NumConflicts()}, branches={solver.NumBranches()}, "
+            f"response_stats={solver.ResponseStats()}"
+        )
 
     print("\n")
     final_players = []

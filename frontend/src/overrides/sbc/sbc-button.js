@@ -118,16 +118,16 @@ const applyGalleryPurchaseAction = async (itemId, purchasePrice, action) => {
   });
   if (action === "club") {
     await move(7);
-    return;
+    return item;
   }
-  if (!["minBin", "cost", "profit5", "profit10"].includes(action)) throw new Error("Unknown Gallery purchase action");
-  await ensureItemMarketData(item);
+  if (!["market", "markup10"].includes(action)) throw new Error("Unknown Gallery purchase action");
+  await ensureItemMarketData(item, { force: true });
   let price = purchasePrice;
-  if (action === "minBin") {
+  if (action === "market") {
     const listing = await fetchLivePlayerPrice(item, { suppressNotification: true, excludeItemIds: [item.id] });
     price = Number(listing?._auction?.buyNowPrice);
-  } else if (action === "profit5" || action === "profit10") {
-    price = Math.ceil(purchasePrice * (action === "profit10" ? 110 : 105) / 95);
+  } else if (action === "markup10") {
+    price = Math.ceil(purchasePrice * 1.1);
   }
   const minimum = Number(item._itemPriceLimits?.minimum);
   const maximum = Number(item._itemPriceLimits?.maximum);
@@ -161,6 +161,10 @@ const tryQuickBuy = async (
     sbcId = _challenge?.setId ?? 0;
     challengeId = _challenge?.id ?? 0;
   }
+  if (options.settingsScope) {
+    sbcId = options.settingsScope.sbc;
+    challengeId = options.settingsScope.challenge;
+  }
 
   const { suppressNotifications = false } = options;
   const excludedTradeIds = new Set(
@@ -174,6 +178,7 @@ const tryQuickBuy = async (
       .filter((id) => Number.isFinite(id) && id > 0),
   );
   const notify = (message, type) => {
+    options.onProgress?.(message);
     if (!suppressNotifications) {
       showNotification(message, type);
     }
@@ -184,7 +189,14 @@ const tryQuickBuy = async (
     : null;
 
   try {
-    const baselinePrice = Number(getPrice(item));
+    if (options.cancelled?.()) return { success: false, reason: "stopped" };
+    if (options.validateItem && !await options.validateItem(item)) {
+      notify("Concept excluded by current SBC settings", UINotificationType.NEGATIVE);
+      return { success: false, reason: "excludedBySettings" };
+    }
+    if (options.cancelled?.()) return { success: false, reason: "stopped" };
+    const baselinePrice = Number(options.capToCurrentPrice && options.currentPrice !== undefined
+      ? options.currentPrice : getPrice(item));
     const maxPerPlayerSetting = Number(
       getSettings(sbcId, challengeId, "sbcBuyConceptsMaxPrice"),
     );
@@ -206,19 +218,38 @@ const tryQuickBuy = async (
       return { success: false, reason: "noCachedPrice" };
     }
 
+    const rangeMaximum = Number(options.maxBuyPrice);
+    let permittedCap = options.capToCurrentPrice
+      ? Number.isFinite(rangeMaximum) && rangeMaximum > 0
+        ? rangeMaximum
+        : baselinePrice
+      : Number.isFinite(overridePermittedCap) && overridePermittedCap > 0
+        ? Math.min(maxPerPlayer, overridePermittedCap)
+        : Math.min(maxPerPlayer, baselinePrice + maxAbove);
+    options.onProgress?.(`Searching transfer market; maximum ${permittedCap.toLocaleString()} coins...`);
     let listing = await fetchLivePlayerPrice(item, {
       suppressNotification: true,
+      purchaseSearch: true,
+      maxBuy: permittedCap,
       excludeTradeIds: Array.from(excludedTradeIds),
       excludeItemIds: Array.from(excludedItemIds),
     });
+    if (options.cancelled?.()) return { success: false, reason: "stopped" };
     const listingPrice = Number(listing?._auction?.buyNowPrice);
     const listingTradeId = Number(
       listing?._auction?.tradeId ?? listing?._auction?.id ?? 0,
     );
     const listingItemId = Number(listing?.id ?? 0);
     if (!Number.isFinite(listingPrice) || listingPrice <= 0) {
-      notify("No active listing found", UINotificationType.NEGATIVE);
-      return { success: false, reason: "noListing" };
+      const message = `Nothing exists at or below ${permittedCap.toLocaleString()} coins`;
+      notify(message, UINotificationType.NEGATIVE);
+      void fetchLivePlayerPrice(item, { suppressNotification: true }).then(updated => {
+        const price = Number(updated?._auction?.buyNowPrice);
+        options.onProgress?.(price > 0
+          ? `${message}. Current lowest price updated to ${price.toLocaleString()} coins.`
+          : `${message}. No active listings found during price refresh.`);
+      }).catch(() => options.onProgress?.(`${message}. Price refresh failed.`));
+      return { success: false, reason: "noListing", limit: permittedCap, message };
     }
 
     const lowestPrice = listingPrice;
@@ -226,15 +257,6 @@ const tryQuickBuy = async (
     if (buttonRoot?.setAttribute) {
       buttonRoot.setAttribute("title", `Quick Buy @${priceLabel}`);
     }
-
-    const permittedCap =
-      options.capToCurrentPrice && Number.isFinite(baselinePrice) && baselinePrice > 0
-        ? baselinePrice
-        : Number.isFinite(overridePermittedCap) && overridePermittedCap > 0
-        ? Math.min(maxPerPlayer, overridePermittedCap)
-        : Number.isFinite(baselinePrice) && baselinePrice > 0
-          ? Math.min(maxPerPlayer, baselinePrice + maxAbove)
-          : maxPerPlayer;
 
     if (
       Number.isFinite(permittedCap) &&
@@ -267,11 +289,16 @@ const tryQuickBuy = async (
       };
     }
 
+    options.onProgress?.(`Found listing at ${priceLabel} coins; rechecking price and availability...`);
+    if (options.cancelled?.()) return { success: false, reason: "stopped" };
     const confirmedListing = await fetchLivePlayerPrice(item, {
       suppressNotification: true,
+      purchaseSearch: true,
+      maxBuy: permittedCap,
       excludeTradeIds: Array.from(excludedTradeIds),
       excludeItemIds: Array.from(excludedItemIds),
     });
+    if (options.cancelled?.()) return { success: false, reason: "stopped" };
     const confirmedPrice = Number(confirmedListing?._auction?.buyNowPrice);
     if (!Number.isFinite(confirmedPrice) || confirmedPrice <= 0) {
       notify("Listing disappeared before purchase", UINotificationType.NEGATIVE);
@@ -299,6 +326,26 @@ const tryQuickBuy = async (
     }
 
     listing = confirmedListing;
+    if (options.scoreSbcLineup) {
+      if (options.validateItem && !await options.validateItem(item)) {
+        notify("Concept excluded by updated SBC settings", UINotificationType.NEGATIVE);
+        return { success: false, reason: "excludedBySettings" };
+      }
+      const currentPrice = Number(getPrice(item));
+      const purchaseMaximum = Number(getSettings(sbcId, challengeId, "sbcBuyConceptsMaxPrice"));
+      const purchaseAbove = Number(getSettings(sbcId, challengeId, "sbcBuyConceptsPriceAbove"));
+      const playerMaximum = Number(getSettings(sbcId, challengeId, "maxPlayerPrice"));
+      permittedCap = Math.min(permittedCap,
+        purchaseMaximum > 0 ? purchaseMaximum : 15000,
+        currentPrice > 0 ? currentPrice + (purchaseAbove >= 0 ? purchaseAbove : 0) : 0,
+        playerMaximum > 0 ? playerMaximum : Infinity);
+      if (confirmedPrice > permittedCap) {
+        notify("Listing exceeds current SBC purchase settings", UINotificationType.NEGATIVE);
+        return { success: false, reason: "priceAboveThreshold", price: confirmedPrice, limit: permittedCap };
+      }
+    }
+    options.onProgress?.(`Buying at ${confirmedPrice.toLocaleString()} coins; waiting for EA confirmation...`);
+    if (options.cancelled?.()) return { success: false, reason: "stopped" };
     const bidAttempt = services.Item.bid(listing, confirmedPrice);
     if (bidAttempt && typeof bidAttempt.observe === "function") {
       return await new Promise((resolve) => {
@@ -336,9 +383,10 @@ const tryQuickBuy = async (
 
           const success = response?.success === true;
           let postPurchaseError = null;
+          let purchasedItem = null;
           if (success && options.galleryPurchaseAction) {
             try {
-              await applyGalleryPurchaseAction(listingItemId, lowestPrice, options.galleryPurchaseAction);
+              purchasedItem = await applyGalleryPurchaseAction(Number(listing.id), confirmedPrice, options.galleryPurchaseAction);
             } catch (error) {
               postPurchaseError = error.message;
               showNotification(`Bought at ${priceLabel}; ${postPurchaseError}`, UINotificationType.NEGATIVE);
@@ -357,16 +405,14 @@ const tryQuickBuy = async (
           finish({
             success,
             postPurchaseError,
+            purchasedItem,
             reason: success ? "success" : "bidFailed",
             price: lowestPrice,
             priceLabel,
             tradeId: Number.isFinite(listingTradeId) && listingTradeId > 0
               ? listingTradeId
               : null,
-            itemId:
-              Number.isFinite(listingItemId) && listingItemId > 0
-                ? listingItemId
-                : null,
+            itemId: Number(listing.id) || null,
           });
         });
       });

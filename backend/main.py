@@ -12,12 +12,13 @@ from pathlib import Path
 from threading import Event, Thread, Timer
 
 import collection_book  # Collection Book (fut.gg) scraper + cache
+import gallery_optimize
 import logger  # Import the logger module
 import optimize
 import requests
 import setup
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
@@ -153,6 +154,7 @@ def start_persistent_injector() -> None:
 app = FastAPI()
 thread_pool = ThreadPoolExecutor(max_workers=10)
 solve_thread_pool = ThreadPoolExecutor(max_workers=1)
+gallery_thread_pool = ThreadPoolExecutor(max_workers=1)
 shutdown_event = asyncio.Event()
 
 # Configure CORS
@@ -299,6 +301,19 @@ def process_solve_request(request_data):
         # Log errors
         logger.add_log(f"Error in solver thread: {str(e)}")
         raise e
+
+
+@app.post("/api/gallery/optimise")
+async def optimise_gallery(request: Request):
+    payload = await request.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Expected a Gallery optimisation object")
+    try:
+        return await asyncio.get_running_loop().run_in_executor(
+            gallery_thread_pool, gallery_optimize.maximize_rewards, payload
+        )
+    except (ValueError, KeyError, TypeError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.post("/solve")
@@ -494,7 +509,7 @@ def get_collection_book_ownership_file_path() -> Path:
 
 
 def read_collection_book_ownership() -> dict:
-    """Read the ownership store (definitionId -> [entityId]); {} if missing."""
+    """Read ownership records, including legacy entity-id lists."""
     store_file = get_collection_book_ownership_file_path()
     if store_file.exists():
         try:
@@ -522,7 +537,25 @@ def _collection_book_ownership_counts(store: dict) -> dict:
     return {
         def_id: len(entity_ids)
         for def_id, entity_ids in store.items()
-        if isinstance(entity_ids, list)
+        if isinstance(entity_ids, (list, dict))
+    }
+
+
+def _collection_book_ownership_summary(store: dict) -> dict:
+    return {
+        "counts": _collection_book_ownership_counts(store),
+        "firstOwnerCounts": {
+            def_id: sum(value is True for value in records.values())
+            for def_id, records in store.items()
+            if isinstance(records, dict)
+        },
+        "firstOwnerItems": {
+            entity_id: first_owner
+            for records in store.values()
+            if isinstance(records, dict)
+            for entity_id, first_owner in records.items()
+            if isinstance(first_owner, bool)
+        },
     }
 
 
@@ -550,14 +583,22 @@ def _apply_collection_book_ownership(pairs: list) -> dict:
         if entity_id is None:
             continue
         entity_id = str(entity_id)
-        entity_ids = store.get(def_id)
-        if not isinstance(entity_ids, list):
-            entity_ids = []
-        if entity_id not in entity_ids:
-            entity_ids.append(entity_id)
-        store[def_id] = entity_ids
-    write_collection_book_ownership(store)
-    return _collection_book_ownership_counts(store)
+        records = store.get(def_id)
+        if isinstance(records, list):
+            records = {str(value): None for value in records}
+        elif not isinstance(records, dict):
+            records = {}
+        first_owner = pair.get("firstOwner")
+        previous = records.get(entity_id)
+        records[entity_id] = (
+            True if previous is True or first_owner is True
+            else False if previous is False or first_owner is False
+            else None
+        )
+        store[def_id] = records
+    if not write_collection_book_ownership(store):
+        raise OSError("Unable to persist collection book ownership")
+    return _collection_book_ownership_summary(store)
 
 
 def _collection_book_ownership_worker() -> None:
@@ -596,7 +637,7 @@ def merge_collection_book_ownership(pairs: list) -> dict:
 async def get_collection_book_ownership():
     """Return the persisted definitionId -> owned count map."""
     store = await run_in_threadpool(read_collection_book_ownership)()
-    return {"counts": _collection_book_ownership_counts(store)}
+    return _collection_book_ownership_summary(store)
 
 
 @app.post("/api/collection-book-ownership")
@@ -606,7 +647,7 @@ async def save_collection_book_ownership(request: Request):
         body = await request.json()
         pairs = body.get("pairs") if isinstance(body, dict) else None
         counts = await run_in_threadpool(merge_collection_book_ownership)(pairs or [])
-        return {"status": "success", "counts": counts}
+        return {"status": "success", **counts}
     except Exception as e:
         logging.error(f"Collection book ownership save error: {e}")
         return {"status": "error", "message": str(e)}

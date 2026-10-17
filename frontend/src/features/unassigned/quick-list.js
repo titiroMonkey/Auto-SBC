@@ -1206,13 +1206,7 @@ const refreshItemsLivePrices = async (items = []) => {
   let refreshedCount = 0;
   let failedCount = 0;
 
-  const configuredRefreshBatchSize = Number(
-    getSettings(0, 0, "futggPriceBatchSize"),
-  );
-  const refreshBatchSize =
-    Number.isFinite(configuredRefreshBatchSize) && configuredRefreshBatchSize > 0
-      ? Math.min(50, Math.max(1, Math.floor(configuredRefreshBatchSize)))
-      : 30;
+  const refreshBatchSize = 1;
 
   const runBatch = async () => {
     if (isQueueStopRequested("refresh-prices")) {

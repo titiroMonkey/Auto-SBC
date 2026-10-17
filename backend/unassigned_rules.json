@@ -157,16 +157,42 @@
       "color": "#3498db",
       "filters": [
         "isTradable:true",
-        "isDuplicate:true",
-        "isFodder:false"
+        "isFodder:false",
+        "rating"
       ],
       "ratingRange": [
         0,
-        99
+        74
       ],
       "priceRange": [
         200,
-        15000000
+        3000
+      ],
+      "includeLeagues": [],
+      "excludeLeagues": [],
+      "includeTeams": [],
+      "excludeTeams": [],
+      "includeNations": [],
+      "excludeNations": [],
+      "includeRarity": [],
+      "excludeRarity": []
+    },
+    {
+      "id": "1790891624743-l8ewz",
+      "action": "listOnTransferMarket",
+      "color": "#3498db",
+      "filters": [
+        "isTradable:true",
+        "isFodder:true",
+        "rating"
+      ],
+      "ratingRange": [
+        74,
+        84
+      ],
+      "priceRange": [
+        200,
+        3000
       ],
       "includeLeagues": [],
       "excludeLeagues": [],

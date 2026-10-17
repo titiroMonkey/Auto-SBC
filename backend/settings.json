@@ -14,7 +14,7 @@
         "repeatCount": 0,
         "enableClubSearchOverrides": true,
         "autoOpenPacks": true,
-        "autoApplyQuickSolutionOnOpen": false,
+        "autoApplyQuickSolutionOnOpen": true,
         "sbcBuyConceptsMaxPrice": 4000,
         "sbcBuyConceptsPriceAbove": 1000,
         "excludeRarity": [
@@ -38,9 +38,11 @@
           202126,
           50405533,
           234396,
-          237288
+          237288,
+          50585891,
+          243812
         ],
-        "sbcType": "All",
+        "sbcType": "Players",
         "loginSbcOrder": [
           "4 of 10 82+ Player Pick",
           "3x 88+ Upgrade",
@@ -52,7 +54,7 @@
           "5x 88+ Upgrade"
         ],
         "useConcepts": false,
-        "useDupes": true,
+        "useDupes": false,
         "autoGrindSubmitMode": 1,
         "sbcBuyConcepts": false,
         "sbcOnLogin": false,
@@ -63,7 +65,7 @@
         "autoConfirmPicks": true,
         "lockMinOnePlayerRequirements": false,
         "excludeExtinct": true,
-        "sbcAllGroup": true,
+        "sbcAllGroup": false,
         "excludeLeagues": [],
         "animateWalkoutItems": {
           "filters": [
@@ -90,9 +92,10 @@
         "excludeFromSquadIds": [
           "0"
         ],
-        "autoBuyCurrency": "POINTS",
-        "showAutoBuyButton": false,
-        "autoOpenSub100CoinPacks": true
+        "autoBuyCurrency": "COINS",
+        "showAutoBuyButton": true,
+        "autoOpenSub100CoinPacks": true,
+        "showSbcScores": false
       }
     },
     "Daily Bronze Upgrade": {
@@ -678,6 +681,73 @@
     "1 of 3 98+ FOF or FUTTIES T1-T4 Player Pick": {
       "global": {
         "autoConfirmPicks": false
+      }
+    },
+    "League & Nation Advanced": {
+      "global": {
+        "useConcepts": true,
+        "autoApplyQuickSolutionOnOpen": true,
+        "ratingRange": [
+          40,
+          83
+        ]
+      }
+    },
+    "2x 79+ Upgrade": {
+      "global": {
+        "ratingRange": [
+          40,
+          78
+        ],
+        "useDupes": false
+      }
+    },
+    "Gold Re-Roll": {
+      "global": {
+        "autoSubmit": 4,
+        "useConcepts": true,
+        "conceptPremium": 1.1,
+        "maxPlayerPrice": 750,
+        "ratingRange": [
+          40,
+          83
+        ],
+        "useDupes": false,
+        "sbcBuyConceptsMaxPrice": 1000,
+        "sbcBuyConceptsPriceAbove": 100,
+        "repeatCount": 10,
+        "sbcBuyConcepts": true
+      }
+    },
+    "Destined for Glory Challenge 3": {
+      "global": {
+        "useConcepts": true
+      }
+    },
+    "3x 79+ Upgrade": {
+      "global": {
+        "ratingRange": [
+          40,
+          82
+        ],
+        "useDupes": false
+      }
+    },
+    "Marquee Matchups": {
+      "global": {
+        "useConcepts": true,
+        "excludeFromSquadIds": [],
+        "excludePlayers": [
+          202126,
+          50405533,
+          237288,
+          243812
+        ],
+        "maxSolveTime": 600,
+        "ratingRange": [
+          40,
+          77
+        ]
       }
     }
   }

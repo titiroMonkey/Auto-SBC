@@ -988,18 +988,104 @@ const fetchSingleCheapest = async (rating) => {
   console.log(rating, PriceItems[rating + "_CBR"]);
 };
 
-// Populate `_itemPriceLimits` for an item by asking EA for its market data.
-// Club / extinct items that have never been opened on the transfer market have
-// no price limits until this runs. Resolves to the item's price limits (or null).
-let ensureItemMarketData = (item) =>
-  new Promise((resolve) => {
+const ITEM_PRICE_LIMITS_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
+const ITEM_PRICE_LIMITS_UNAVAILABLE_KEY = "eaItemPriceLimitsUnavailable.v1";
+const itemPriceLimitsInFlight = new Map();
+const itemPriceLimitsUnavailableUntil = new Map();
+let itemPriceLimitsQueue = Promise.resolve();
+let itemPriceLimitsNextAllowedAt = 0;
+
+const getItemPriceLimitsUnavailableUntil = definitionId => {
+  const key = String(definitionId);
+  const inMemory = itemPriceLimitsUnavailableUntil.get(key) || 0;
+  if (inMemory > Date.now()) return inMemory;
+  try {
+    const cached = JSON.parse(localStorage.getItem(ITEM_PRICE_LIMITS_UNAVAILABLE_KEY) || "{}");
+    const until = Number(cached[key]) || 0;
+    if (until > Date.now()) {
+      itemPriceLimitsUnavailableUntil.set(key, until);
+      return until;
+    }
+    if (until) {
+      delete cached[key];
+      localStorage.setItem(ITEM_PRICE_LIMITS_UNAVAILABLE_KEY, JSON.stringify(cached));
+    }
+  } catch {}
+  return 0;
+};
+
+const setItemPriceLimitsUnavailableUntil = definitionId => {
+  if (!definitionId) return;
+  const key = String(definitionId);
+  const until = Date.now() + ITEM_PRICE_LIMITS_CACHE_MS;
+  itemPriceLimitsUnavailableUntil.set(key, until);
+  try {
+    const cached = JSON.parse(localStorage.getItem(ITEM_PRICE_LIMITS_UNAVAILABLE_KEY) || "{}");
+    cached[key] = until;
+    localStorage.setItem(ITEM_PRICE_LIMITS_UNAVAILABLE_KEY, JSON.stringify(cached));
+  } catch {}
+};
+
+// EA can return 404 for valid items with no published market limits. Serialize
+// requests and cache those misses briefly so price refreshes do not hammer it.
+let ensureItemMarketData = (item, { force = false } = {}) => {
+  const definitionId = String(item?.definitionId ?? item?.id ?? "");
+  if (definitionId && itemPriceLimitsInFlight.has(definitionId)) {
+    return itemPriceLimitsInFlight.get(definitionId);
+  }
+  if (!force && definitionId && getItemPriceLimitsUnavailableUntil(definitionId)) {
+    return Promise.resolve(item?._itemPriceLimits || null);
+  }
+
+  const request = itemPriceLimitsQueue.then(async () => {
+    if (!force && definitionId && getItemPriceLimitsUnavailableUntil(definitionId)) {
+      return item?._itemPriceLimits || null;
+    }
+    const latestLimits = item?._itemPriceLimits;
+    if (Number(latestLimits?.minimum) > 0 && Number(latestLimits?.maximum) > 0) {
+      const cached = getPriceItems()?.[item?.definitionId] || getPriceItems()?.[definitionId];
+      const fetchedAt = Number(cached?.priceLimitsFetchedAt);
+      if (fetchedAt > 0 && Date.now() - fetchedAt < ITEM_PRICE_LIMITS_CACHE_MS) return latestLimits;
+      item._itemPriceLimits = null;
+    }
+    const delay = itemPriceLimitsNextAllowedAt - Date.now();
+    if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+    itemPriceLimitsNextAllowedAt = Date.now() + 1200;
+    return new Promise((resolve) => {
     const current = item?._itemPriceLimits;
-    const hasMin = Number.isFinite(Number(current?.minimum));
-    const hasMax = Number.isFinite(Number(current?.maximum));
+    const hasMin = Number(current?.minimum) > 0;
+    const hasMax = Number(current?.maximum) > 0;
     // Already populated -> skip the network call.
     if (hasMin && hasMax) {
       resolve(current);
       return;
+    }
+    const itemId = item?.id;
+    const definitionId = item?.definitionId;
+    if (
+      (!force && item?.concept) ||
+      (!force && Number(item?.owners) === 0) ||
+      (!force && itemId != null && definitionId != null && String(itemId) === String(definitionId))
+    ) {
+      resolve(current || null);
+      return;
+    }
+    if (!force && !getPriceItems()?.[item?.definitionId]?.isExtinct) {
+      resolve(current || null);
+      return;
+    }
+    const priceCache = getPriceItems() || {};
+    const priceEntry = priceCache[item?.definitionId] || priceCache[definitionId];
+    const cachedMin = Number(priceEntry?.priceLimitMin);
+    const cachedMax = Number(priceEntry?.priceLimitMax);
+    const cachedAt = Number(priceEntry?.priceLimitsFetchedAt);
+    if (cachedMin > 0 && cachedMax > 0 && cachedAt > 0) {
+      if (Date.now() - cachedAt < ITEM_PRICE_LIMITS_CACHE_MS) {
+        item._itemPriceLimits = { minimum: cachedMin, maximum: cachedMax };
+        resolve(item._itemPriceLimits);
+        return;
+      }
+      item._itemPriceLimits = null;
     }
     if (!item || typeof services?.Item?.requestMarketData !== "function") {
       resolve(current || null);
@@ -1014,7 +1100,7 @@ let ensureItemMarketData = (item) =>
       isExtinct,
     };
     console.log(
-      "[itemPriceLimits] extinct card needs price limits, requesting market data",
+      "[itemPriceLimits] item needs price limits, requesting market data",
       cardInfo,
     );
 
@@ -1024,11 +1110,36 @@ let ensureItemMarketData = (item) =>
         (_sender, response) => {
           const limits = item?._itemPriceLimits || null;
           if (response?.success === false) {
+            setItemPriceLimitsUnavailableUntil(definitionId);
             console.warn("[itemPriceLimits] request failed", {
               ...cardInfo,
               status: response?.status,
             });
           } else {
+            if (limits && Number(limits.minimum) > 0 && Number(limits.maximum) > 0) {
+              itemPriceLimitsUnavailableUntil.delete(String(definitionId));
+              try {
+                const cached = JSON.parse(localStorage.getItem(ITEM_PRICE_LIMITS_UNAVAILABLE_KEY) || "{}");
+                delete cached[String(definitionId)];
+                localStorage.setItem(ITEM_PRICE_LIMITS_UNAVAILABLE_KEY, JSON.stringify(cached));
+              } catch {}
+              item._itemPriceLimits = limits;
+              const cache = getPriceItems() || {};
+              const existing = cache[definitionId] || cache[String(definitionId)] || {};
+              PriceItem({
+                [definitionId]: {
+                  ...existing,
+                  eaId: item.definitionId,
+                  type: existing.type || (item.getSearchType?.() || "PLAYER").toString().toUpperCase(),
+                  priceLimitMin: Number(limits.minimum),
+                  priceLimitMax: Number(limits.maximum),
+                  priceLimitsFetchedAt: Date.now(),
+                  source: "eaMarketDataLimits",
+                },
+              });
+            } else if (definitionId) {
+              setItemPriceLimitsUnavailableUntil(definitionId);
+            }
             console.log("[itemPriceLimits] loaded", {
               ...cardInfo,
               minimum: limits?.minimum ?? null,
@@ -1039,10 +1150,53 @@ let ensureItemMarketData = (item) =>
         },
       );
     } catch (err) {
+      setItemPriceLimitsUnavailableUntil(definitionId);
       console.warn("[itemPriceLimits] error", { ...cardInfo, error: String(err) });
       resolve(item?._itemPriceLimits || null);
     }
+    });
   });
+  itemPriceLimitsQueue = request.catch(() => {});
+  if (definitionId) {
+    const tracked = request.finally(() => {
+      if (itemPriceLimitsInFlight.get(definitionId) === tracked) itemPriceLimitsInFlight.delete(definitionId);
+    });
+    itemPriceLimitsInFlight.set(definitionId, tracked);
+    return tracked;
+  }
+  return request;
+};
+
+let ensureExtinctPlayerMaxPrice = async item => {
+  const definitionId = Number(item?.definitionId || item?.resourceId || 0);
+  if (!definitionId) return null;
+  const cache = getPriceItems() || {};
+  const entry = cache[definitionId] || cache[String(definitionId)];
+  if (!entry?.isExtinct) return null;
+
+  let maximum = Number(item?._itemPriceLimits?.maximum ?? entry.priceLimitMax);
+  if (maximum > 0) return maximum;
+
+  const requestItem = item?.getStaticData ? item : null;
+  if (!requestItem || typeof ensureItemMarketData !== "function") return null;
+  await ensureItemMarketData(requestItem);
+  maximum = Number(requestItem?._itemPriceLimits?.maximum);
+  if (!(maximum > 0)) return null;
+
+  PriceItem({
+    [definitionId]: {
+      ...entry,
+      eaId: definitionId,
+      type: entry.type || "PLAYER",
+      price: maximum,
+      priceLimitMax: maximum,
+      priceLimitMin: Number(requestItem?._itemPriceLimits?.minimum) || entry.priceLimitMin,
+      isExtinct: true,
+      source: "eaMarketDataLimit",
+    },
+  });
+  return maximum;
+};
 
 let transferMarketSearchQueue = Promise.resolve();
 let transferMarketNextAllowedAt = 0;
@@ -1286,8 +1440,9 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
     return Math.max(0, Math.ceil(price / inc) * inc);
   };
 
-  // Make sure EA-imposed price limits are loaded for unopened/extinct items.
-  await ensureItemMarketData(player);
+  if (!options.purchaseSearch && getPriceItems()?.[player?.definitionId]?.isExtinct) {
+    await ensureItemMarketData(player);
+  }
 
   const limits = player._itemPriceLimits || {};
   const MIN_CAP = alignDown(Math.max(0, limits.minimum || 0));
@@ -1491,6 +1646,14 @@ let fetchLivePlayerPrice = async (player, options = {}) => {
     item && item._auction && typeof item._auction.buyNowPrice === "number"
       ? item._auction.buyNowPrice
       : Number.POSITIVE_INFINITY;
+
+  if (options.purchaseSearch) {
+    const cap = Number(options.maxBuy);
+    if (!Number.isFinite(cap) || cap <= 0) return null;
+    const listings = await doSearch(Math.floor(cap));
+    return listings.filter(item => extractBuy(item) > 0 && extractBuy(item) <= cap)
+      .sort((first, second) => extractBuy(first) - extractBuy(second))[0] || null;
+  }
 
   const evaluate = async (cap, minBuy = null) => {
     let bounded = cap;

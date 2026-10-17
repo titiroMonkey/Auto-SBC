@@ -303,6 +303,11 @@ const transferListOverride = () => {
 
           const SECTION = UTTransferSectionListViewModel.SECTION;
 
+          if (typeof collectionBookRecordTransferPlayers === "function") {
+            const observedItems = Object.values(SECTION).flatMap(section => this._viewmodel.getSectionItems(section) || []);
+            void collectionBookRecordTransferPlayers(observedItems);
+          }
+
           const isRefreshableItem = (item) => {
             const definitionId = Number(item?.definitionId);
             return Number.isFinite(definitionId) && definitionId > 0;

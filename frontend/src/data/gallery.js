@@ -2,21 +2,27 @@ const FUT_GALLERY_CATALOGUE_KEY = "futGallery.catalogue.v2";
 let futGalleryCatalogueRequest = null;
 const futGalleryVariantPriceCache = new Map();
 const futGalleryVariantPriceRequests = new Map();
-const futGalleryFetchVariantPrice = async (variantEaId, { holographicType = null, force = false } = {}) => {
+const futGalleryFetchVariantPriceData = async (variantEaId, { holographicType = null, force = false } = {}) => {
   const id = Number(variantEaId);
   if (!id || typeof fetchFutggSignedJson !== "function") return null;
   const cacheKey = `${id}:${holographicType || "standard"}`;
   const cached = futGalleryVariantPriceCache.get(cacheKey);
-  if (!force && cached && Date.now() - cached.timestamp < 5 * 60 * 1000) return cached.price;
+  if (!force && cached && Date.now() - cached.timestamp < 5 * 60 * 1000) return cached;
   if (futGalleryVariantPriceRequests.has(cacheKey)) return futGalleryVariantPriceRequests.get(cacheKey);
 
   const request = (async () => {
     try {
       const response = (await fetchFutggSignedJson(`/api/fut/player-prices/27/${id}/`))?.data;
       const price = Number(response?.currentPrice?.price ?? response?.price ?? response?.currentDbPrice);
-      if (!Number.isFinite(price) || price <= 0) return null;
-      futGalleryVariantPriceCache.set(cacheKey, { price, timestamp: Date.now() });
-      return price;
+      const maxPrice = Number(response?.priceRange?.maxPrice);
+      const result = {
+        price: Number.isFinite(price) && price > 0 ? price : null,
+        maxPrice: Number.isFinite(maxPrice) && maxPrice > 0 ? maxPrice : null,
+        timestamp: Date.now(),
+      };
+      if (result.price == null && result.maxPrice == null) return null;
+      futGalleryVariantPriceCache.set(cacheKey, result);
+      return result;
     } catch (error) {
       console.warn("[Gallery] FUT.GG item price lookup failed", { id, holographicType, error: String(error) });
       return null;
@@ -28,6 +34,9 @@ const futGalleryFetchVariantPrice = async (variantEaId, { holographicType = null
   return request;
 };
 
+const futGalleryFetchVariantPrice = async (variantEaId, options = {}) =>
+  (await futGalleryFetchVariantPriceData(variantEaId, options))?.price ?? null;
+
 const futGalleryIsVariantItem = (entity, definitionId) => {
   const assetId = Number(entity?.databaseId || entity?._metaData?.id || entity?.assetId || 0);
   const hasHyperCosmetics = Object.keys(entity?._hyperCosmeticDTOs || {}).length > 0;
@@ -35,92 +44,99 @@ const futGalleryIsVariantItem = (entity, definitionId) => {
 };
 
 const futGalleryPrice = player => {
+  const priceEntry = typeof getPriceItems === "function"
+    ? getPriceItems()?.[player?.eaId] || getPriceItems()?.[String(player?.eaId)]
+    : null;
+  if (priceEntry?.isExtinct) {
+    const extinctMax = Number(player?.extinctMaxPrice ?? player?.entity?._itemPriceLimits?.maximum ?? priceEntry.priceLimitMax);
+    return Number.isFinite(extinctMax) && extinctMax > 0 ? extinctMax : NaN;
+  }
   if (player?.variantPrice != null && Number.isFinite(Number(player.variantPrice))) return Number(player.variantPrice);
   if (player?.isVariantItem) return NaN;
   const price = typeof getPrice === "function" ? Number(getPrice(player?.entity)) : NaN;
   return Number.isFinite(price) && price > 0 ? price : null;
 };
 
-const futGalleryAddPristineVariants = async (players, { cancelled = () => false } = {}) => {
-  if (typeof fetchFutggSignedJson !== "function" || typeof searchEaConceptEntitiesByDefIds !== "function") return players;
-  const definitions = [];
-  const ids = [...new Set((players || []).map(player => Number(player.eaId)).filter(Boolean))];
-  for (let offset = 0; offset < ids.length && !cancelled(); offset += 40) {
-    const slugs = ids.slice(offset, offset + 40).map(id => `27-${id}`).join(",");
-    try {
-      const response = await fetchFutggSignedJson(`/api/fut/players/v2/definition-data/?game=27&slugs=${encodeURIComponent(slugs)}`);
-      definitions.push(...(Array.isArray(response?.data) ? response.data : []));
-    } catch (error) {
-      console.warn("[Gallery] FUT.GG variant discovery failed", String(error));
-    }
-  }
-  if (cancelled()) return players;
-
-  const existing = new Set((players || []).map(player => Number(player.eaId)));
-  const byId = new Map((players || []).map(player => [Number(player.eaId), player]));
-  const missing = [...new Map(definitions.flatMap(definition => (definition.itemVariants || [])
-    .filter(variant => variant.holographicType === "pristine" && !existing.has(Number(variant.eaId)))
-    .map(variant => [Number(variant.eaId), { eaId: Number(variant.eaId), baseEaId: Number(definition.standardItemEaId || definition.basePlayerEaId), holographicType: variant.holographicType }]))).values()]
-    .filter(variant => variant.eaId && byId.has(variant.baseEaId));
-  if (!missing.length || cancelled()) return players;
-
-  const entities = await searchEaConceptEntitiesByDefIds(missing.map(variant => variant.eaId));
-  if (cancelled()) return players;
-  const entityById = new Map((entities || []).map(entity => [Number(entity.resourceId || entity.definitionId || entity.eaId || entity.id), entity]));
-  const additions = missing.flatMap(variant => {
-    const entity = entityById.get(variant.eaId);
-    const base = byId.get(variant.baseEaId);
-    if (!entity || !base) return [];
-    entity.holographicType = variant.holographicType;
-    entity._hyperCosmeticDTOs = entity._hyperCosmeticDTOs || {};
-    const staticData = entity._staticData || base.entity?._staticData || {};
-    return [{
-      ...base,
-      eaId: variant.eaId,
-      entity,
-      name: entity.getFullName?.() || staticData.name || base.name,
-      assetId: Number(entity.databaseId || entity._metaData?.id || base.assetId),
-      itemDefinitionId: variant.eaId,
-      isVariantItem: true,
-      holographicType: variant.holographicType,
-      holographic: true,
-      variantPrice: null,
-      variantPriceResolved: false,
-      price: null,
-      purchaseCost: null,
-      inClub: false,
-      seen: false,
-      available: false,
-      firstOwner: false,
-    }];
+const futGalleryEnrichMarketPrices = async (players, { matches = null, cancelled = () => false } = {}) => {
+  const fetchMissingPrices = globalThis.window?.collectionBookFetchMissingPrices;
+  if (typeof fetchMissingPrices !== "function" || cancelled()) return players;
+  const missing = players.filter(player => {
+    const price = Number(futGalleryPrice(player));
+    return !player.available && (!matches || matches(player)) && (!Number.isFinite(price) || price <= 0);
   });
-  return [...players, ...additions];
+  if (missing.length) await fetchMissingPrices(missing);
+  return players;
 };
+
+// EA concept search already supplies variant entities with their own definition
+// IDs and shared base asset IDs. Keep the enrichment hook async for callers.
+const futGalleryAddPristineVariants = async players => players;
 
 const futGalleryEnrichVariantPrices = async (players, { cancelled = () => false, force = false, concurrency = 4 } = {}) => {
   players = await futGalleryAddPristineVariants(players, { cancelled });
+  if (typeof ensureExtinctPlayerMaxPrice === "function") {
+    await Promise.all((players || []).filter(player => {
+      const prices = typeof getPriceItems === "function" ? getPriceItems() || {} : {};
+      return Boolean((prices[player.eaId] || prices[String(player.eaId)])?.isExtinct);
+    }).map(async player => {
+      const price = await ensureExtinctPlayerMaxPrice(player.entity);
+      if (price != null) {
+        player.extinctMaxPrice = price;
+        player.price = price;
+        player.purchaseCost = player.available ? 0 : price;
+        player.variantPriceResolved = true;
+      }
+    }));
+  }
   const targets = [...new Map((players || [])
-    .filter(player => player?.isVariantItem && (force || !player.variantPriceResolved))
+    .filter(player => player?.isVariantItem && !player.extinctMaxPrice && (force || !player.variantPriceResolved))
     .map(player => [Number(player.eaId), player]))
     .values()];
   let cursor = 0;
   const workers = Array.from({ length: Math.min(Math.max(1, concurrency), targets.length) }, async () => {
     while (cursor < targets.length && !cancelled()) {
       const player = targets[cursor++];
-      const price = await futGalleryFetchVariantPrice(player.itemDefinitionId || player.eaId, {
+      const priceData = await futGalleryFetchVariantPriceData(player.itemDefinitionId || player.eaId, {
         holographicType: player.holographicType,
         force,
       });
       player.variantPriceResolved = true;
-      if (price != null && !cancelled()) {
-        player.variantPrice = price;
-        player.price = price;
-        player.purchaseCost = player.available ? 0 : price;
+      if (priceData && !cancelled()) {
+        player.variantPrice = priceData.price;
+        player.maxPrice = priceData.maxPrice;
+        player.price = priceData.price;
+        player.purchaseCost = player.available ? 0 : priceData.price;
       }
     }
   });
   await Promise.all(workers);
   return players;
+};
+
+const futGalleryRefreshConceptPrices = async players => {
+  const concepts = window.getAutoSbcConceptPlayers?.() || window.autoSbcConceptPlayers || [];
+  const conceptsById = new Map(concepts.map(player => [Number(player.definitionId), player]));
+  const targets = [...new Map((players || [])
+    .filter(player => !player.inClub)
+    .map(player => [Number(player.eaId), player]))
+    .values()];
+  const variants = targets.filter(player => player.isVariantItem);
+  const standardEntities = targets
+    .filter(player => !player.isVariantItem)
+    .map(player => conceptsById.get(Number(player.eaId)) || player.entity)
+    .filter(Boolean);
+
+  if (standardEntities.length) {
+    if (typeof fetchPlayerPrices !== "function") throw new Error("Concept price refresh is unavailable");
+    await fetchPlayerPrices(standardEntities, {
+      force: true,
+      throttleProfile: "concept",
+      waitForCompletion: true,
+      suppressNotification: true,
+    });
+  }
+  if (variants.length) await futGalleryEnrichVariantPrices(variants, { force: true });
+  return targets.length;
 };
 
 const futGalleryLoadCatalogue = async ({ force = false } = {}) => {
@@ -164,10 +180,10 @@ const futGalleryCategories = catalogue => {
   });
 };
 
-const futGalleryIconUrls = item => {
+const futGalleryIconUrls = (item, { leagueOnly = false } = {}) => {
   const assets = globalThis.AssetLocationUtils;
   if (!assets) return [];
-  if (item.clubEaId) return [assets.getBadgeImageUri(Number(item.clubEaId))];
+  if (item.clubEaId && !leagueOnly) return [assets.getBadgeImageUri(Number(item.clubEaId))];
   const leagueIds = { "premier-league": [13, 2216], laliga: [53, 2222], bundesliga: [19, 2218], "ligue-1": [16, 2219], "serie-a": [31], leagues: [13, 53, 19] };
   if (item.categorySlug === "leagues") {
     const target = futGalleryNormalizeLabel(item.name === "Frauen-Bundesliga" ? "GPFBL" : item.name);
@@ -180,18 +196,21 @@ const futGalleryIconUrls = item => {
 };
 const futGalleryQuality = rating => rating >= 75 ? "gold" : rating >= 65 ? "silver" : "bronze";
 const futGalleryIsLoan = item => typeof item?.isLoan === "function" ? item.isLoan() : Number(item?.loans ?? -1) >= 0;
+const futGalleryIsTimeLimited = item => (typeof item?.isTimeLimited === "function" ? item.isTimeLimited() : item?.isTimeLimited === true)
+  || Number(item?.limitedUseType) > 1;
 
 const futGalleryGetCandidates = () => {
   const concepts = window.getAutoSbcConceptPlayers?.() || window.autoSbcConceptPlayers || [];
   const seenCounts = typeof collectionBookGetOwnedCounts === "function" ? collectionBookGetOwnedCounts() : new Map();
-  const firstOwnerCounts = typeof collectionBookGetFirstOwnerCounts === "function" ? collectionBookGetFirstOwnerCounts() : new Map();
-  const entities = new Map(concepts.map(item => [Number(item.definitionId), { entity: item, inClub: false }]));
+  const entities = new Map(concepts.filter(item => !futGalleryIsLoan(item) && !futGalleryIsTimeLimited(item))
+    .map(item => [Number(item.definitionId), { entity: item, inClub: false }]));
   const entries = window.__clubPlayersEntries || [];
   const liveItems = globalThis.services?.Item?.itemDao?.itemRepo?.club?.items?._collection || {};
-  const live = new Map(Object.values(liveItems).filter(item => item.isPlayer?.()).map(item => [Number(item.id), item]));
+  const live = new Map(Object.values(liveItems).filter(item => item.isPlayer?.() && !futGalleryIsTimeLimited(item))
+    .map(item => [Number(item.id), item]));
   for (const entry of entries) {
     const entity = live.get(Number(entry.id)) || entry.itemAttributes || entry;
-    if (futGalleryIsLoan(entity)) continue;
+    if (futGalleryIsLoan(entity) || futGalleryIsTimeLimited(entity) || futGalleryIsTimeLimited(entry)) continue;
     const previous = entities.get(Number(entry.definitionId));
     if (previous?.inClub && previous.entity.owners === 1) continue;
     entities.set(Number(entry.definitionId), { entity, entry, inClub: true, concept: previous?.entity });
@@ -204,7 +223,7 @@ const futGalleryGetCandidates = () => {
   const positions = globalThis.PlayerPosition || {};
   return [...entities].flatMap(([eaId, source]) => {
     const { entity, entry, inClub, concept } = source;
-    if (!eaId || futGalleryIsLoan(entity)) return [];
+    if (!eaId || futGalleryIsLoan(entity) || futGalleryIsTimeLimited(entity)) return [];
     const field = (name, fallback) => entity[name] ?? concept?.[name] ?? entry?.[name] ?? fallback;
     const teamId = Number(field("teamId", 0));
     const score = Number(entity.sbsScore || entity.gradingScore || concept?.sbsScore || 0);
@@ -218,6 +237,7 @@ const futGalleryGetCandidates = () => {
     const isVariantItem = futGalleryIsVariantItem(entity, itemDefinitionId);
     const staticData = entity._staticData || concept?._staticData || {};
     const name = entry?.name || entity.getFullName?.() || staticData.name || [staticData.firstName, staticData.lastName].filter(Boolean).join(" ") || String(eaId);
+    const manualSeen = typeof collectionBookGetManualSeen === "function" ? collectionBookGetManualSeen(eaId) : null;
     return [{
       eaId, entity, name, rating, score: score > 0 ? score : null, inClub,
       assetId, itemDefinitionId, isVariantItem, holographicType,
@@ -225,9 +245,12 @@ const futGalleryGetCandidates = () => {
       price: isVariantItem ? null : (typeof getPrice === "function" ? Number(getPrice(entity)) : null),
       purchaseCost: inClub ? 0 : null,
       seen: (seenCounts.get(eaId) || 0) > 0,
-      available: inClub || (seenCounts.get(eaId) || 0) > 0,
-      firstOwner: (inClub && Number(entity.owners ?? entry?.owners) === 1) || (firstOwnerCounts.get(eaId) || 0) > 0,
+      available: manualSeen ? manualSeen !== "unseen" : inClub || (seenCounts.get(eaId) || 0) > 0,
+      firstOwner: manualSeen ? manualSeen === "firstOwner" : inClub && (typeof collectionBookIsFirstOwner === "function"
+        ? collectionBookIsFirstOwner(entity?.id ?? entry?.id, entity.owners ?? entry?.owners)
+        : Number(entity.owners ?? entry?.owners) === 1),
       teamId, clubId: teamId,
+      gender: field("gender", globalThis.GrammaticalGender?.NEUTER ?? 2),
       eligibilityClubId: chemistry?.teamConfigRepo ? chemistry.normalizeClubId(teamId) : teamId,
       leagueId: Number(field("leagueId", 0)), nationId: Number(field("nationId", field("nation", 0))),
       playerId: Number(entity.databaseId || entity._metaData?.id || concept?.databaseId || entry?.assetId || eaId),
@@ -241,7 +264,15 @@ const futGalleryGetCandidates = () => {
 };
 
 const futGalleryEligibility = (set, tags) => {
-  if (set.clubEaId) return { matches: player => (player.eligibilityClubId ?? player.clubId) === Number(set.clubEaId) };
+  if (set.clubEaId) {
+    const description = String(set.description || "");
+    const requiresWomen = /\bwomen(?:['\u2019]?s)?\b/i.test(description);
+    const requiresMen = /\bmen(?:['\u2019]?s)?\b/i.test(description);
+    const gender = requiresWomen && !requiresMen ? (globalThis.GrammaticalGender?.FEMININE ?? 1)
+      : requiresMen && !requiresWomen ? (globalThis.GrammaticalGender?.MASCULINE ?? 0) : null;
+    return { matches: player => (player.eligibilityClubId ?? player.clubId) === Number(set.clubEaId)
+      && (gender === null || Number(player.gender ?? player.entity?.gender) === gender) };
+  }
   if (set.categorySlug === "leagues") {
     const leagues = globalThis.factories?.DataProvider?.getLeagueDP?.() || [];
     const target = futGalleryNormalizeLabel(set.name === "Frauen-Bundesliga" ? "GPFBL" : set.name);
@@ -292,10 +323,11 @@ const futGalleryEvaluateTag = (tag, players) => {
       ? [...groups.values()].map(group => group.reduce((best, player) => player.score > best.score ? player : best))
       : [...groups.values()].sort((left, right) => right.length - left.length || sum(right) - sum(left))[0] || [];
   }
-  const tier = [...tag.tiers].sort((left, right) => left.minItems - right.minItems).filter(value => matched.length >= value.minItems).at(-1);
+  const tier = [...tag.tiers].sort((left, right) => left.minItems - right.minItems)
+    .filter(value => matched.length >= value.minItems).at(-1);
   const matchedScore = matched.reduce((total, player) => total + (player.score || 0), 0);
   const nextTier = [...tag.tiers].sort((left, right) => left.minItems - right.minItems).find(value => value.minItems > matched.length) || null;
-  return { id: tag.id, name: tag.name, count: matched.length, percent: tier?.bonus || 0, matchedScore, nextTier,
+  return { id: tag.id, name: tag.name, count: matched.length, percent: tier?.bonus || 0, matchedScore, tiers: [...tag.tiers], nextTier,
     matchedIds: matched.map(player => player.eaId), bonus: Math.floor(matchedScore * (tier?.bonus || 0) / 100) };
 };
 
@@ -312,15 +344,41 @@ const futGalleryEvaluate = (set, tags, players) => {
   return { baseScore, bonusScore, totalScore, bonuses, complete, grade: reached.at(-1)?.name || null, next, tokens };
 };
 
-const futGalleryOptimize = async (set, tags, candidates, { cancelled = () => false, maxChecks = 60000, target = null } = {}) => {
+const futGalleryTagBonusShares = (tag, players) => {
+  const shares = [];
+  let accumulatedScore = 0;
+  for (const matchedId of tag.matchedIds || []) {
+    const player = players.find(value => value.eaId === matchedId);
+    if (!player) continue;
+    const nextScore = accumulatedScore + Number(player.score || 0);
+    const bonus = Math.floor(nextScore * tag.percent / 100) - Math.floor(accumulatedScore * tag.percent / 100);
+    if (bonus > 0) shares.push({ playerId: matchedId, name: player.name, bonus });
+    accumulatedScore = nextScore;
+  }
+  return shares;
+};
+
+const futGalleryPlayerTagBonus = (outcome, players, targetId) => {
+  const tags = outcome.bonuses.filter(value => value.paid && value.percent > 0).flatMap(tag =>
+    futGalleryTagBonusShares(tag, players)
+      .filter(share => share.playerId === targetId)
+      .map(share => ({ name: tag.name, bonus: share.bonus })),
+  );
+  return { total: tags.reduce((sum, tag) => sum + tag.bonus, 0), tags };
+};
+
+const futGalleryOptimize = async (set, tags, candidates, { cancelled = () => false, maxChecks = 60000, target = null, maxCost = null } = {}) => {
   const pool = [...new Map(candidates.filter(player => player.score !== null && (target === null || !player.isVariantItem || Number(player.variantPrice) > 0)).map(player => [player.eaId, player])).values()].sort((left, right) => right.score - left.score || left.eaId - right.eaId);
   const size = Math.min(set.requiredCards, pool.length);
   const evaluate = players => {
     const result = futGalleryEvaluate(set, tags, players);
-    return { score: result.totalScore, feasible: result.complete && result.totalScore >= target, cost: players.reduce((total, player) => total + (player.available ? 0 : Number(player.isVariantItem ? player.variantPrice : player.purchaseCost || 0)), 0) };
+    const cost = players.reduce((total, player) => total + (player.available ? 0 : Number(player.isVariantItem ? player.variantPrice : player.purchaseCost || 0)), 0);
+    return { score: result.totalScore, feasible: result.complete && (target === null || result.totalScore >= target) && (maxCost === null || cost <= maxCost), cost };
   };
-  const compare = (left, right) => target === null ? left.score - right.score
-    : Number(left.feasible) - Number(right.feasible) || (left.feasible ? right.cost - left.cost || left.score - right.score : left.score - right.score || right.cost - left.cost);
+  const compare = (left, right) => maxCost !== null
+    ? Number(left.feasible) - Number(right.feasible) || left.score - right.score || right.cost - left.cost
+    : target === null ? left.score - right.score
+      : Number(left.feasible) - Number(right.feasible) || (left.feasible ? right.cost - left.cost || left.score - right.score : left.score - right.score || right.cost - left.cost);
   if (cancelled()) return null;
   let best = pool.slice(0, size);
   let bestScore = evaluate(best);
@@ -347,7 +405,7 @@ const futGalleryOptimize = async (set, tags, candidates, { cancelled = () => fal
     return { players: best, optimal: true, checks };
   }
   const seeds = [best];
-  if (target !== null) {
+  if (target !== null || maxCost !== null) {
     seeds.push([...pool].sort((left, right) => left.purchaseCost - right.purchaseCost || right.score - left.score).slice(0, size));
     seeds.push([...pool].sort((left, right) => right.score / (right.purchaseCost + 1) - left.score / (left.purchaseCost + 1)).slice(0, size));
   }
@@ -416,4 +474,171 @@ const futGalleryCheapest = async (set, tags, candidates, grade, options = {}) =>
   return { ...result, reached: outcome.complete && outcome.totalScore >= target, grade, unpriced,
     cost: result.players.reduce((total, player) => total + player.purchaseCost, 0),
     missing: result.players.filter(player => player.purchaseCost > 0) };
+};
+
+const futGalleryMaxScoreWithinBudget = async (set, tags, candidates, budget, options = {}) => {
+  let unpriced = 0;
+  const pool = candidates.flatMap(player => {
+    if (player.score === null) return [];
+    if (player.available) return [{ ...player, purchaseCost: 0 }];
+    const price = Number(options.price ? options.price(player) : futGalleryPrice(player));
+    if (!Number.isFinite(price) || price <= 0) { unpriced++; return []; }
+    return [{ ...player, purchaseCost: Math.ceil(price), firstOwner: false }];
+  });
+  const result = await futGalleryOptimize(set, tags, pool, { ...options, target: null, maxCost: budget });
+  if (!result || options.cancelled?.()) return null;
+  const outcome = futGalleryEvaluate(set, tags, result.players);
+  const cost = result.players.reduce((total, player) => total + Number(player.purchaseCost || 0), 0);
+  return { ...result, reached: outcome.complete && cost <= budget, grade: outcome.grade, unpriced, cost,
+    missing: result.players.filter(player => player.purchaseCost > 0) };
+};
+
+const futGalleryRewardAmount = (set, outcome, currency) => {
+  if (!outcome.complete) return 0;
+  if (currency === "gems") return Math.max(0, Number(outcome.totalScore) || 0);
+  const types = ["event_token_1"];
+  return set.grades.filter(grade => outcome.totalScore >= grade.threshold)
+    .flatMap(grade => grade.rewards || [])
+    .filter(reward => types.includes(reward.type))
+    .reduce((total, reward) => total + Math.max(0, Number(reward.value) || 0) * Math.max(0, Number(reward.count) || 0), 0);
+};
+
+const futGalleryPlanRewards = async (sets, tags, candidates, currency, budget, options = {}) => {
+  if (!["tokens", "gems"].includes(currency)) throw new Error("Unknown reward currency");
+  if (!Number.isFinite(budget) || budget < 0) throw new Error("Coin balance unavailable");
+  const price = options.price || futGalleryPrice;
+  const solve = options.solve || futGalleryCheapest;
+  const beamWidth = Math.max(1, options.beamWidth || 200);
+  const portfolioChoices = [];
+  let states = [{ reward: 0, cost: 0, purchases: new Map(), sets: [] }];
+  let skipped = 0;
+  let optimal = true;
+  let exhaustiveCandidates = true;
+  for (let index = 0; index < sets.length; index++) {
+    if (options.cancelled?.()) return null;
+    const set = sets[index];
+    options.progress?.(index, sets.length, `Checking ${set.name}`);
+    const requirement = futGalleryEligibility(set, tags);
+    const choices = [];
+    const signatures = new Set();
+    const addChoice = players => {
+      if (players.length !== set.requiredCards || new Set(players.map(player => player.eaId)).size !== set.requiredCards) return;
+      const outcome = futGalleryEvaluate(set, tags, players);
+      const reward = futGalleryRewardAmount(set, outcome, currency);
+      if (!reward) return;
+      const signature = players.map(player => player.eaId).sort((first, second) => first - second).join(",");
+      if (signatures.has(signature)) return;
+      const purchases = new Map();
+      for (const player of players.filter(player => !player.available)) {
+        const cost = Number(price(player));
+        if (!(cost > 0) || !Number.isFinite(cost)) return;
+        purchases.set(player.eaId, { player, cost: Math.ceil(cost) });
+      }
+      signatures.add(signature);
+      choices.push({ set, grade: outcome.grade, reward, players, purchases });
+    };
+    if (requirement.matches && (currency === "gems" || set.grades.some(grade => futGalleryRewardAmount(set, { complete: true, totalScore: grade.threshold }, currency) > 0))) {
+      const pool = candidates.filter(requirement.matches).filter(player => player.score !== null)
+        .map(player => player.available ? player : { ...player, firstOwner: false });
+      const current = options.currentSolutions?.[set.id];
+      const savedSolutions = Array.isArray(current) ? current : current ? [current, ...(current.solutions || [])] : [];
+      for (const saved of savedSolutions) {
+        const ids = new Set(saved.ids || saved.playerIds || []);
+        addChoice(pool.filter(player => ids.has(player.eaId)));
+      }
+      let combinations = 1;
+      for (let count = 1; count <= set.requiredCards; count++) {
+        combinations = combinations * (pool.length - set.requiredCards + count) / count;
+        if (combinations > 1000) break;
+      }
+      const exhaustive = pool.length >= set.requiredCards && combinations <= 1000;
+      if (exhaustive) {
+        options.progress?.(index, sets.length, `${set.name}: evaluating ${Math.round(combinations)} complete lineups`);
+        const visit = (start, players) => {
+          if (players.length === set.requiredCards) { addChoice(players); return; }
+          for (let cursor = start; cursor <= pool.length - (set.requiredCards - players.length); cursor++) {
+            visit(cursor + 1, [...players, pool[cursor]]);
+          }
+        };
+        visit(0, []);
+      } else if (pool.length >= set.requiredCards) {
+        optimal = false;
+        exhaustiveCandidates = false;
+      }
+      if (currency === "gems" && !exhaustive) {
+        options.progress?.(index, sets.length, `${set.name}: maximising score within budget`);
+        const result = await futGalleryMaxScoreWithinBudget(set, tags, pool, budget, { price, maxChecks: 3000, cancelled: options.cancelled });
+        if (options.cancelled?.()) return null;
+        if (result?.reached) {
+          optimal = optimal && result.optimal;
+          addChoice(result.players);
+        }
+      }
+      for (const grade of currency === "tokens" ? set.grades : []) {
+        const possible = futGalleryRewardAmount(set, { complete: true, totalScore: grade.threshold }, currency);
+        if (!possible || exhaustive) continue;
+        options.progress?.(index, sets.length, `${set.name}: calculating grade ${grade.name}`);
+        const result = await solve(set, tags, pool, grade.name, { price, maxChecks: 3000, cancelled: options.cancelled });
+        if (options.cancelled?.()) return null;
+        if (!result?.reached) continue;
+        optimal = optimal && result.optimal;
+        addChoice(result.players);
+        const sharedPrice = player => {
+          const overlaps = sets.filter(other => futGalleryEligibility(other, tags).matches?.(player)).length;
+          return Math.max(1, Math.ceil(Number(price(player)) / Math.max(1, overlaps)));
+        };
+        const shared = await solve(set, tags, pool, grade.name, { price: sharedPrice, maxChecks: 3000, cancelled: options.cancelled });
+        if (options.cancelled?.()) return null;
+        if (shared?.reached) addChoice(shared.players);
+        for (const excluded of (result.missing || []).slice(0, 3)) {
+          const alternative = await solve(set, tags, pool.filter(player => player.eaId !== excluded.eaId), grade.name,
+            { price, maxChecks: 3000, cancelled: options.cancelled });
+          if (options.cancelled?.()) return null;
+          if (alternative?.reached) addChoice(alternative.players);
+        }
+      }
+    }
+    if (!choices.length) skipped++;
+    portfolioChoices.push(...choices);
+    if (options.portfolioSolver) {
+      options.progress?.(index + 1, sets.length, `${set.name}: ${choices.length} valid alternatives`);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      continue;
+    }
+    const expanded = states.slice();
+    for (const state of states) for (const choice of choices) {
+      const purchases = new Map(state.purchases);
+      let cost = state.cost;
+      for (const [id, purchase] of choice.purchases) {
+        if (!purchases.has(id)) { purchases.set(id, purchase); cost += purchase.cost; }
+      }
+      if (cost <= budget) expanded.push({ reward: state.reward + choice.reward, cost, purchases, sets: [...state.sets, choice] });
+    }
+    expanded.sort((first, second) => second.reward - first.reward || first.cost - second.cost);
+    if (expanded.length > beamWidth) optimal = false;
+    states = expanded.slice(0, beamWidth);
+    options.progress?.(index + 1, sets.length, set.name);
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+  if (options.portfolioSolver) {
+    options.progress?.(sets.length, sets.length, "Optimising reward portfolio with OR-Tools CP-SAT");
+    const solution = await options.portfolioSolver({
+      currency, budget: Math.floor(budget),
+      choices: portfolioChoices.map(choice => ({
+        setId: choice.set.id, grade: choice.grade, reward: choice.reward,
+        requiredCards: choice.set.requiredCards, playerIds: choice.players.map(player => player.eaId),
+        purchases: [...choice.purchases.values()].map(({ player, cost }) => ({ eaId: player.eaId, cost: Math.ceil(cost) })),
+      })),
+    });
+    if (options.cancelled?.()) return null;
+    if (!["OPTIMAL", "FEASIBLE"].includes(solution?.status)) throw new Error(`Gallery solver returned ${solution?.status || "no result"}`);
+    const chosen = solution.selectedIndexes.map(index => portfolioChoices[index]);
+    const purchases = new Map(chosen.flatMap(choice => [...choice.purchases]));
+    return { reward: solution.reward, cost: solution.cost, sets: chosen, purchases: [...purchases.values()],
+      budget, remaining: budget - solution.cost, currency, skipped, optimal: solution.optimal,
+      solverStatus: solution.status, scope: solution.scope,
+      exhaustive: exhaustiveCandidates, choiceCount: portfolioChoices.length, evaluatedSets: sets.length };
+  }
+  const best = states[0];
+  return { ...best, purchases: [...best.purchases.values()], budget, remaining: budget - best.cost, currency, skipped, optimal };
 };

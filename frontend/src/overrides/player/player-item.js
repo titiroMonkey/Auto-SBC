@@ -1,3 +1,34 @@
+const playerItemAddSeenControl = (view, item) => {
+  if (!view.lockUnlockButton || typeof collectionBookGetManualSeen !== "function") return;
+  const anchor = view.lockUnlockButton.__root;
+  if (!anchor?.parentElement) return;
+  view.__seenDropdown?.dealloc();
+  view.__seenControl?.remove();
+  const label = document.createElement("div");
+  label.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;";
+  label.append(document.createTextNode("Collection seen"));
+  const dropdown = new UTDropDownControl();
+  dropdown.init();
+  dropdown.setOptions([
+    new UTDataProviderEntryDTO("unseen", "unseen", "Unseen"),
+    new UTDataProviderEntryDTO("seen", "seen", "Seen"),
+    new UTDataProviderEntryDTO("firstOwner", "firstOwner", "Seen first owner"),
+  ]);
+  const value = collectionBookGetManualSeen(item.definitionId) ||
+    (collectionBookGetOwnedCounts().get(Number(item.definitionId)) > 0
+      ? collectionBookIsFirstOwner(item.id, item.owners) ? "firstOwner" : "seen" : "unseen");
+  dropdown.setIndexById(value);
+  dropdown.addTarget(view, () => {
+    try { collectionBookSetManualSeen(item.definitionId, dropdown.getValue()); }
+    catch (error) { showNotification(`Could not save seen status: ${error.message}`, UINotificationType.NEGATIVE); }
+  }, EventType.CHANGE);
+  const controlRoot = dropdown.getRootElement();
+  controlRoot.setAttribute("aria-label", "Collection seen status");
+  controlRoot.style.cssText = "flex:0 1 170px;min-width:0;";
+  anchor.after(label); label.append(controlRoot); view.__seenControl = label;
+  view.__seenDropdown = dropdown;
+};
+
 const playerItemOverride = () => {
   // Adds a "Remove All Evolutions" button directly under EA's native
   // "Remove Last Evolution" button. EA only exposes single-upgrade removal in
@@ -228,6 +259,7 @@ const playerItemOverride = () => {
       );
       this.lockUnlockButton = button;
     }
+    playerItemAddSeenControl(this, e);
     if (!isItemLocked(e) && !this.fixUnfixButton) {
       const fixLabel = isItemFixed(e) ? fixedLabel : unfixedLabel;
       const fixbutton = new UTGroupButtonControl();
@@ -513,6 +545,7 @@ const playerItemOverride = () => {
         this.lockUnlockButton = button;
       }
     }
+    playerItemAddSeenControl(this, e);
     if (!isItemLocked(e)) {
       const fixlabel = isItemFixed(e) ? fixedLabel : unfixedLabel;
       if (!this.fixUnfixButton) {
