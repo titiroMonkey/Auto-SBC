@@ -287,6 +287,11 @@ const futGalleryEnsureStyles = () => {
     .fg-reward-modal [data-result] h3 { margin:0 0 6px; font-size:14px; color:#f5f7f8; overflow-wrap:anywhere; }
     .fg-reward-modal [data-result] p { margin:0; color:#aeb9bc; font-size:13px; overflow-wrap:anywhere; }
     .fg-reward-modal .fg-autocomplete-actions { flex-wrap:wrap; padding-top:8px; border-top:1px solid #3b4245; }
+    .fg-reward-background-progress { display:grid; gap:7px; padding:10px 16px; border-bottom:1px solid var(--fg-line); background:#202827; }
+    .fg-reward-background-progress > div { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .fg-reward-background-progress strong { min-width:0; overflow-wrap:anywhere; }
+    .fg-reward-background-progress p { margin:0; color:var(--fg-muted); font-size:12px; overflow-wrap:anywhere; }
+    .fg-reward-background-progress progress { display:block; width:100%; height:8px; accent-color:var(--fg-accent); }
     @media (max-width:480px) { .fg-reward-modal { padding:18px; } .fg-reward-modal .fg-autocomplete-actions button { flex:1 1 100px; min-width:0; } }
     .fg-autocomplete-progress { display:grid; gap:7px; }
     .fg-autocomplete-progress progress { display:block; width:100%; height:8px; border:0; border-radius:8px; overflow:hidden; background:#303638; accent-color:#b7f36b; }
@@ -636,12 +641,21 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
   const balance = Number(coins?.amount ?? coins);
   if (Number.isFinite(balance) && balance >= 0) form.elements.budget.value = balance;
   const status = view.querySelector('[role="status"]');
+  const progress = view.querySelector("progress");
   const logLine = document.createElement("p");
   logLine.className = "fg-planner-log";
   logLine.setAttribute("role", "log");
   logLine.setAttribute("aria-live", "polite");
   status.after(logLine);
   const results = view.querySelector("[data-result]");
+  const backgroundProgress = document.createElement("section");
+  backgroundProgress.className = "fg-reward-background-progress";
+  backgroundProgress.hidden = true;
+  backgroundProgress.innerHTML = `<div><strong></strong><button type="button">Open</button></div><progress max="1" value="0" aria-label="Sets calculated"></progress><p role="status" aria-live="polite"></p>`;
+  root.prepend(backgroundProgress);
+  const backgroundTitle = backgroundProgress.querySelector("strong");
+  const backgroundProgressBar = backgroundProgress.querySelector("progress");
+  const backgroundStatus = backgroundProgress.querySelector('[role="status"]');
   const close = view.querySelector("[data-close]");
   const saveButton = view.querySelector("[data-save]");
   let closed = false;
@@ -649,6 +663,13 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
   let stopped = false;
   let result = null;
   let background = false;
+  const updateBackgroundProgress = message => {
+    if (!background) return;
+    backgroundTitle.textContent = `${title} calculation`;
+    backgroundStatus.textContent = message || status.textContent;
+    backgroundProgressBar.max = progress.max;
+    backgroundProgressBar.value = progress.value;
+  };
   let modalOwner = owner;
   let savePlans = save;
   const job = {
@@ -657,12 +678,15 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
       modalOwner = nextOwner;
       savePlans = nextSave;
       background = false;
+      backgroundProgress.hidden = true;
       modalOwner.presentViewController(controller, false);
     },
   };
   const minimise = () => {
     if (background || closed) return;
     background = true;
+    backgroundProgress.hidden = false;
+    updateBackgroundProgress(status.textContent);
     modalOwner.dismissViewController(false);
   };
   const backgroundButton = document.createElement("button");
@@ -670,11 +694,13 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
   backgroundButton.textContent = "Run in background";
   backgroundButton.onclick = minimise;
   view.querySelector(".fg-autocomplete-actions").append(backgroundButton);
+  backgroundProgress.querySelector("button").onclick = () => job.show(modalOwner, savePlans);
   root.__galleryCloseRewardPlan = () => {
     if (background) return;
     if (closed) return;
     closed = true; stopped = true; root.__galleryCloseRewardPlan = null;
     futGalleryRewardJobs.delete(currency);
+    backgroundProgress.remove();
     modalOwner.dismissViewController(false, () => controller.dealloc());
   };
   controller.viewWillDisappear = function () {
@@ -682,6 +708,7 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
     if (background) return;
     closed = true; stopped = true; root.__galleryCloseRewardPlan = null;
     futGalleryRewardJobs.delete(currency);
+    backgroundProgress.remove();
   };
   close.onclick = () => { if (running) { stopped = true; status.textContent = "Stopping..."; } else root.__galleryCloseRewardPlan?.(); };
   saveButton.onclick = () => { if (result) { savePlans(result); status.textContent = "Recommended lineups saved"; } };
@@ -693,7 +720,6 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
     results.replaceChildren(); saveButton.disabled = true; close.textContent = "Stop";
     form.querySelector('[type="submit"]').disabled = true;
     const format = value => Number(value || 0).toLocaleString();
-    const progress = view.querySelector("progress");
     progress.max = Math.max(1, catalogue.sets.length);
     progress.value = 0;
     status.textContent = "Preparing cached player prices...";
@@ -704,7 +730,6 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
     };
     updateLog();
     const logTimer = setInterval(updateLog, 1000);
-    minimise();
     try {
       await new Promise(resolve => setTimeout(resolve, 0));
       const pool = candidates.map(player => ({ ...player, available: player.available === true, firstOwner: player.available === true && player.firstOwner }));
@@ -725,11 +750,14 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
           status.textContent = `${completed} / ${total}: ${name}`;
           stage = name;
           updateLog();
+          updateBackgroundProgress(status.textContent);
         },
       });
       if (closed) return;
       if (!result) { status.textContent = "Calculation stopped"; return; }
       status.textContent = `${format(result.reward)} ${currency} from ${result.sets.length} complete sets | ${format(result.cost)} coins | ${format(result.remaining)} remaining. ${result.choiceCount} alternatives across ${result.evaluatedSets} sets. CP-SAT ${result.solverStatus}; ${result.exhaustive ? "exhaustive candidate search" : "bounded candidate search, not a global optimality proof"}.`;
+      progress.value = progress.max;
+      updateBackgroundProgress(status.textContent);
       if (!result.reward) results.textContent = "No complete sets found within this budget.";
       for (const choice of result.sets) {
         const section = document.createElement("section"); section.style.padding = "12px 0";
@@ -739,7 +767,7 @@ const futGalleryShowRewardPlan = (root, currency, catalogue, candidates, save, c
         section.append(heading, list); results.append(section);
       }
       saveButton.disabled = !result.sets.length;
-    } catch (error) { if (!closed) status.textContent = `Calculation failed: ${error.message}`; }
+    } catch (error) { if (!closed) { status.textContent = `Calculation failed: ${error.message}`; updateBackgroundProgress(status.textContent); } }
     finally {
       clearInterval(logTimer);
       running = false;

@@ -1169,6 +1169,20 @@ test("Gallery overview exposes all-set Max Gems and Max Tokens budget planners",
   assert.match(source, /available: player\.available === true/);
 });
 
+test("Gallery reward calculation stays open until Run in background is selected", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../src/features/collection-book/gallery-view.js"), "utf8");
+  const start = source.indexOf("const futGalleryShowRewardPlan =");
+  const end = source.indexOf("const futGalleryMountPage =", start);
+  const modal = source.slice(start, end);
+  const submit = modal.slice(modal.indexOf("form.onsubmit = async event =>"));
+
+  assert.doesNotMatch(submit, /\n\s+minimise\(\);/);
+  assert.match(modal, /backgroundButton\.onclick = minimise/);
+  assert.match(modal, /backgroundProgress\.hidden = false/);
+  assert.match(modal, /backgroundProgressBar\.value = progress\.value/);
+  assert.match(modal, /backgroundProgress\.querySelector\("button"\)\.onclick = \(\) => job\.show/);
+});
+
 test("Gallery grade badges reuse the shared grade medal icon", () => {
   const source = fs.readFileSync(path.join(__dirname, "../src/features/collection-book/gallery-view.js"), "utf8");
   assert.match(source, /badge\.className = `fg-remaining\$\{badgeState\.graded \? " fg-grade-icon" : ""\}`/);
