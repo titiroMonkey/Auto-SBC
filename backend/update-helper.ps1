@@ -1,3 +1,6 @@
+Import-Module "$PSHOME\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1" -ErrorAction Stop
+Import-Module "$PSHOME\Modules\Microsoft.PowerShell.Management\Microsoft.PowerShell.Management.psd1" -ErrorAction Stop
+
 function Wait-AutoSbcReady {
     param($Process)
     $deadline = [DateTime]::UtcNow.AddSeconds(90)

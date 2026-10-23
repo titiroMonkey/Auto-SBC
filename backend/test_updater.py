@@ -168,7 +168,7 @@ class UpdaterTests(unittest.TestCase):
                     metadata["sha256"] = "0" * 64
                 metadata_path = Path(root) / "metadata.json"
                 metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
-                script = helper + """
+                script = "$PSModuleAutoLoadingPreference = 'None'\n" + helper + """
 $global:starts = @()
 function Get-Process {
     param($Id, $ErrorAction)
@@ -206,7 +206,7 @@ if ($global:starts.Count -ne $expectedStarts) { throw 'Incorrect restart count' 
 """
                 result = subprocess.run(
                     [str(powershell), "-NoProfile", "-NonInteractive", "-Command", script],
-                    env={**os.environ, "UPDATER_TEST_METADATA": str(metadata_path), "UPDATER_TEST_SCENARIO": scenario},
+                    env={**os.environ, "PSModulePath": root, "UPDATER_TEST_METADATA": str(metadata_path), "UPDATER_TEST_SCENARIO": scenario},
                     capture_output=True, text=True, timeout=20,
                 )
                 error_log = directory / "update-error.txt"
