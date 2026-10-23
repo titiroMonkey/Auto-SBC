@@ -209,8 +209,12 @@ if ($global:starts.Count -ne $expectedStarts) { throw 'Incorrect restart count' 
                     env={**os.environ, "UPDATER_TEST_METADATA": str(metadata_path), "UPDATER_TEST_SCENARIO": scenario},
                     capture_output=True, text=True, timeout=20,
                 )
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(target.read_bytes(), b"new version" if scenario == "success" else b"old version")
+                error_log = directory / "update-error.txt"
+                diagnostics = result.stdout + result.stderr
+                if error_log.exists():
+                    diagnostics += error_log.read_text(errors="replace")
+                self.assertEqual(result.returncode, 0, diagnostics)
+                self.assertEqual(target.read_bytes(), b"new version" if scenario == "success" else b"old version", diagnostics)
                 self.assertEqual(directory.exists(), scenario != "success")
 
 
