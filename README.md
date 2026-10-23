@@ -197,6 +197,17 @@ the same version and updates that release. A push containing multiple commits
 releases the pushed branch tip, so intermediate version numbers can be skipped.
 The workflow checks that the executable starts before publishing it.
 
+The executable checks for a newer stable FC27 release at startup and shows a
+Windows Yes/No prompt. Yes downloads and verifies the release checksum, replaces
+the executable, and restarts it. If the new backend fails to start, the updater
+restores the previous executable. No or an offline check starts the current
+version normally. Install an updater-enabled release manually once if you are
+using an older executable.
+
+The executable's folder must be writable and Windows PowerShell must be available.
+Set `AUTOSBC_DISABLE_UPDATES=1` to disable update checks. Run
+`AutoSBCBackend.exe --version` to print the embedded release version.
+
 ### Windows Installer (Optional Packaging)
 
 You can create a single-file executable with PyInstaller and then wrap it in a user-friendly Windows installer (Inno Setup) that asks the user where to install the backend service.

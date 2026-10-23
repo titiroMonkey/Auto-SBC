@@ -1,3 +1,14 @@
+import sys
+
+if __name__ == "__main__":
+    import updater
+
+    if "--version" in sys.argv:
+        print(updater.current_version())
+        sys.exit(0)
+    if updater.check_for_update():
+        sys.exit(0)
+
 import asyncio
 import functools
 import json
@@ -6,7 +17,6 @@ import os
 import queue
 import signal
 import subprocess
-import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event, Thread, Timer

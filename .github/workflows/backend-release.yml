@@ -50,6 +50,19 @@ jobs:
           python --version
           pip list
 
+      - name: Test backend and updater
+        run: python -m unittest discover -s backend -p "test_*.py"
+
+      - name: Embed release version
+        shell: python
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.tag }}
+        run: |
+          import os
+          from pathlib import Path
+
+          Path("backend/release-version.txt").write_text(os.environ["RELEASE_VERSION"], encoding="utf-8")
+
       - name: Build EXE
         shell: cmd
         run: |
@@ -58,6 +71,8 @@ jobs:
           pyinstaller --noconfirm --onefile --name AutoSBCBackend ^
             --paths backend ^
             --hidden-import main ^
+            --add-data "backend\release-version.txt;." ^
+            --add-data "backend\update-helper.ps1;." ^
             --collect-all ortools ^
             backend\main.py
           if not exist dist\AutoSBCBackend.exe (
@@ -68,13 +83,19 @@ jobs:
 
       - name: Smoke test EXE
         shell: python
+        env:
+          AUTOSBC_DISABLE_UPDATES: "1"
+          RELEASE_VERSION: ${{ steps.version.outputs.tag }}
         run: |
           import json
+          import os
           import subprocess
           import time
           import urllib.error
           import urllib.request
 
+          version = subprocess.check_output(["dist/AutoSBCBackend.exe", "--version"], text=True, timeout=30).strip()
+          assert version == os.environ["RELEASE_VERSION"], f"Unexpected EXE version: {version}"
           process = subprocess.Popen(["dist/AutoSBCBackend.exe"])
           try:
               deadline = time.monotonic() + 90
@@ -121,6 +142,7 @@ jobs:
             Notes:
             - Built via PyInstaller.
             - Run: AutoSBCBackend.exe (binds to port 8000).
+            - Checks for newer releases at startup and asks before downloading and restarting.
             - Set AUTOSBC_ENABLE_FILE_LOGS=1 to enable file logging in packaged mode.
           prerelease: false
           fail_on_unmatched_files: true
