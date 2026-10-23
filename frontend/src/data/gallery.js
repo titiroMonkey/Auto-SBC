@@ -1,4 +1,18 @@
 const FUT_GALLERY_CATALOGUE_KEY = "futGallery.catalogue.v2";
+const FUT_GALLERY_LEAGUE_IDS_BY_SET_ID = Object.freeze({
+  100: 2216,
+  103: 31,
+  108: 13,
+  109: 53,
+  111: 16,
+  115: 2218,
+  120: 2215,
+  121: 2222,
+  122: 19,
+  155: 350,
+  173: 39,
+  193: 2221,
+});
 let futGalleryCatalogueRequest = null;
 const futGalleryVariantPriceCache = new Map();
 const futGalleryVariantPriceRequests = new Map();
@@ -184,11 +198,10 @@ const futGalleryIconUrls = (item, { leagueOnly = false } = {}) => {
   const assets = globalThis.AssetLocationUtils;
   if (!assets) return [];
   if (item.clubEaId && !leagueOnly) return [assets.getBadgeImageUri(Number(item.clubEaId))];
-  const leagueIds = { "premier-league": [13, 2216], laliga: [53, 2222], bundesliga: [19, 2218], "ligue-1": [16, 2219], "serie-a": [31], leagues: [13, 53, 19] };
+  const leagueIds = { "premier-league": [13, 2216], laliga: [53, 2222], bundesliga: [19, 2215], "ligue-1": [16, 2218], "serie-a": [31], leagues: [13, 53, 19] };
   if (item.categorySlug === "leagues") {
-    const target = futGalleryNormalizeLabel(item.name === "Frauen-Bundesliga" ? "GPFBL" : item.name);
-    const league = globalThis.factories?.DataProvider?.getLeagueDP?.().find(value => futGalleryNormalizeLabel(String(value.label).replace(/\s*\([^)]*\)\s*$/, "")) === target);
-    return league ? [assets.getLeagueImageUri(Number(league.id))] : [];
+    const leagueId = FUT_GALLERY_LEAGUE_IDS_BY_SET_ID[Number(item.id)];
+    return leagueId ? [assets.getLeagueImageUri(leagueId)] : [];
   }
   if (leagueIds[item.slug]) return leagueIds[item.slug].map(id => assets.getLeagueImageUri(id));
   const rarity = { totw: 3, heroes: 22, "squad-foundations": 87, "starter-set": 1, "season-1": 72, holographics: 3, rarities: 3 }[item.slug];
@@ -274,10 +287,8 @@ const futGalleryEligibility = (set, tags) => {
       && (gender === null || Number(player.gender ?? player.entity?.gender) === gender) };
   }
   if (set.categorySlug === "leagues") {
-    const leagues = globalThis.factories?.DataProvider?.getLeagueDP?.() || [];
-    const target = futGalleryNormalizeLabel(set.name === "Frauen-Bundesliga" ? "GPFBL" : set.name);
-    const league = leagues.find(value => futGalleryNormalizeLabel(String(value.label).replace(/\s*\([^)]*\)\s*$/, "")) === target);
-    return league ? { matches: player => player.leagueId === Number(league.id) } : { error: "League requirement could not be matched to EA data." };
+    const leagueId = FUT_GALLERY_LEAGUE_IDS_BY_SET_ID[Number(set.id)];
+    return leagueId ? { matches: player => player.leagueId === leagueId } : { error: "No EA league ID is configured for this gallery set." };
   }
   const tagNames = { totw: "TOTW", heroes: "Heroic", holographics: "Holographic" };
   const tag = tags.find(value => value.name === tagNames[set.slug]);

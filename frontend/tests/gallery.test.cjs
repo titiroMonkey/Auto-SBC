@@ -810,13 +810,38 @@ test("large search can stop and returns a bounded best-found result", async () =
   assert.equal(result.checks, 400);
 });
 
-test("eligibility uses normalized clubs, EA league labels and rarity tags", () => {
-  const api = load({ factories: { DataProvider: { getLeagueDP: () => [{ id: 13, label: "Premier League (ENG 1)" }] } } });
+test("eligibility uses normalized clubs, league set IDs and rarity tags", () => {
+  const api = load();
   assert.equal(api.eligible({ clubEaId: 1 }, []).matches(player(1, 100)), true);
-  assert.equal(api.eligible({ categorySlug: "leagues", name: "Premier League" }, []).matches(player(1, 100, { leagueId: 13 })), true);
+  assert.equal(api.eligible({ categorySlug: "leagues", id: 108 }, []).matches(player(1, 100, { leagueId: 13 })), true);
   assert.equal(api.eligible({ slug: "season-1" }, []).matches(player(1, 100, { rarityName: "Destined for Glory" })), true);
   assert.equal(api.eligible({ slug: "starter-set" }, []).matches(player(1, 100, { rarityId: 22 })), false);
   assert.ok(api.eligible({ slug: "unrecognized" }, []).error);
+});
+
+test("league eligibility and icons resolve all current set IDs without names or EA labels", () => {
+  const api = load({
+    AssetLocationUtils: { getLeagueImageUri: id => `league:${id}` },
+    factories: { DataProvider: { getLeagueDP() { throw new Error("League labels must not be read"); } } },
+  });
+  const mappings = [[108, 13], [100, 2216], [111, 16], [115, 2218], [109, 53], [121, 2222],
+    [103, 31], [122, 19], [120, 2215], [155, 350], [173, 39], [193, 2221]];
+  for (const [id, leagueId] of mappings) {
+    for (const setId of [id, String(id)]) {
+      const set = { id: setId, categorySlug: "leagues", name: "Unrelated display name" };
+      const requirement = api.eligible(set, []);
+      assert.equal(requirement.matches(player(1, 100, { leagueId })), true);
+      assert.equal(requirement.matches(player(2, 100, { leagueId: 9999 })), false);
+      assert.deepEqual(Array.from(api.icons(set)), [`league:${leagueId}`]);
+    }
+  }
+  for (const id of [undefined, 0, 9999, "invalid"]) {
+    const set = { id, categorySlug: "leagues", name: "Premier League", slug: "premier-league" };
+    assert.match(api.eligible(set, []).error, /No EA league ID/);
+    assert.deepEqual(Array.from(api.icons(set)), []);
+  }
+  assert.deepEqual(Array.from(api.icons({ slug: "bundesliga" })), ["league:19", "league:2215"]);
+  assert.deepEqual(Array.from(api.icons({ slug: "ligue-1" })), ["league:16", "league:2218"]);
 });
 
 test("league-category set icons render alongside a club badge", () => {
@@ -825,12 +850,11 @@ test("league-category set icons render alongside a club badge", () => {
       getBadgeImageUri: id => `club:${id}`,
       getLeagueImageUri: id => `league:${id}`,
     },
-    factories: { DataProvider: { getLeagueDP: () => [{ id: 13, label: "Premier League (ENG 1)" }] } },
   });
-  const set = { categorySlug: "leagues", name: "Premier League", clubEaId: 1 };
+  const set = { categorySlug: "leagues", id: 108, clubEaId: 1 };
   assert.deepEqual(Array.from(api.icons(set)), ["club:1"]);
   assert.deepEqual(Array.from(api.icons(set, { leagueOnly: true })), ["league:13"]);
-  assert.deepEqual(Array.from(api.icons({ categorySlug: "leagues", name: "Premier League" })), ["league:13"]);
+  assert.deepEqual(Array.from(api.icons({ categorySlug: "leagues", id: 108 })), ["league:13"]);
 });
 
 test("club join rejects loans and never marks concepts first owner", () => {

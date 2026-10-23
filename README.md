@@ -184,6 +184,19 @@ then run:
 
 `docker run --rm -p 8000:8000 auto-sbc`
 
+### Windows executable releases
+
+Every push to `eafc27` builds and publishes `AutoSBCBackend.exe` in the repository's
+GitHub Releases page. Download the executable from the release's Assets section
+and run it to start the backend on port 8000. Python is not required.
+
+Versioning starts at `27.1` with the first commit after
+`2958cf255a326ad34001c6b696cf79b1b995c726`. Each subsequent first-parent commit
+increments the version (`27.2`, `27.3`, and so on). Rerunning a workflow keeps
+the same version and updates that release. A push containing multiple commits
+releases the pushed branch tip, so intermediate version numbers can be skipped.
+The workflow checks that the executable starts before publishing it.
+
 ### Windows Installer (Optional Packaging)
 
 You can create a single-file executable with PyInstaller and then wrap it in a user-friendly Windows installer (Inno Setup) that asks the user where to install the backend service.

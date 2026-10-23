@@ -1,9 +1,10 @@
-name: Backend EXE Release (Minimal)
+name: Backend EXE Release
 
 on:
   push:
-    tags:
-      - "v*" # e.g. v1.0.0
+    branches:
+      - eafc27
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,18 +16,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Detect prerelease
-        id: pre
+      - name: Determine release version
+        id: version
         shell: bash
+        env:
+          VERSION_BASE_COMMIT: 2958cf255a326ad34001c6b696cf79b1b995c726
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          # If tag contains a hyphen (v1.2.3-rc1, v1.2.3-beta, etc.) treat as prerelease
-          if [[ "$TAG" == *-* ]]; then
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          git merge-base --is-ancestor "$VERSION_BASE_COMMIT" "$GITHUB_SHA"
+          REVISION=$(git rev-list --first-parent --count "$VERSION_BASE_COMMIT..$GITHUB_SHA")
+          if [[ "$REVISION" -lt 1 ]]; then
+            echo "Release commits must follow the version baseline."
+            exit 1
           fi
+          echo "tag=v27.$REVISION" >> "$GITHUB_OUTPUT"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,7 +56,8 @@ jobs:
           if exist dist rd /s /q dist
           if exist build rd /s /q build
           pyinstaller --noconfirm --onefile --name AutoSBCBackend ^
-            --additional-hooks-dir hooks ^
+            --paths backend ^
+            --hidden-import main ^
             --collect-all ortools ^
             backend\main.py
           if not exist dist\AutoSBCBackend.exe (
@@ -59,6 +65,34 @@ jobs:
             dir dist
             exit /b 1
           )
+
+      - name: Smoke test EXE
+        shell: python
+        run: |
+          import json
+          import subprocess
+          import time
+          import urllib.error
+          import urllib.request
+
+          process = subprocess.Popen(["dist/AutoSBCBackend.exe"])
+          try:
+              deadline = time.monotonic() + 90
+              while time.monotonic() < deadline:
+                if process.poll() is not None:
+                  raise RuntimeError("Backend exited before becoming ready")
+                try:
+                  with urllib.request.urlopen("http://127.0.0.1:8000/openapi.json", timeout=2) as response:
+                    schema = json.load(response)
+                  assert "paths" in schema, "Backend did not return an OpenAPI schema"
+                  break
+                except (urllib.error.URLError, TimeoutError):
+                  time.sleep(1)
+              else:
+                raise RuntimeError("Backend did not become ready within 90 seconds")
+          finally:
+              subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], check=False)
+              process.wait(timeout=10)
 
       - name: Compute checksum
         id: sums
@@ -69,23 +103,27 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AutoSBCBackend-${{ github.ref_name }}
+          name: AutoSBCBackend-${{ steps.version.outputs.tag }}
           path: dist/AutoSBCBackend.exe
+          if-no-files-found: error
           retention-days: 7
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: AutoSBC Backend ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: AutoSBC Backend ${{ steps.version.outputs.tag }}
           body: |
-            AutoSBC Backend release ${{ github.ref_name }}
+            AutoSBC Backend release ${{ steps.version.outputs.tag }}
+            Commit: ${{ github.sha }}
             SHA256: `${{ steps.sums.outputs.sha256 }}`
             Notes:
             - Built via PyInstaller.
             - Run: AutoSBCBackend.exe (binds to port 8000).
             - Set AUTOSBC_ENABLE_FILE_LOGS=1 to enable file logging in packaged mode.
-          prerelease: ${{ steps.pre.outputs.is_prerelease }}
+          prerelease: false
+          fail_on_unmatched_files: true
           files: |
             dist/AutoSBCBackend.exe
         env:
